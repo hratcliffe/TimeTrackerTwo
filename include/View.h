@@ -3,6 +3,7 @@
 #include "ui_Main.h"
 
 #include "project.h"
+#include "projectbutton.h"
 
 class View: public QWidget{
 Q_OBJECT
@@ -33,6 +34,10 @@ Q_OBJECT
 
   void projectClicked(projectButton * button){
     std::cout << "Project clicked: " << button->projectId << " - " << button->fullName << std::endl;
+
+    //Re-raise signal with the uid. We could raise it directly, but this gives us a chance to do something else with the button
+    emit projectSelected(button->projectId, button->fullName);
+
   }
 
   public slots:
@@ -58,4 +63,6 @@ Q_OBJECT
       }
     }
 
+  signals:
+    void projectSelected(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project button is clicked */
 };

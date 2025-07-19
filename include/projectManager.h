@@ -14,7 +14,7 @@
 class projectManager{
 
   private:
-    void setupGenerator(){this->gen = new seqIdGenerator();}; //TODO - handle re-starting generator
+    void setupGenerator(){this->gen = new uniqueIdGenerator();}; //TODO - handle re-starting generator
     IdGenerator * gen = nullptr;/**< \brief Uid generator to use */
 
     project dummyParent;

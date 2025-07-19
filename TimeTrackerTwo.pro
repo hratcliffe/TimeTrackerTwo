@@ -20,7 +20,6 @@ FORMS += GUI/Main.ui
 SOURCES += src/main.cpp \
            src/project.cpp \
            src/projectManager.cpp \
-           src/idGenerators.cpp
 
 HEADERS += include/Controller.h \
            include/View.h \

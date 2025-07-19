@@ -16,10 +16,11 @@ Q_OBJECT
     theView = new View();
 
     currentData = new TrackerData();
+    connectSignals();
+
     currentData->fillDemoData();
 
-    connectSignals();
- }
+  }
 
   void connectSignals(){
     // Collect all the connections from View to Model (TrackerData)

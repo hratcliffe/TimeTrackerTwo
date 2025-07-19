@@ -2,12 +2,12 @@
 
 #include <QWidget>
 #include "View.h"
-#include "Model.h"
+#include "TrackerData.h"
 
 class Controller : public QWidget{
 Q_OBJECT
   View * theView;
-  Model * theModel;
+  TrackerData * currentData;
 
   public:
   Controller(){
@@ -18,11 +18,11 @@ Q_OBJECT
   }
 
   void connect_all(){
-/*
+
     // Old style connection - 4th argument must be in section marked slots
-    connect(theView->ui->One, SIGNAL(clicked()), this, SLOT(oneClicked()));
+    connect(theView->ui->t_test_button, SIGNAL(clicked()), this, SLOT(oneClicked()));
 
-
+/*
     // Qt5 or newer - object pointer syntax WITH a lambda
     // First argument is the variable name, the next is a function pointer: here we're getting the
     // clicked function on the class QBushButton, which is what Four is an instance of
@@ -37,15 +37,11 @@ Q_OBJECT
 */
   }
 
-  void twoClicked(){
-
-   std::cout<<"Button Two clicked"<<std::endl;
-  }
 
  public slots:
-  void oneClicked(){
-    std::cout<<"You clicked button One \n Do not click this button again"<<std::endl;
-
-  }
+   void oneClicked(){
+     std::cout << "One clicked" << std::endl;
+     theView->prependLFooter("One clicked");
+   }
 
 };

@@ -108,7 +108,7 @@
           </size>
          </property>
          <property name="currentIndex">
-          <number>3</number>
+          <number>0</number>
          </property>
          <widget class="QWidget" name="track_tab">
           <attribute name="title">
@@ -137,6 +137,19 @@
                <property name="title">
                 <string/>
                </property>
+               <widget class="QPushButton" name="t_test_button">
+                <property name="geometry">
+                 <rect>
+                  <x>80</x>
+                  <y>190</y>
+                  <width>100</width>
+                  <height>32</height>
+                 </rect>
+                </property>
+                <property name="text">
+                 <string>PushButton</string>
+                </property>
+               </widget>
               </widget>
              </item>
              <item row="0" column="1">

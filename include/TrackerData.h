@@ -1,6 +1,11 @@
+#ifndef ____trackerData__
+#define ____trackerData__
+
+#include "projectManager.h"
 
 class TrackerData{
 
+  projectManager thePM;
   public:
 
     TrackerData() = default;
@@ -12,3 +17,4 @@ class TrackerData{
     ~TrackerData() = default;
 
 };
+#endif // ____trackerData__

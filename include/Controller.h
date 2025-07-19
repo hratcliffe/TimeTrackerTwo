@@ -3,6 +3,7 @@
 #include <QWidget>
 #include "View.h"
 #include "TrackerData.h"
+#include "projectbutton.h"
 
 class Controller : public QWidget{
 Q_OBJECT
@@ -14,7 +15,14 @@ Q_OBJECT
 
     theView = new View();
 
+    //theView->ui->t_test_button->projectId = "0000000";
+    theView->ui->t_test_button->fullName = "Test Project";
+    connect(theView->ui->t_test_button, &projectButton::clicked, [this](){this->projectClicked(this->theView->ui->t_test_button);} );
     connect_all();
+  }
+
+  void projectClicked(projectButton * button){
+    std::cout << "Project clicked: " << button->projectId << " - " << button->fullName << std::endl;
   }
 
   void connect_all(){

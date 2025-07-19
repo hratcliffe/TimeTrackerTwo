@@ -4,7 +4,7 @@
 
 TEMPLATE = app
 TARGET = TTT
-INCLUDEPATH += ./include
+INCLUDEPATH += . ./include JSON11/json11-master/
 
 QT += widgets
 
@@ -17,10 +17,20 @@ DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs depr
 
 # Input
 FORMS += GUI/Main.ui
-SOURCES += src/main.cpp
+SOURCES += src/main.cpp \
+           src/project.cpp \
+           src/projectManager.cpp \
+           src/idGenerators.cpp
 
 HEADERS += include/Controller.h \
-           include/View.h
+           include/View.h \
+           include/configObjects.h \
+           include/dataObjects.h \
+           include/idGenerators.h \
+           include/project.h \
+           include/projectbutton.h \
+           include/projectManager.h \
+           include/TrackerData.h
 
 OBJECTS_DIR = ./obj
 MOC_DIR = ./moc

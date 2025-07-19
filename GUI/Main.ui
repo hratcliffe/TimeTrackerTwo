@@ -137,7 +137,7 @@
                <property name="title">
                 <string/>
                </property>
-               <widget class="QPushButton" name="t_test_button">
+               <widget class="projectButton" name="t_test_button">
                 <property name="geometry">
                  <rect>
                   <x>80</x>
@@ -530,6 +530,13 @@
    </layout>
   </widget>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>projectButton</class>
+   <extends>QPushButton</extends>
+   <header>projectbutton.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

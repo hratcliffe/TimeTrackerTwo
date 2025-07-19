@@ -15,10 +15,13 @@ Q_OBJECT
 
     theView = new View();
 
+    currentData = new TrackerData();
+    connect(currentData, &TrackerData::projectListUpdateEvent, theView, &View::projectListUpdated);
+    currentData->fillDemoData();
     //theView->ui->t_test_button->projectId = "0000000";
-    theView->ui->t_test_button->fullName = "Test Project";
-    connect(theView->ui->t_test_button, &projectButton::clicked, [this](){this->projectClicked(this->theView->ui->t_test_button);} );
-    connect_all();
+    //theView->ui->t_test_button->fullName = "Test Project";
+    //connect(theView->ui->t_test_button, &projectButton::clicked, [this](){this->projectClicked(this->theView->ui->t_test_button);} );
+    //connect_all();
   }
 
   void projectClicked(projectButton * button){

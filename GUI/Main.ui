@@ -137,19 +137,19 @@
                <property name="title">
                 <string/>
                </property>
-               <widget class="projectButton" name="t_test_button">
-                <property name="geometry">
-                 <rect>
-                  <x>80</x>
-                  <y>190</y>
-                  <width>100</width>
-                  <height>32</height>
-                 </rect>
-                </property>
-                <property name="text">
-                 <string>PushButton</string>
-                </property>
-               </widget>
+               <layout class="QVBoxLayout" name="verticalLayout_5">
+                <item>
+                 <layout class="QVBoxLayout" name="verticalLayout_4">
+                  <item>
+                   <widget class="projectButton" name="t_test_button">
+                    <property name="text">
+                     <string>PushButton</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
               </widget>
              </item>
              <item row="0" column="1">

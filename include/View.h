@@ -1,11 +1,11 @@
 #include <QObject>
-#include <QtGui>
-#include <QApplication>
 
 #include "ui_Main.h"
 
-class View{
+#include "project.h"
 
+class View: public QWidget{
+Q_OBJECT
   public:
 
     Ui::main_window * ui;
@@ -29,4 +29,33 @@ class View{
   void updateRFooter(std::string newText){ui->right_footer->setText(trunc(newText).c_str());};
   /** \brief Slot for prepending to Left footer @param newText Text to add*/
   void prependLFooter(std::string newText){updateLFooter(ui->left_footer->text().toStdString() + newText);};
+
+
+  void projectClicked(projectButton * button){
+    std::cout << "Project clicked: " << button->projectId << " - " << button->fullName << std::endl;
+  }
+
+  public slots:
+    void projectListUpdated(std::vector<project> & newList){
+      std::cout << "Project list updated with " << newList.size() << " projects." << std::endl;
+      // Clear existing buttons
+      if (ui->t_project_buttons->layout() == nullptr) {
+        std::cerr << "Error: t_project_buttons layout is null." << std::endl;
+        return;
+      }
+      QLayoutItem *child;
+      while ((child = ui->t_project_buttons->layout()->takeAt(0)) != nullptr) {
+        delete child->widget();
+        delete child;
+      }
+      for (auto & proj : newList){
+        projectButton * button = new projectButton();
+        button->projectId = proj.uid;
+        button->fullName = proj.name;
+        button->setText(QString::fromStdString(proj.name));
+        connect(button, &projectButton::clicked, this, [this, button](){this->projectClicked(button);});
+        ui->t_project_buttons->layout()->addWidget(button);
+      }
+    }
+
 };

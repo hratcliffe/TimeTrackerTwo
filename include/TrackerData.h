@@ -1,20 +1,34 @@
 #ifndef ____trackerData__
 #define ____trackerData__
 
+#include <QWidget>
+#include <vector>
+#include "dataObjects.h"
+
 #include "projectManager.h"
 
-class TrackerData{
+class TrackerData: public QWidget{
+Q_OBJECT
 
   projectManager thePM;
   public:
 
-    TrackerData() = default;
-    TrackerData(const TrackerData&) = default;
-    TrackerData(TrackerData&&) = default;
-    TrackerData& operator=(const TrackerData&) = default;
-    TrackerData& operator=(TrackerData&&) = default;
+    TrackerData(){;};
 
-    ~TrackerData() = default;
+    ~TrackerData(){;};
+
+    // Demo - filling in some fake projects to the UI
+    void fillDemoData(){
+      std::cout<< "Filling demo data" << std::endl;
+      thePM.addProject(projectData{"Demo Project 1", 0.5});
+      thePM.addProject(projectData{"Demo Project 2", 0.3});
+      thePM.addProject(projectData{"Demo Project 3", 0.2});
+
+      emit projectListUpdateEvent(thePM.projects);
+    }
+
+    signals:
+      void projectListUpdateEvent(std::vector<project> & newList);
 
 };
 #endif // ____trackerData__

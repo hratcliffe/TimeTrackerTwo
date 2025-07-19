@@ -22,7 +22,7 @@ class projectManager{
   public:
     std::vector<project> projects;/**< \brief List of projects */
 
-    projectManager(){setupDummyParent(); setupGenerator();};
+    projectManager(){setupGenerator(); setupDummyParent();};
     ~projectManager(){ if(gen) delete gen;}
     projectManager(const projectManager & src)=delete;
     projectManager& operator=(const projectManager&)=delete;

@@ -16,11 +16,22 @@ Q_OBJECT
     theView = new View();
 
     currentData = new TrackerData();
-    connect(currentData, &TrackerData::projectListUpdateEvent, theView, &View::projectListUpdated);
     currentData->fillDemoData();
 
+    connectSignals();
+ }
+
+  void connectSignals(){
+    // Collect all the connections from View to Model (TrackerData)
+
+    // Update the view when the project list changes
+    connect(currentData, &TrackerData::projectListUpdateEvent, theView, &View::projectListUpdated);
+
+    // Connect the project selection to the TrackerData to mark projects
     connect(theView, &View::projectSelected, currentData, &TrackerData::markProject);
+
   }
+
 
  public slots:
    void oneClicked(){

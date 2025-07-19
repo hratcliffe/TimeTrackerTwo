@@ -4,7 +4,6 @@
 
 #include "project.h"
 #include "dataObjects.h"
-#include "configObjects.h"
 
 /** \brief Holds and manages projects
 *
@@ -15,32 +14,30 @@
 class projectManager{
 
   private:
-    void setupGenerator();
+    void setupGenerator(){this->gen = new seqIdGenerator();}; //TODO - handle re-starting generator
     IdGenerator * gen = nullptr;/**< \brief Uid generator to use */
 
     project dummyParent;
-    void setupDummyParent();
+    void setupDummyParent(){dummyParent = project(projectData{"One Off", 0}, gen);}
   public:
     std::vector<project> projects;/**< \brief List of projects */
 
-    projectManager();
-    projectManager(std::string filename);
-    projectManager(projectConfig Pconfig);
-    ~projectManager();
-    projectManager(const projectManager & src);
-    projectManager& operator=(const projectManager&);
+    projectManager(){setupDummyParent(); setupGenerator();};
+    ~projectManager(){ if(gen) delete gen;}
+    projectManager(const projectManager & src)=delete;
+    projectManager& operator=(const projectManager&)=delete;
 
     /** \brief Add project to list @param item Project to add */
     void addProject(project item){projects.push_back(item);};
-    proIds::Uuid addProject(projectData dat);
+    proIds::Uuid addProject(projectData dat){ project tmp = project(dat, gen); addProject(tmp); return tmp.uid;}
 
     void deleteProjectById(proIds::Uuid uid);
     /** \brief Remove project from list @param index Project number to delete*/
     void deleteProjectByIndex(int index){projects.erase(projects.begin() + index);};
 
-    proIds::Uuid getNullUid();
-    proIds::Uuid getNewUid();
-    proIds::Uuid getNewUid(proIds::uidTag tag);
+    proIds::Uuid getNullUid(){return gen->getNullId();};
+    proIds::Uuid getNewUid(){return gen->getNextId();};
+    proIds::Uuid getNewUid(proIds::uidTag tag){return gen->getNextId(tag);};
   
     std::string getParentNameForSub(proIds::Uuid uid);
     project * getRef(proIds::Uuid uid);

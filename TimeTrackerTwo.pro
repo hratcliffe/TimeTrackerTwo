@@ -24,7 +24,6 @@ SOURCES += src/main.cpp \
 
 HEADERS += include/Controller.h \
            include/View.h \
-           include/configObjects.h \
            include/dataObjects.h \
            include/idGenerators.h \
            include/project.h \

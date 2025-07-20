@@ -25,7 +25,10 @@ Q_OBJECT
     connect(ui->t_silent_button, &QPushButton::clicked, [this](){emit closeRequested(true);});
     connect(ui->t_pause_button, &QPushButton::clicked, [this](){emit pauseRequested();});
     connect(ui->t_resume_button, &QPushButton::clicked, [this](){emit resumeRequested();});
+    connect(ui->t_stop_button, &QPushButton::clicked, [this](){emit stopRequested();});
 
+    updateLFooter("Not Tracking");
+    updateAvailableActions(false);
     
     main->show();
   }
@@ -57,6 +60,12 @@ Q_OBJECT
   void projectClicked(projectButton * button){
     //Re-raise signal with the uid. We could raise it directly, but this gives us a chance to do something else with the button
     emit projectSelected(button->projectId, button->fullName);
+  }
+  void updateAvailableActions(bool active, bool paused=false){
+    // Enable/disable buttons based on project state
+    ui->t_pause_button->setEnabled(active && !paused);
+    ui->t_resume_button->setEnabled(paused);
+    ui->t_stop_button->setEnabled(active || paused);
   }
 
   public slots:
@@ -94,15 +103,22 @@ Q_OBJECT
 
     void updateRunningProjectDisplay(std::string name){
       updateLFooter(name);
+      updateAvailableActions(true);
     }
     void updatePausedProjectDisplay(std::string name){
       updateLFooter("Paused: "+name);
+      updateAvailableActions(true, true);
+    }
+    void updateStoppedProjectDisplay(){
+      updateLFooter("Not Tracking");
+      updateAvailableActions(false);
     }
 
   signals:
     void projectSelected(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project button is clicked */
     void pauseRequested(); /**< \brief Signal emitted when the pause button is clicked */
     void resumeRequested(); /**< \brief Signal emitted when the resume button is clicked */
+    void stopRequested(); /**< \brief Signal emitted when the stop button is clicked */
     void closeRequested(bool silent);/**< \brief Signal emitted when the close button is clicked, silent is true if the silent close button is clicked */
 };
 

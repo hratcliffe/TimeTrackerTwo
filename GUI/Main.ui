@@ -139,15 +139,7 @@
                </property>
                <layout class="QVBoxLayout" name="verticalLayout_5">
                 <item>
-                 <layout class="QVBoxLayout" name="verticalLayout_4">
-                  <item>
-                   <widget class="projectButton" name="t_test_button">
-                    <property name="text">
-                     <string>PushButton</string>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
+                 <layout class="QVBoxLayout" name="verticalLayout_4"/>
                 </item>
                </layout>
               </widget>
@@ -181,6 +173,13 @@
                   <property name="leftMargin">
                    <number>5</number>
                   </property>
+                  <item>
+                   <widget class="QPushButton" name="t_stop_button">
+                    <property name="text">
+                     <string>Stop</string>
+                    </property>
+                   </widget>
+                  </item>
                   <item>
                    <widget class="QPushButton" name="t_pause_button">
                     <property name="sizePolicy">
@@ -530,13 +529,6 @@
    </layout>
   </widget>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>projectButton</class>
-   <extends>QPushButton</extends>
-   <header>projectbutton.h</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

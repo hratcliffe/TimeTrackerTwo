@@ -43,6 +43,9 @@ Q_OBJECT
     // Resuming a project
     connect(theView, &View::resumeRequested, currentData, &TrackerData::resumeProject);
     connect(currentData, &TrackerData::projectRunningUpdate, theView, &View::updateRunningProjectDisplay);
+    // Stopping a project
+    connect(theView, &View::stopRequested, currentData, &TrackerData::stopProject);
+    connect(currentData, &TrackerData::projectStopped, theView, &View::updateStoppedProjectDisplay);
  }
 
 };

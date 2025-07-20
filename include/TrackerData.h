@@ -51,6 +51,13 @@ Q_OBJECT
       emit projectRunningUpdate(name); // Notify view that a project is running
 
     }
+    void stopProject(){
+      if(currentProjectStatus.status == trackerTypes::projectStatusFlag::active){
+        std::cout << "Stopping project with UID: " << currentProjectStatus.uid << std::endl;
+        currentProjectStatus.status = trackerTypes::projectStatusFlag::none;
+        emit projectStopped(); // Notify view that no project is running
+      } //If nothing is active, do nothing
+    }
     void pauseProject(){
       if(currentProjectStatus.status == trackerTypes::projectStatusFlag::active){
         std::cout << "Pausing project with UID: " << currentProjectStatus.uid << std::endl;
@@ -65,8 +72,6 @@ Q_OBJECT
         emit projectRunningUpdate(thePM.getName(currentProjectStatus.uid)); // Notify view that a project is running
       } //If nothing is paused, do nothing
     }
-
-    void markSpecialEvent(specialEventType type);
 
     void handleCloseRequest(bool silent){
       if(silent){
@@ -84,6 +89,7 @@ Q_OBJECT
       void projectListUpdateEvent(std::vector<selectableEntity> const & newList);
       void projectRunningUpdate(std::string name); /**< \brief Signal emitted when a project is running, with the name of the project */
       void projectPaused(std::string name); /**< \brief Signal emitted when a project is paused, with the name of the project */
+      void projectStopped(); /**< \brief Signal emitted when no project is running */
       void readyToClose(); /**< \brief Signal emitted when data is saved and app is ready to close */
 };
 #endif // ____trackerData__

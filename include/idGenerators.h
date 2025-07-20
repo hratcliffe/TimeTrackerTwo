@@ -36,28 +36,16 @@ namespace proIds{
   class uidWrapper{
     private:
       QUuid qID;/**< \brief QT supplied uid */
-      uidTag Itag;/**< \brief Tag for content type*/
+      uidTag Itag=uidTag::none;/**< \brief Tag for content type*/
   
     public:
-      /** \brief Default constructor
-      *
-      *
-       Construct Null Uuid object
-      */
+      /** \brief Generic - a uid with none tag */
       uidWrapper(){this->qID = QUuid(); this->Itag = uidTag::none;}
 
-      /** \brief Constructor from QUid
-      *
-      *
-       Construct uid from QUid
-       */
+      /** \brief Constructor from QUid */
       uidWrapper(QUuid qID){this->qID = qID;}
 
-      /** \brief Constructor from QUid
-      *
-      *
-       Construct uid from QUid with tag
-       */
+      /** \brief Constructor from QUid with tag */
       uidWrapper(QUuid qID, uidTag tag){this->qID = qID; this->Itag = tag;}
 
  
@@ -65,6 +53,15 @@ namespace proIds{
         @param tag Tag to apply
       */
       void tag(uidTag tag){this->Itag = tag;}
+
+      bool isTaggedAs(uidTag tag)const{
+        /** \brief Check if tagged as
+        *
+        * @param tag Tag to check against
+        * @returns Boolean true if tagged as, false else
+        */
+        return Itag == tag;
+      }
 
       /** \brief Check for equality
       *
@@ -80,8 +77,17 @@ namespace proIds{
       bool isExactEq(const uidWrapper &other)const{return qID == other.qID && Itag == other.Itag;};
       friend std::ostream& operator<<(std::ostream& stream, const uidWrapper& uid);
 
+      bool operator<(const uidWrapper &other)const{
+        /** \brief Less than operator
+        *
+        * Compares only the core id, not the tag
+          @param other Object to compare
+          @returns Boolean true if less than, false else
+        */
+        return qID < other.qID;
+      }
+
       /** \brief Stringify
-        \todo Wont work for non string ids
       */
       std::string to_string()const{return qID.toString().toStdString();}
   };

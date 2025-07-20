@@ -2,6 +2,8 @@
 #ifndef ____projectManager__
 #define ____projectManager__
 
+#include <map>
+
 #include "project.h"
 #include "dataObjects.h"
 
@@ -14,36 +16,63 @@
 class projectManager{
 
   private:
-    void setupGenerator(){this->gen = new uniqueIdGenerator();}; //TODO - handle re-starting generator
-    IdGenerator * gen = nullptr;/**< \brief Uid generator to use */
+   IdGenerator * gen = nullptr;/**< \brief Uid generator to use */
 
-    project dummyParent;
-    void setupDummyParent(){dummyParent = project(projectData{"One Off", 0}, gen);}
+    std::map<proIds::Uuid, project> projects; /**< \brief Project store. Contains projects only*/
+    std::map<proIds::Uuid, subproject> subprojects; /**< \brief Subproject store. Contains subprojects only*/
+    void setupGenerator(){this->gen = new uniqueIdGenerator();}; 
   public:
-    std::vector<project> projects;/**< \brief List of projects */
 
-    projectManager(){setupGenerator(); setupDummyParent();};
+    projectManager(){setupGenerator(); auto id_tmp = gen->getNullId(); project dummy = project({"Dummy", 0.0}, id_tmp); projects[id_tmp] = dummy;}; /**< \brief Default constructor */
     ~projectManager(){ if(gen) delete gen;}
     projectManager(const projectManager & src)=delete;
     projectManager& operator=(const projectManager&)=delete;
 
-    /** \brief Add project to list @param item Project to add */
-    void addProject(project item){projects.push_back(item);};
-    proIds::Uuid addProject(projectData dat){ project tmp = project(dat, gen); addProject(tmp); return tmp.uid;}
+    project createProject(projectData data){
+      return project(data, gen->getNextId());
+    }
+    proIds::Uuid addProject(projectData dat){
+      project tmp = createProject(dat); 
+      projects[tmp.uid] = tmp; 
+      return tmp.uid;
+    }
 
-    void deleteProjectById(proIds::Uuid uid);
-    /** \brief Remove project from list @param index Project number to delete*/
-    void deleteProjectByIndex(int index){projects.erase(projects.begin() + index);};
+    /** \brief Get list of projects
+     * 
+     * Returns a COPY vector of the projects
+     */
+    std::vector<project> getProjectList(){
+      std::vector<project> ret;
+      for(auto & it : projects){
+        ret.push_back(it.second);
+      }
+      return ret;
+    }
+
+    void deleteProjectById(proIds::Uuid uid){projects.erase(uid);};
 
     proIds::Uuid getNullUid(){return gen->getNullId();};
     proIds::Uuid getNewUid(){return gen->getNextId();};
     proIds::Uuid getNewUid(proIds::uidTag tag){return gen->getNextId(tag);};
   
+   
+    /** \brief Get reference to project from its uid 
+     * 
+     * If the uid is null or not found, returns a reference to the dummy project
+    */
+    project & getRef(proIds::Uuid uid){
+      if(projects.find(uid) != projects.end()){
+        return projects[uid];
+      }else{
+        return projects[getNullUid()]; 
+      }
+    }
+    project & getParentForSubRef(proIds::Uuid uid);
+    subproject & getSubRef(proIds::Uuid uid){
+
+    }
+
     std::string getParentNameForSub(proIds::Uuid uid);
-    project * getRef(proIds::Uuid uid);
-    project * getParentForSubRef(proIds::Uuid uid);
-    subproject * getSubRef(proIds::Uuid uid);
-    std::string getDummyName(){return dummyParent.name;};
 
 };
 

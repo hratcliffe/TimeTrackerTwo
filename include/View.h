@@ -41,7 +41,7 @@ Q_OBJECT
   }
 
   public slots:
-    void projectListUpdated(std::vector<project> & newList){
+    void projectListUpdated(std::vector<project> const & newList){
       std::cout << "Project list updated with " << newList.size() << " projects." << std::endl;
       // Clear existing buttons
       if (ui->t_project_buttons->layout() == nullptr) {

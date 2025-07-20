@@ -17,9 +17,7 @@ DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs depr
 
 # Input
 FORMS += GUI/Main.ui
-SOURCES += src/main.cpp \
-           src/project.cpp \
-           src/projectManager.cpp \
+SOURCES += src/main.cpp
 
 HEADERS += include/Controller.h \
            include/View.h \

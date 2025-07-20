@@ -24,13 +24,19 @@ class subproject{
     std::string name; /**< \brief Name of sub */
     proIds::Uuid uid; /**< \brief Unique identifier for sub */
 
-    subproject(){;};
-    subproject(subProjectData data, IdGenerator * gen);
+    subproject() = default;
+    ~subproject()=default;
+    subproject(subProjectData data, proIds::Uuid uid_in){
+        name = data.name;
+        frac = data.frac;
+        if(!uid_in.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Subproject must have sub tag");
+        uid = uid_in;
+    }
 
-    std::string describe();
-    /** \brief Get fraction of parent time as percent @returns Float percent */
-    float percent(){return frac*100;};
-
+    std::string describe(){
+      /** \brief String description of subproject */
+      return "Subproject "+name + '\n' + std::to_string((int)(frac*100))+" %\n";
+    }
 };
 
 
@@ -51,21 +57,22 @@ class project{
     bool active; /**< \brief Flag to allow project to be deactivated for any reason*/
   public:
     std::string name;/**< \brief Name of project */
-    std::vector<subproject> subprojects;/**< \brief Subprojects belonging to this project */
+    std::vector<proIds::Uuid> subprojects;/**< \brief Subprojects belonging to this project */
     proIds::Uuid uid;/**< \brief Unique identifier for project */
     float FTE;/**< \brief Fraction of FTE for this project */
-    project(){;};
-    project(std::string name, IdGenerator * gen);
-    /** \rem Not implemented, remove */
-    project(projectData data);
-    project(projectData data, IdGenerator * gen);
-    project(projectData data, IdGenerator * gen, std::vector<subProjectData> subs);
-    ~project(){;}
+    project() = default;
+    project(projectData data, proIds::Uuid uid_in){
+        this->name = data.name;
+        uid =  uid_in;
+        FTE = data.FTE;
+        active = true;
+    };
+    void addSubproject(proIds::Uuid sub_id){subprojects.push_back(sub_id);}
+    ~project()=default;
 
-    std::string describe();
-    /** \brief Get FTE fraction as percent @returns Float percent */
-    float percent(){return FTE*100;};
-
+    std::string describe(){
+      return !active ? "\nProject is inactive\n" : name+" "+ std::to_string((int)(FTE*100))+" % FTE\n "+ std::to_string(subprojects.size()) + " subprojects";
+    }
 };
 
 

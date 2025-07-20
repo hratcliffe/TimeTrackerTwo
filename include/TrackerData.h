@@ -24,7 +24,7 @@ Q_OBJECT
       thePM.addProject(projectData{"Demo Project 2", 0.3});
       thePM.addProject(projectData{"Demo Project 3", 0.2});
 
-      emit projectListUpdateEvent(thePM.projects);
+      emit projectListUpdateEvent(thePM.getProjectList());
     }
 
     void markProject(proIds::Uuid uid, std::string name){
@@ -36,7 +36,7 @@ Q_OBJECT
 
 
     signals:
-      void projectListUpdateEvent(std::vector<project> & newList);
+      void projectListUpdateEvent(std::vector<project> const & newList);
 
 };
 #endif // ____trackerData__

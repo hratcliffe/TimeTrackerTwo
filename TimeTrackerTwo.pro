@@ -4,7 +4,7 @@
 
 TEMPLATE = app
 TARGET = TTT
-INCLUDEPATH += . ./include JSON11/json11-master/
+INCLUDEPATH += . ./include
 
 QT += widgets
 
@@ -32,5 +32,6 @@ OBJECTS_DIR = ./obj
 MOC_DIR = ./moc
 UI_DIR = ./ui
 
-CONFIG += '-Wno-unused-parameter'
+# Adding flags wont work, have to override the warnings flags else they come later and take priority
+QMAKE_CXXFLAGS_WARN_ON  = '-Wall -Wno-unused-parameter'
 CONFIG += c++11

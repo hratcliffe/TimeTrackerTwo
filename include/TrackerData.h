@@ -7,10 +7,22 @@
 
 #include "projectManager.h"
 
+namespace trackerTypes{
+
+enum class projectStatusFlag{none, active, paused}; // None- no active project, active -a project is running, paused - a project was running and is now paused
+class projectStatus{
+  public:
+    proIds::Uuid uid; /**< \brief Pointer to project, null if none in progress */
+    projectStatusFlag status = projectStatusFlag::none; /**< \brief Status of project */
+};
+};
+
 class TrackerData: public QWidget{
 Q_OBJECT
 
   projectManager thePM;
+  trackerTypes::projectStatus currentProjectStatus; /**< \brief Current project status*/
+
   public:
 
     TrackerData(){;};
@@ -34,7 +46,24 @@ Q_OBJECT
 
       //Temporary - just log the request
       std::cout << "Marking project "<<name<< " UID: " << uid <<std::endl;
+      currentProjectStatus.uid = uid;
+      currentProjectStatus.status = trackerTypes::projectStatusFlag::active;
+      emit projectRunningUpdate(name); // Notify view that a project is running
 
+    }
+    void pauseProject(){
+      if(currentProjectStatus.status == trackerTypes::projectStatusFlag::active){
+        std::cout << "Pausing project with UID: " << currentProjectStatus.uid << std::endl;
+        currentProjectStatus.status = trackerTypes::projectStatusFlag::paused;
+        emit projectPaused(thePM.getName(currentProjectStatus.uid)); // Notify view that a project is paused
+      } //If nothing is active, do nothing
+    }
+    void resumeProject(){
+      if(currentProjectStatus.status == trackerTypes::projectStatusFlag::paused){
+        std::cout << "Resuming project with UID: " << currentProjectStatus.uid << std::endl;
+        currentProjectStatus.status = trackerTypes::projectStatusFlag::active;
+        emit projectRunningUpdate(thePM.getName(currentProjectStatus.uid)); // Notify view that a project is running
+      } //If nothing is paused, do nothing
     }
 
     void markSpecialEvent(specialEventType type);
@@ -53,6 +82,8 @@ Q_OBJECT
 
     signals:
       void projectListUpdateEvent(std::vector<selectableEntity> const & newList);
+      void projectRunningUpdate(std::string name); /**< \brief Signal emitted when a project is running, with the name of the project */
+      void projectPaused(std::string name); /**< \brief Signal emitted when a project is paused, with the name of the project */
       void readyToClose(); /**< \brief Signal emitted when data is saved and app is ready to close */
 };
 #endif // ____trackerData__

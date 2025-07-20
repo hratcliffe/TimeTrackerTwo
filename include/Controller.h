@@ -34,14 +34,15 @@ Q_OBJECT
 
     // Connect the project selection to the TrackerData to mark projects
     connect(theView, &View::projectSelected, currentData, &TrackerData::markProject);
+    // And back, to show status
+    connect(currentData, &TrackerData::projectRunningUpdate, theView, &View::updateRunningProjectDisplay);
 
-  }
-
-
- public slots:
-   void oneClicked(){
-     std::cout << "One clicked" << std::endl;
-     theView->prependLFooter("One clicked");
-   }
+    //Pausing a project:
+    connect(theView, &View::pauseRequested, currentData, &TrackerData::pauseProject);
+    connect(currentData, &TrackerData::projectPaused, theView, &View::updatePausedProjectDisplay);
+    // Resuming a project
+    connect(theView, &View::resumeRequested, currentData, &TrackerData::resumeProject);
+    connect(currentData, &TrackerData::projectRunningUpdate, theView, &View::updateRunningProjectDisplay);
+ }
 
 };

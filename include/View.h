@@ -23,6 +23,8 @@ Q_OBJECT
     //Connecting buttons to downstream functions for controller to connect to
     connect(ui->t_close_button, &QPushButton::clicked, [this](){emit closeRequested(false);});
     connect(ui->t_silent_button, &QPushButton::clicked, [this](){emit closeRequested(true);});
+    connect(ui->t_pause_button, &QPushButton::clicked, [this](){emit pauseRequested();});
+    connect(ui->t_resume_button, &QPushButton::clicked, [this](){emit resumeRequested();});
 
     
     main->show();
@@ -90,8 +92,17 @@ Q_OBJECT
       }
     }
 
+    void updateRunningProjectDisplay(std::string name){
+      updateLFooter(name);
+    }
+    void updatePausedProjectDisplay(std::string name){
+      updateLFooter("Paused: "+name);
+    }
+
   signals:
     void projectSelected(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project button is clicked */
+    void pauseRequested(); /**< \brief Signal emitted when the pause button is clicked */
+    void resumeRequested(); /**< \brief Signal emitted when the resume button is clicked */
     void closeRequested(bool silent);/**< \brief Signal emitted when the close button is clicked, silent is true if the silent close button is clicked */
 };
 

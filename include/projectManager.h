@@ -86,7 +86,15 @@ class projectManager{
     project & getParentForSubRef(proIds::Uuid uid);
     subproject & getSubRef(proIds::Uuid uid);
 
-
+    std::string getName(proIds::Uuid uid){
+      if(projects.find(uid) != projects.end()){
+        return projects[uid].getName();
+      }else if(subprojects.find(uid) != subprojects.end()){
+        return subprojects[uid].getName();
+      }else{
+        return "Unknown Project";
+      }
+    }
     std::string getParentNameForSub(proIds::Uuid uid);
 
 };

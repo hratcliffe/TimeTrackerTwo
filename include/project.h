@@ -65,6 +65,7 @@ class subproject: public projectLike{
     }
     operator selectableEntity()override{return selectableEntity{name, uid, 1};} //Level 1 in display hierarchy
 
+    proIds::Uuid getParentUid() const{return parentUid;}; /**< \brief Get the unique id of the parent project */
 
     std::string describe()override{
       /** \brief String description of subproject */

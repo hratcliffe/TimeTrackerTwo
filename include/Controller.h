@@ -33,7 +33,7 @@ Q_OBJECT
     connect(currentData, &TrackerData::projectListUpdateEvent, theView, &View::projectListUpdated);
 
     // Connect the project selection to the TrackerData to mark projects
-    connect(theView, &View::projectSelected, currentData, &TrackerData::markProject);
+    connect(theView, &View::projectSelectedTrack, currentData, &TrackerData::markProject);
     // And back, to show status
     connect(currentData, &TrackerData::projectRunningUpdate, theView, &View::updateRunningProjectDisplay);
 
@@ -46,6 +46,11 @@ Q_OBJECT
     // Stopping a project
     connect(theView, &View::stopRequested, currentData, &TrackerData::stopProject);
     connect(currentData, &TrackerData::projectStopped, theView, &View::updateStoppedProjectDisplay);
- }
+
+    //Project information tab events
+    connect(theView, &View::projectSelectedView, currentData, &TrackerData::generateProjectSummary);
+    connect(currentData, &TrackerData::projectSummaryReady, theView, &View::projectSummaryUpdated);
+
+  }
 
 };

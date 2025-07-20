@@ -57,10 +57,16 @@ Q_OBJECT
   /** \brief Slot for prepending to Left footer @param newText Text to add*/
   void prependLFooter(std::string newText){updateLFooter(ui->left_footer->text().toStdString() + newText);};
 
-  void projectClicked(projectButton * button){
+  void trackProjectClicked(projectButton * button){
     //Re-raise signal with the uid. We could raise it directly, but this gives us a chance to do something else with the button
-    emit projectSelected(button->projectId, button->fullName);
+    emit projectSelectedTrack(button->projectId, button->fullName);
   }
+
+  void viewProjectClicked(projectButton * button){
+    //Re-raise signal with the uid. We could raise it directly, but this gives us a chance to do something else with the button
+    emit projectSelectedView(button->projectId, button->fullName);
+  }
+
   void updateAvailableActions(bool active, bool paused=false){
     // Enable/disable buttons based on project state
     ui->t_pause_button->setEnabled(active && !paused);
@@ -78,27 +84,53 @@ Q_OBJECT
       // Clear existing buttons
       if (ui->t_project_buttons->layout() == nullptr) {
         std::cerr << "Error: t_project_buttons layout is null." << std::endl;
-        return;
-      }
-      QLayoutItem *child;
-      while ((child = ui->t_project_buttons->layout()->takeAt(0)) != nullptr) {
-        delete child->widget();
-        delete child;
-      }
-      for (auto & proj : newList){
-        projectButton * button = new projectButton();
-        button->projectId = proj.uid;
-        button->fullName = proj.name;
-        button->setText(QString::fromStdString(proj.name));
-        if(proj.level == 0){
-          button->setStyleSheet("background-color: lightblue;"); // Top level projects 
-        }else if(proj.level == 1){
-          button->setStyleSheet("background-color: lightgreen;"); // Subprojects
+      }else{
+        QLayoutItem *child;
+        while ((child = ui->t_project_buttons->layout()->takeAt(0)) != nullptr) {
+          delete child->widget();
+          delete child;
         }
-        button->setFixedWidth(150);
-        connect(button, &projectButton::clicked, this, [this, button](){this->projectClicked(button);});
-        ui->t_project_buttons->layout()->addWidget(button);
+        for (auto & proj : newList){
+          projectButton * button = new projectButton();
+          button->projectId = proj.uid;
+          button->fullName = proj.name;
+          button->setText(QString::fromStdString(proj.name));
+          if(proj.level == 0){
+            button->setStyleSheet("background-color: lightblue;"); // Top level projects 
+          }else if(proj.level == 1){
+            button->setStyleSheet("background-color: lightgreen;"); // Subprojects
+          }
+          button->setFixedWidth(150);
+          connect(button, &projectButton::clicked, this, [this, button](){this->trackProjectClicked(button);});
+          ui->t_project_buttons->layout()->addWidget(button);
+        }
       }
+
+      //Adding just top-level projects to the Projects tab sidebar
+      if(ui->p_project_layout->layout() == nullptr) {
+        std::cerr << "Error: p_project_layout layout is null." << std::endl;
+      }else{
+        QLayoutItem *child;
+        while ((child = ui->p_project_layout->layout()->takeAt(0)) != nullptr) {
+          delete child->widget();
+          delete child; // Clear existing buttons
+        }
+        for (auto & proj : newList){ 
+          if(proj.uid.isTaggedAs(proIds::uidTag::oneoff) || proj.uid.isTaggedAs(proIds::uidTag::sub)) continue; //Skips one-offs and subprojects
+          projectButton * button = new projectButton();
+          button->projectId = proj.uid;
+          button->fullName = proj.name;
+          button->setText(QString::fromStdString(proj.name));
+          button->setFixedWidth(150);
+          connect(button, &projectButton::clicked, this, [this, button](){this->viewProjectClicked(button);});
+          ui->p_project_layout->layout()->addWidget(button);
+        }
+      }
+    }
+
+    void projectSummaryUpdated(std::string summary){
+      // Update the project summary display
+      ui->p_project_info->setText(QString::fromStdString(summary));
     }
 
     void updateRunningProjectDisplay(std::string name){
@@ -115,7 +147,8 @@ Q_OBJECT
     }
 
   signals:
-    void projectSelected(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project button is clicked */
+    void projectSelectedTrack(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project button is clicked */
+    void projectSelectedView(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project view button is clicked to view details */
     void pauseRequested(); /**< \brief Signal emitted when the pause button is clicked */
     void resumeRequested(); /**< \brief Signal emitted when the resume button is clicked */
     void stopRequested(); /**< \brief Signal emitted when the stop button is clicked */

@@ -3,6 +3,7 @@
 #define ____projectManager__
 
 #include <map>
+#include <sstream>
 
 #include "project.h"
 #include "dataObjects.h"
@@ -65,27 +66,23 @@ class projectManager{
       return ret;
     }
 
+    // Top level projects, OMITTING one-off which by defn. have no config info
+    std::vector<selectableEntity> getToplevelProjectList(){
+      std::vector<selectableEntity> ret;
+      for(auto & it : projects){
+        if(!it.second.getUid().isTaggedAs(proIds::uidTag::oneoff)){
+          ret.push_back(it.second);
+        }
+      }
+      return ret;
+    }
+
     void deleteProjectById(proIds::Uuid uid){projects.erase(uid);};
 
     proIds::Uuid getNullUid(){return gen->getNullId();};
     proIds::Uuid getNewUid(){return gen->getNextId();};
     proIds::Uuid getNewUid(proIds::uidTag tag){return gen->getNextId(tag);};
   
-   
-    /** \brief Get reference to project from its uid 
-     * 
-     * If the uid is null or not found, returns a reference to the dummy project
-    */
-    project & getRef(proIds::Uuid uid){
-      if(projects.find(uid) != projects.end()){
-        return projects[uid];
-      }else{
-        return projects[getNullUid()]; 
-      }
-    }
-    project & getParentForSubRef(proIds::Uuid uid);
-    subproject & getSubRef(proIds::Uuid uid);
-
     std::string getName(proIds::Uuid uid){
       if(projects.find(uid) != projects.end()){
         return projects[uid].getName();
@@ -95,8 +92,44 @@ class projectManager{
         return "Unknown Project";
       }
     }
-    std::string getParentNameForSub(proIds::Uuid uid);
+    std::string getParentNameForSub(proIds::Uuid uid){
+      if(subprojects.find(uid) != subprojects.end()){
+        proIds::Uuid parentUid = subprojects[uid].getParentUid();
+        if(projects.find(parentUid) != projects.end()){
+          return projects[parentUid].getName();
+        }else{
+          return "Unknown Parent Project";
+        }
+      }else{
+        return "Not a subproject";
+      }
+    }
 
+    /** \brief Summarise project config information
+     * 
+     * Includes name, FTE and subprojects. 
+     */
+    std::string summariseProject(proIds::Uuid uid){
+
+      if(uid.isTaggedAs(proIds::uidTag::oneoff)){
+        return "One-off project";
+      }
+      std::stringstream ss;
+
+      if(projects.find(uid) != projects.end()){
+        project & proj = projects[uid];
+        ss << proj.describe();
+        for(auto & subId : proj.subprojects){
+          if(subprojects.find(subId) != subprojects.end()){
+            subproject & sub = subprojects[subId];
+            ss << sub.describe();
+          }// Else case should just not happen so ignore it
+        }
+        return ss.str();
+      }else{
+        throw std::runtime_error("Project not found");
+      }
+    }
 };
 
 

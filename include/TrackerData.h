@@ -73,6 +73,12 @@ Q_OBJECT
       } //If nothing is paused, do nothing
     }
 
+    void generateProjectSummary(proIds::Uuid uid){
+      std::cout << "Generating summary for project with UID: " << uid << std::endl;
+      std::string summary = thePM.summariseProject(uid);
+      emit projectSummaryReady(summary); // Notify view that a project summary is ready
+    }
+
     void handleCloseRequest(bool silent){
       if(silent){
         // Just ensure data is saved and exit
@@ -87,6 +93,7 @@ Q_OBJECT
 
     signals:
       void projectListUpdateEvent(std::vector<selectableEntity> const & newList);
+      void projectSummaryReady(std::string summary); /**< \brief Signal emitted when a project summary is ready, with the summary text */
       void projectRunningUpdate(std::string name); /**< \brief Signal emitted when a project is running, with the name of the project */
       void projectPaused(std::string name); /**< \brief Signal emitted when a project is paused, with the name of the project */
       void projectStopped(); /**< \brief Signal emitted when no project is running */

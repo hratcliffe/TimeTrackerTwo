@@ -39,9 +39,20 @@ Q_OBJECT
 
     void markSpecialEvent(specialEventType type);
 
+    void handleCloseRequest(bool silent){
+      if(silent){
+        // Just ensure data is saved and exit
+        std::cout << "Silent close requested. Saving data..." << std::endl;
+        // \TODO IMPLEMENT saving etc
+
+      }else{
+        std::cout<<" Closing requested. Saving data..." << std::endl;
+      }
+      emit readyToClose(); // Done, ready to shutdown now
+    }
 
     signals:
       void projectListUpdateEvent(std::vector<selectableEntity> const & newList);
-
+      void readyToClose(); /**< \brief Signal emitted when data is saved and app is ready to close */
 };
 #endif // ____trackerData__

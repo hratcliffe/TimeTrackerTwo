@@ -1,4 +1,6 @@
 #include <QObject>
+#include <QMainWindow>
+#include <QCloseEvent>
 
 #include "ui_Main.h"
 
@@ -10,13 +12,32 @@ Q_OBJECT
   public:
 
     Ui::main_window * ui;
+    QMainWindow * main;
 
   View(){
 
-    QMainWindow * main = new QMainWindow(); //Pointer so it lives after this exits...
+    main = new QMainWindow(); //Pointer so it lives after this exits...
     ui = new Ui::main_window();
     ui->setupUi(main);
+    
+    //Connecting buttons to downstream functions for controller to connect to
+    connect(ui->t_close_button, &QPushButton::clicked, [this](){emit closeRequested(false);});
+    connect(ui->t_silent_button, &QPushButton::clicked, [this](){emit closeRequested(true);});
+
+    
     main->show();
+  }
+  void closeEvent(QCloseEvent *event) override {
+    // Handle close event, emit signal to controller
+    // TODO figure out why this is not working...
+    std::cout << "Close event triggered." << std::endl;
+    emit closeRequested(false); // Default to non-silent close
+    event->ignore();
+  }
+
+  ~View(){
+    delete ui;
+    delete main;
   }
 
   auto trunc(std::string inp, size_t maxLength = 30){
@@ -31,16 +52,16 @@ Q_OBJECT
   /** \brief Slot for prepending to Left footer @param newText Text to add*/
   void prependLFooter(std::string newText){updateLFooter(ui->left_footer->text().toStdString() + newText);};
 
-
   void projectClicked(projectButton * button){
-    std::cout << "Project clicked: " << button->projectId << " - " << button->fullName << std::endl;
-
     //Re-raise signal with the uid. We could raise it directly, but this gives us a chance to do something else with the button
     emit projectSelected(button->projectId, button->fullName);
-
   }
 
   public slots:
+    void exitApp(){
+      std::cout << "Exiting UI" << std::endl;
+      QApplication::quit();
+    }
     void projectListUpdated(std::vector<selectableEntity> const & newList){
       std::cout << "Project list updated with " << newList.size() << " projects." << std::endl;
       // Clear existing buttons
@@ -71,4 +92,6 @@ Q_OBJECT
 
   signals:
     void projectSelected(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project button is clicked */
+    void closeRequested(bool silent);/**< \brief Signal emitted when the close button is clicked, silent is true if the silent close button is clicked */
 };
+

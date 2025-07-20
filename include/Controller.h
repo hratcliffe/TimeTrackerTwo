@@ -25,6 +25,10 @@ Q_OBJECT
   void connectSignals(){
     // Collect all the connections from View to Model (TrackerData)
 
+    // Close, and silent close. Close will mark current project as stopped. Silent close will not...
+    connect(theView, &View::closeRequested, currentData, &TrackerData::handleCloseRequest);
+    connect(currentData, &TrackerData::readyToClose, theView, &View::exitApp);
+
     // Update the view when the project list changes
     connect(currentData, &TrackerData::projectListUpdateEvent, theView, &View::projectListUpdated);
 

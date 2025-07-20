@@ -41,7 +41,7 @@ Q_OBJECT
   }
 
   public slots:
-    void projectListUpdated(std::vector<project> const & newList){
+    void projectListUpdated(std::vector<selectableEntity> const & newList){
       std::cout << "Project list updated with " << newList.size() << " projects." << std::endl;
       // Clear existing buttons
       if (ui->t_project_buttons->layout() == nullptr) {
@@ -58,6 +58,12 @@ Q_OBJECT
         button->projectId = proj.uid;
         button->fullName = proj.name;
         button->setText(QString::fromStdString(proj.name));
+        if(proj.level == 0){
+          button->setStyleSheet("background-color: lightblue;"); // Top level projects 
+        }else if(proj.level == 1){
+          button->setStyleSheet("background-color: lightgreen;"); // Subprojects
+        }
+        button->setFixedWidth(150);
         connect(button, &projectButton::clicked, this, [this, button](){this->projectClicked(button);});
         ui->t_project_buttons->layout()->addWidget(button);
       }

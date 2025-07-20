@@ -92,25 +92,10 @@ namespace proIds{
       std::string to_string()const{return qID.toString().toStdString();}
   };
   
-  /** \brief Check equality of uids
-  *
-    @param lhs First object
-    @param rhs Other object
-    @returns Boolean true if equals, false else
-  */
   inline bool operator==(const uidWrapper &lhs, const uidWrapper & rhs){ return lhs.isEq(rhs);};
-  /** \brief Check nonequality of uids
-  *
-    @param lhs First object
-    @param rhs Other object
-    @returns Boolean true if not-equal, false else
-  */
   inline bool operator!=(const uidWrapper &lhs, const uidWrapper & rhs){ return !(lhs==rhs);};
 
-  /** \brief Stream operator for id
-  \todo Use tostring operator
-  */
-  inline std::ostream& operator<< (std::ostream& stream, const uidWrapper& uid){ stream<<uid.qID.toString().toStdString(); return stream;};
+  inline std::ostream& operator<< (std::ostream& stream, const uidWrapper& uid){ stream<<uid.to_string(); return stream;};
 
   /** \brief Unique Id type
   *

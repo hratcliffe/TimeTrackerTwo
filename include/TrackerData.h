@@ -22,9 +22,11 @@ Q_OBJECT
       std::cout<< "Filling demo data" << std::endl;
       thePM.addProject(projectData{"Demo Project 1", 0.5});
       thePM.addProject(projectData{"Demo Project 2", 0.3});
-      thePM.addProject(projectData{"Demo Project 3", 0.2});
+      auto id = thePM.addProject(projectData{"Demo Project 3", 0.2});
+      thePM.addSubproject(subProjectData{"Demo Subproject 3.1", 0.5}, id);
+      thePM.addSubproject(subProjectData{"Demo Subproject 3.2", 0.5}, id);
 
-      emit projectListUpdateEvent(thePM.getProjectList());
+      emit projectListUpdateEvent(thePM.getOrderedProjectList()); // NOTE: if weird bugs start appearing, check the rules for prolonging rvalues against how emit works again
     }
 
     void markProject(proIds::Uuid uid, std::string name){
@@ -32,11 +34,14 @@ Q_OBJECT
 
       //Temporary - just log the request
       std::cout << "Marking project "<<name<< " UID: " << uid <<std::endl;
+
     }
+
+    void markSpecialEvent(specialEventType type);
 
 
     signals:
-      void projectListUpdateEvent(std::vector<project> const & newList);
+      void projectListUpdateEvent(std::vector<selectableEntity> const & newList);
 
 };
 #endif // ____trackerData__

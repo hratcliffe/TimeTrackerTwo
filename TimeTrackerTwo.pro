@@ -33,3 +33,4 @@ MOC_DIR = ./moc
 UI_DIR = ./ui
 
 CONFIG += '-Wno-unused-parameter'
+CONFIG += c++11

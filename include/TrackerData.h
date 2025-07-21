@@ -46,9 +46,12 @@ Q_OBJECT
     // Demo - filling in some fake projects to the UI
     void fillDemoData(){
       std::cout<< "Filling demo data" << std::endl;
-      thePM.addProject(projectData{"Demo Project 1", 0.5});
-      thePM.addProject(projectData{"Demo Project 2", 0.3});
-      auto id = thePM.addProject(projectData{"Demo Project 3", 0.2});
+      auto id = thePM.addProject(projectData{"Demo Project 1", 0.5});
+      // TODO replace this testing idiom with sensible real flow
+      fullProjectData demoData{id, "Demo Project 1", 0.5};
+      dataHandler->writeProject(demoData); // Write to data handler
+      id = thePM.addProject(projectData{"Demo Project 2", 0.3});
+      id = thePM.addProject(projectData{"Demo Project 3", 0.2});
       thePM.addSubproject(subProjectData{"Demo Subproject 3.1", 0.5}, id);
       thePM.addSubproject(subProjectData{"Demo Subproject 3.2", 0.5}, id);
 

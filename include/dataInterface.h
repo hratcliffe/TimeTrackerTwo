@@ -130,7 +130,7 @@ class databaseIO : public dataIO{
     }
     void writeProject(fullProjectData &dat) override {
       // Implementation for writing project data to database
-        std::cerr<<"Writing project data not implemented yet."<<std::endl;
+        dbStore.writeProject(dat.uid.to_string(), dat.name, dat.FTE);
     }
     fullProjectData readProject() override {
       // Implementation for reading project data from database

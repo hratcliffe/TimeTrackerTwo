@@ -42,7 +42,8 @@ class databaseStore{
     void enable_foreign_keys(){sqlite3_exec(DB, "PRAGMA foreign_keys = ON", nullptr, nullptr, nullptr);}
     void check_tables(){
         std::string cmd = "SELECT name FROM sqlite_master WHERE type='table' AND name='timestamps';";
-        int ret = sqlite3_exec(DB, cmd.c_str(), DBUnpackSingleString, &errMsg, &errMsg);
+        std::string name_in_db;
+        int ret = sqlite3_exec(DB, cmd.c_str(), DBUnpackSingleString, &name_in_db, &errMsg);
         if(ret != SQLITE_OK){
             std::cerr << "Error checking tables: " << errMsg << std::endl;
             sqlite3_free(errMsg);

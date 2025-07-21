@@ -1,5 +1,6 @@
 #include <QApplication>
 
+#include "support.h"
 #include "Controller.h"
 
 /*
@@ -16,6 +17,9 @@ Based on previous Time Tracker code, this:
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
-    Controller cc;
+    appConfig config;
+    config.dataFileName = "data.db"; // Default data file name
+    config.backend = dataBackendType::database; // Default backend type
+    Controller cc(config);
     return app.exec();
 }

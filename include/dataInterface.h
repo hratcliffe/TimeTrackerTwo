@@ -88,6 +88,8 @@ class dataIO{
 
   public:
     dataIO(){;};
+    dataIO(std::string fileName){;}; /**< \brief Constructor with file name */
+    dataIO(const dataIO &other) = delete;
     virtual ~dataIO(){;};
 
     virtual void writeReferenceTime(timecode time) = 0; /**< \brief Write a reference time for verification later*/
@@ -112,10 +114,11 @@ class flatfileIO : public dataIO{
     ~flatfileIO(){;};
 };
 
-class dataBaseIO : public dataIO{
+class databaseIO : public dataIO{
   public:
-    dataBaseIO(){;};
-    ~dataBaseIO(){;};
+    databaseIO(){;};
+    databaseIO(std::string fileName){;}; /**< \brief Constructor with file name */
+    ~databaseIO(){;};
     void writeReferenceTime(timecode time) override {
       // Implementation for writing reference time to database
       std::cerr<<"Writing reference time not implemented yet."<<std::endl;

@@ -3,6 +3,8 @@
 
 #include <QWidget>
 #include <vector>
+
+#include "support.h"
 #include "dataObjects.h"
 
 #include "projectManager.h"
@@ -28,9 +30,18 @@ Q_OBJECT
 
   public:
 
-    TrackerData(){dataHandler = new dataBaseIO();};
+    TrackerData(appConfig config){
+      if(config.backend == dataBackendType::database){
+        dataHandler = new databaseIO(config.dataFileName);
+      }else if(config.backend == dataBackendType::flatfile){
+        //dataHandler = new flatfileIO(config.dataFileName);
+        throw std::runtime_error("Flat file backend not implemented");
+      }else{
+        throw std::runtime_error("Unknown data backend type specified in config");
+      }
+    };
 
-    ~TrackerData(){;};
+    ~TrackerData(){if(dataHandler) delete dataHandler;};
 
     // Demo - filling in some fake projects to the UI
     void fillDemoData(){

@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <QWidget>
+#include "support.h"
 #include "View.h"
 #include "TrackerData.h"
 #include "projectbutton.h"
@@ -11,11 +12,11 @@ Q_OBJECT
   TrackerData * currentData;
 
   public:
-  Controller(){
+  Controller(appConfig config){
 
     theView = new View();
 
-    currentData = new TrackerData();
+    currentData = new TrackerData(config);
     connectSignals();
 
     currentData->fillDemoData();

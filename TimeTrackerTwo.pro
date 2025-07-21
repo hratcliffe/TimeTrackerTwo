@@ -26,7 +26,9 @@ HEADERS += include/Controller.h \
            include/project.h \
            include/projectbutton.h \
            include/projectManager.h \
-           include/TrackerData.h
+           include/TrackerData.h \
+           include/dataInterface.h \
+           include/timeWrapper.h
 
 OBJECTS_DIR = ./obj
 MOC_DIR = ./moc

@@ -6,6 +6,8 @@
 #include "dataObjects.h"
 
 #include "projectManager.h"
+#include "dataInterface.h"
+#include "timeWrapper.h"
 
 namespace trackerTypes{
 
@@ -22,10 +24,11 @@ Q_OBJECT
 
   projectManager thePM;
   trackerTypes::projectStatus currentProjectStatus; /**< \brief Current project status*/
+  dataIO * dataHandler = nullptr; /**< \brief Data handler for reading/writing data */
 
   public:
 
-    TrackerData(){;};
+    TrackerData(){dataHandler = new dataBaseIO();};
 
     ~TrackerData(){;};
 
@@ -45,7 +48,8 @@ Q_OBJECT
       //Timestamp project with current 'time' - (NB app time, not necessarily real time)
 
       //Temporary - just log the request
-      std::cout << "Marking project "<<name<< " UID: " << uid <<std::endl;
+      auto stamp = timeWrapper::now();
+      std::cout << "Marking project "<<name<< " UID: " << uid << " "<<timeWrapper::formatTime(stamp)<< std::endl;
       currentProjectStatus.uid = uid;
       currentProjectStatus.status = trackerTypes::projectStatusFlag::active;
       emit projectRunningUpdate(name); // Notify view that a project is running

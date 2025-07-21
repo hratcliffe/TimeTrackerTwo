@@ -3,6 +3,8 @@
 
 #include "idGenerators.h"
 
+#include "databaseStore.h"
+
 using timecode = long long; /**< \brief Type for timecodes, representing seconds since epoch */
 
 class fullProjectData{
@@ -115,9 +117,12 @@ class flatfileIO : public dataIO{
 };
 
 class databaseIO : public dataIO{
+
+  databaseStore dbStore; /**< \brief Database store for handling database operations */
+
   public:
-    databaseIO(){;};
-    databaseIO(std::string fileName){;}; /**< \brief Constructor with file name */
+    databaseIO()=delete;
+    databaseIO(std::string fileName): dbStore(fileName){;}; /**< \brief Constructor with file name */
     ~databaseIO(){;};
     void writeReferenceTime(timecode time) override {
       // Implementation for writing reference time to database

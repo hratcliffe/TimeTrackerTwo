@@ -37,3 +37,5 @@ UI_DIR = ./ui
 # Adding flags wont work, have to override the warnings flags else they come later and take priority
 QMAKE_CXXFLAGS_WARN_ON  = '-Wall -Wno-unused-parameter'
 CONFIG += c++11
+LIBS = -lsqlite3
+

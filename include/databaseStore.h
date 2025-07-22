@@ -313,7 +313,7 @@ class databaseStore{
             ret.push_back(stamp);
         }
         if(err != SQLITE_DONE){
-            throw std::runtime_error("Failed to fetch subproject list");
+            throw std::runtime_error("Failed to fetch tracker entries");
         }
         sqlite3_finalize(prep_cmd);
         return ret;

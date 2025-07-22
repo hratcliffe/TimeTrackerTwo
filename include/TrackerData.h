@@ -86,10 +86,11 @@ Q_OBJECT
       //Timestamp project with current 'time' - (NB app time, not necessarily real time)
 
       //Temporary - just log the request
-      auto stamp = timeWrapper::now();
-      std::cout << "Marking project "<<name<< " UID: " << uid << " "<<timeWrapper::formatTime(stamp)<< std::endl;
+      auto stamp = timeStamp{timeWrapper::toSeconds(timeWrapper::now()), uid};
+      std::cout << "Marking project "<<name<< " UID: " << uid << " "<<timeWrapper::formatTime(timeWrapper::fromSeconds(stamp.time))<< std::endl;
       currentProjectStatus.uid = uid;
       currentProjectStatus.status = trackerTypes::projectStatusFlag::active;
+      dataHandler->writeTrackerEntry(stamp); // Write to data handler
       emit projectRunningUpdate(name); // Notify view that a project is running
 
     }

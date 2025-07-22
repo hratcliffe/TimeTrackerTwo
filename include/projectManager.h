@@ -29,10 +29,13 @@ class projectManager{
     projectManager(const projectManager & src)=delete;
     projectManager& operator=(const projectManager&)=delete;
 
-    project createProject(projectData data){
+    project createProject(const projectData & data){
       return project(data, gen->getNextId());
     }
-    proIds::Uuid addProject(projectData dat){
+    subproject createSubproject(const subProjectData & data, const proIds::Uuid & parentUid){
+      return subproject(data, gen->getNextId(proIds::uidTag::sub), parentUid); 
+    }
+    proIds::Uuid addProject(const projectData & dat){
       project tmp = createProject(dat); 
       projects[tmp.getUid()] = tmp; 
       return tmp.getUid();
@@ -40,7 +43,7 @@ class projectManager{
 
     proIds::Uuid addSubproject(subProjectData dat, proIds::Uuid parentUid){
       if(parentUid.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Parent must not be a subproject"); //TODO re-examine this?
-      subproject tmp(dat, gen->getNextId(proIds::uidTag::sub), parentUid);
+      subproject tmp = createSubproject(dat, parentUid);
       subprojects[tmp.getUid()] = tmp;
       projects[parentUid].addSubproject(tmp.getUid());
       return tmp.getUid();

@@ -93,6 +93,11 @@ Q_OBJECT
       dataHandler->writeTrackerEntry(stamp); // Write to data handler
       emit projectRunningUpdate(name); // Notify view that a project is running
 
+      auto list = dataHandler->fetchTrackerEntries();
+      for(const auto & it : list){
+        std::cout<<it<<'\n';
+      }
+
     }
     void stopProject(){
       if(currentProjectStatus.status == trackerTypes::projectStatusFlag::active){

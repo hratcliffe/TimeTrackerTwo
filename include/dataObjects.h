@@ -84,4 +84,56 @@ inline std::ostream& operator<< (std::ostream& stream, const fullSubProjectData&
   return stream;
 };
 
+using timecode = long long; /**< \brief Type for timecodes, representing seconds since epoch. SIGNED to allow -1 for sentinel*/
+
+class timeStamp{
+    public:
+    timecode time;
+    proIds::Uuid projectUid; /**< \brief Unique identifier for the entity this timestamp belongs to */
+};
+inline std::ostream& operator<< (std::ostream& stream, const timeStamp& ts){
+/** \brief Stream operator for timeStamp
+*/
+  stream << "Time: " << ts.time << ", Project UID: " << ts.projectUid;
+  return stream;
+};
+
+inline bool operator<(const timeStamp &lhs, const timeStamp &rhs){
+  return lhs.time < rhs.time;
+};
+inline bool operator>(const timeStamp &lhs, const timeStamp &rhs){
+    return lhs.time > rhs.time;
+};
+inline bool operator<=(const timeStamp &lhs, const timeStamp &rhs){
+  return lhs.time <= rhs.time;
+};
+inline bool operator>=(const timeStamp &lhs, const timeStamp &rhs){
+  return lhs.time >= rhs.time;
+};
+inline bool operator==(const timeStamp &lhs, const timeStamp &rhs){
+  return lhs.time == rhs.time && lhs.projectUid.isExactEq(rhs.projectUid);
+};
+inline bool operator!=(const timeStamp &lhs, const timeStamp &rhs){
+  return !(lhs == rhs);
+};
+
+inline bool operator<(const timeStamp &lhs, const timecode &rhs){
+  return lhs.time < rhs;
+};
+inline bool operator>(const timeStamp &lhs, const timecode &rhs){
+  return lhs.time > rhs;
+};
+inline bool operator<=(const timeStamp &lhs, const timecode &rhs){
+  return lhs.time <= rhs;
+};
+inline bool operator>=(const timeStamp &lhs, const timecode &rhs){
+  return lhs.time >= rhs;
+};
+inline bool operator==(const timeStamp &lhs, const timecode &rhs){
+  return lhs.time == rhs;;
+};
+inline bool operator!=(const timeStamp &lhs, const timecode &rhs){
+  return !(lhs == rhs);
+};
+
 #endif

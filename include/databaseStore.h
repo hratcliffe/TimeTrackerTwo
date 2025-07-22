@@ -142,7 +142,13 @@ class databaseStore{
         if(DB) sqlite3_close(DB);
     } 
 
-    void writeProject(const std::string &id, const std::string &name, double FTE){
+    void writeProject(const fullProjectData & dat){
+
+        //Unpacking
+        const std::string & id = dat.uid.to_string();
+        const std::string & name = dat.name;
+        const double FTE = dat.FTE;
+
         std::string cmd;
         sqlite3_stmt * prep_cmd;
         int err = 0;
@@ -159,7 +165,14 @@ class databaseStore{
         }
         sqlite3_finalize(prep_cmd);
     }
-    void writeSubProject(const std::string &id, const std::string &name, double frac, const std::string &parent_id){
+    void writeSubProject(const fullSubProjectData & dat){
+
+        //Unpacking
+        const std::string & id = dat.uid.to_string();
+        const std::string & name = dat.name;
+        const double frac = dat.frac;
+        const std::string & parent_id = dat.parentUid.to_string();
+
         std::string cmd;
         sqlite3_stmt * prep_cmd;
         int err = 0;
@@ -177,7 +190,12 @@ class databaseStore{
         }
         sqlite3_finalize(prep_cmd);
     }
-    void writeTrackerEntry(long time, const std::string &project_id){
+    void writeTrackerEntry(const timeStamp & stamp){
+
+        //Unpacking
+        const long time = stamp.time;
+        const std::string & project_id = stamp.projectUid.to_string();
+
         std::string cmd;
         sqlite3_stmt * prep_cmd;
         int err = 0;
@@ -260,6 +278,39 @@ class databaseStore{
             subproj.frac = sqlite3_column_double(prep_cmd, 2);
             subproj.parentUid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 3)));
             ret.push_back(subproj);
+        }
+        if(err != SQLITE_DONE){
+            throw std::runtime_error("Failed to fetch subproject list");
+        }
+        sqlite3_finalize(prep_cmd);
+        return ret;
+    }
+
+    std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1){
+
+      //TODO - is there an elegant way to do this with prepared statements?
+      std::string where_clause ="";
+      if(start != -1){
+        where_clause += "t.time >="+std::to_string(start);
+      }
+      if(end != -1){
+        if(where_clause != "") where_clause += " AND ";
+        where_clause += "t.time <="+std::to_string(end);
+      }
+      if(where_clause != ""){
+        where_clause = " WHERE " + where_clause + ';';
+      }else{
+        where_clause = ';';
+      }
+      std::string cmd = "SELECT time, project_id from timestamps t "+where_clause;
+      sqlite3_stmt * prep_cmd;
+      int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr); 
+      std::vector<timeStamp> ret;
+      while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            timeStamp stamp;
+            stamp.time = sqlite3_column_int64(prep_cmd, 0);
+            stamp.projectUid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1)));
+            ret.push_back(stamp);
         }
         if(err != SQLITE_DONE){
             throw std::runtime_error("Failed to fetch subproject list");

@@ -82,6 +82,20 @@ Q_OBJECT
       emit projectListUpdateEvent(thePM.getOrderedProjectList()); // NOTE: if weird bugs start appearing, check the rules for prolonging rvalues against how emit works again
     }
 
+    //Creating new projects - e.g from UI command
+    void createProject(const projectData & dat){
+      //Create a new project from data - adds it to the manager and writes to the backend
+      auto id = thePM.addProject(dat);
+      dataHandler->writeProject(fullProjectData(id, dat)); // Write to data handler
+      emit projectListUpdateEvent(thePM.getOrderedProjectList());
+    }
+    void createSubproject(const subProjectData & dat, const proIds::Uuid & parentId){
+      //Create a new sub under and existing project
+      auto idS = thePM.addSubproject(dat, parentId);
+      dataHandler->writeSubproject(fullSubProjectData(idS, dat, parentId)); // Write to data handler
+      emit projectListUpdateEvent(thePM.getOrderedProjectList());
+    }
+
     //Load existing projects from the data backend
     void loadProjects(){
       if(! dataHandler) throw std::runtime_error("No Data Backend Found");

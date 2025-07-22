@@ -133,10 +133,8 @@ class databaseStore{
         enable_foreign_keys();
         // Check if tables exist, create if not
 
-        delete_all_tables(); // For testing - delete all tables first
-        std::cerr<<"##################### Tables deleted!!"<<std::endl;
         bool tables_ready = check_tables(); // Check if tables exist - throws if bad, false if not all present
-        create_tables(); // TODO decide whether to skip this if the tables exist
+        if(!tables_ready) create_tables(); // Create the tables if they don't exist but we had no errors
     }
     ~databaseStore(){
         if(DB) sqlite3_close(DB);
@@ -274,6 +272,7 @@ class databaseStore{
         while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
             fullSubProjectData subproj;
             subproj.uid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0)));
+            subproj.uid.tag(proIds::uidTag::sub);
             subproj.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1));
             subproj.frac = sqlite3_column_double(prep_cmd, 2);
             subproj.parentUid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 3)));

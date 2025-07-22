@@ -82,6 +82,23 @@ Q_OBJECT
       emit projectListUpdateEvent(thePM.getOrderedProjectList()); // NOTE: if weird bugs start appearing, check the rules for prolonging rvalues against how emit works again
     }
 
+    //Load existing projects from the data backend
+    void loadProjects(){
+      if(! dataHandler) throw std::runtime_error("No Data Backend Found");
+
+      std::cout<<"Loading projects from backend"<<std::endl;
+      auto projectList = dataHandler->fetchProjectList();
+      auto subprojectList = dataHandler->fetchSubprojectList();
+
+      for(const auto & it : projectList){
+        thePM.restoreProject(it);
+      }
+      for(const auto & it : subprojectList){
+        thePM.restoreSubproject(it);
+      }
+      emit projectListUpdateEvent(thePM.getOrderedProjectList());
+    }
+
     void markProject(proIds::Uuid uid, std::string name){
       //Timestamp project with current 'time' - (NB app time, not necessarily real time)
 

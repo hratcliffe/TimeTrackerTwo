@@ -19,7 +19,7 @@ Q_OBJECT
     currentData = new TrackerData(config);
     connectSignals();
 
-    currentData->fillDemoData();
+    currentData->loadProjects();
 
   }
 

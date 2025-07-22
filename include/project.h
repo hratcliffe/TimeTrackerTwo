@@ -56,6 +56,12 @@ class subproject: public projectLike{
 
     subproject() = default;
     ~subproject()=default;
+    subproject(const fullSubProjectData & data){
+      name = data.name;
+      frac = data.frac;
+      uid = data.uid;
+      parentUid = data.parentUid;
+    }
     subproject(subProjectData data, proIds::Uuid uid_in, proIds::Uuid parentUid_in){
         name = data.name;
         frac = data.frac;
@@ -93,6 +99,12 @@ class project : public projectLike{
     std::vector<proIds::Uuid> subprojects;/**< \brief Subprojects belonging to this project */
     float FTE;/**< \brief Fraction of FTE for this project */
     project() = default;
+    project(const fullProjectData &data){
+      name = data.name;
+      uid = data.uid;
+      FTE = data.FTE;
+      active = true;
+    }
     project(projectData data, proIds::Uuid uid_in){
         name = data.name;
         uid =  uid_in;

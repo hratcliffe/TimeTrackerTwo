@@ -49,6 +49,7 @@ inline std::ostream& operator<< (std::ostream& stream, const subProjectData& dat
 }
 
 
+//NOTE: data on project BUT does NOT contain list of subs!
 class fullProjectData{
     public:
     proIds::Uuid uid; /**< \brief Unique identifier for the project */

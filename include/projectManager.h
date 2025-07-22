@@ -41,12 +41,30 @@ class projectManager{
       return tmp.getUid();
     }
 
-    proIds::Uuid addSubproject(subProjectData dat, proIds::Uuid parentUid){
+    proIds::Uuid addSubproject(const subProjectData & dat, const proIds::Uuid & parentUid){
       if(parentUid.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Parent must not be a subproject"); //TODO re-examine this?
       subproject tmp = createSubproject(dat, parentUid);
       subprojects[tmp.getUid()] = tmp;
       projects[parentUid].addSubproject(tmp.getUid());
       return tmp.getUid();
+    }
+
+    void restoreProject(const fullProjectData & dat){
+      //Restore a project from e.g. file - i.e. one that already HAS a uid
+      auto id = dat.uid;
+      if(!id.isTaggedAs(proIds::uidTag::none)) throw std::runtime_error("Id is not for a project");
+      projects[id] = project(dat);
+    }
+
+    void restoreSubproject(const fullSubProjectData & dat){
+      // Restore a subproject. Parent MUST exist already
+      auto id = dat.uid;
+      auto parentUid = dat.parentUid;
+      if(parentUid.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Parent must not be a subproject");
+      if(!id.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Id is not for a subproject");
+      if(projects.count(parentUid) == 0 ) throw std::runtime_error("Parent project does not exist");
+      subprojects[id] = subproject(dat);
+      projects[parentUid].addSubproject(id); // TODO - check if sub already associated?
     }
 
     /** \brief Get list of projects

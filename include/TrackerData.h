@@ -93,7 +93,8 @@ Q_OBJECT
       dataHandler->writeTrackerEntry(stamp); // Write to data handler
       emit projectRunningUpdate(name); // Notify view that a project is running
 
-      auto list = dataHandler->fetchTrackerEntries();
+      auto end = timeWrapper::toSeconds(timeWrapper::now()) - 10;
+      auto list = dataHandler->fetchTrackerEntries(-1, end);
       for(const auto & it : list){
         std::cout<<it<<'\n';
       }

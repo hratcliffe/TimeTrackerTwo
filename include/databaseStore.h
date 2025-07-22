@@ -298,11 +298,11 @@ class databaseStore{
         where_clause += "t.time <="+std::to_string(end);
       }
       if(where_clause != ""){
-        where_clause = " WHERE " + where_clause + ';';
-      }else{
-        where_clause = ';';
+        where_clause = " WHERE " + where_clause + " ";
       }
-      std::string cmd = "SELECT time, project_id from timestamps t "+where_clause;
+      std::string order_clause = "ORDER BY time";
+      std::string cmd = "SELECT time, project_id from timestamps t "+where_clause + order_clause + ';';
+      std::cout<<cmd<<std::endl;
       sqlite3_stmt * prep_cmd;
       int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr); 
       std::vector<timeStamp> ret;

@@ -43,15 +43,34 @@ class databaseStore{
     char *errMsg = nullptr; /**< \brief Error message from SQLite operations */
 
     void enable_foreign_keys(){sqlite3_exec(DB, "PRAGMA foreign_keys = ON", nullptr, nullptr, nullptr);}
-    void check_tables(){
-        std::string cmd = "SELECT name FROM sqlite_master WHERE type='table' AND name='timestamps';";
-        std::string name_in_db;
-        int ret = sqlite3_exec(DB, cmd.c_str(), DBUnpackSingleString, &name_in_db, &errMsg);
-        if(ret != SQLITE_OK){
-            std::cerr << "Error checking tables: " << errMsg << std::endl;
-            sqlite3_free(errMsg);
-            throw std::runtime_error("Tables not OK, aborting");
+    bool check_tables(){
+
+        auto expected_tables = std::vector<std::string>{"projects", "subprojects", "timestamps", "app_data"};
+        // Get list of tables in the database
+        std::string cmd = "SELECT name FROM sqlite_master WHERE type='table';";
+        sqlite3_stmt *stmt;
+        int ret = sqlite3_prepare_v2(DB, cmd.c_str(), -1, &stmt, nullptr);
+        int count = 0;
+        while((ret = sqlite3_step(stmt)) == SQLITE_ROW){
+            std::string name_in_db = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
+            std::cout << "Table in DB: " << name_in_db << std::endl;
+            if(std::find(expected_tables.begin(), expected_tables.end(), name_in_db) == expected_tables.end()){
+                std::cerr << "Unexpected table found: " << name_in_db << std::endl;
+                throw std::runtime_error("Unexpected table in database");
+            }else{
+                count++;
+            }
         }
+        sqlite3_finalize(stmt);
+        if(ret != SQLITE_DONE){
+            std::cerr << "Error checking tables: " << sqlite3_errmsg(DB) << std::endl;
+            throw std::runtime_error("Failed to check tables in database");
+        }
+       
+        if(count < expected_tables.size()){
+          return false;
+        }
+        return true;
     }
 
     void create_tables(){
@@ -78,8 +97,27 @@ class databaseStore{
             sqlite3_free(errMsg);
             throw std::runtime_error("Failed to create timestamps table");
         }
+
+        cmd = "CREATE TABLE IF NOT EXISTS app_data(key TEXT PRIMARY KEY, value TEXT);";
+        err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
+        if(err != SQLITE_OK){
+            std::cerr << "Error creating app_data table: " << errMsg << std::endl;
+            sqlite3_free(errMsg);
+            throw std::runtime_error("Failed to create app_data table");
+        }
     }
 
+    void delete_all_tables(){
+        std::string cmd = "DROP TABLE IF EXISTS subprojects; DROP TABLE IF EXISTS projects; DROP TABLE IF EXISTS timestamps; DROP TABLE IF EXISTS app_data;";
+        int err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
+        if(err != SQLITE_OK){
+            std::cerr << "Error deleting tables: " << errMsg << std::endl;
+            sqlite3_free(errMsg);
+            throw std::runtime_error("Failed to delete tables");
+        }
+        std::cout << "All tables deleted successfully." << std::endl;
+
+    }
     public:
     databaseStore(std::string fileName) : dbFileName(fileName) {
         std::cout<<"Opening Database"<<std::endl; 
@@ -95,7 +133,9 @@ class databaseStore{
         enable_foreign_keys();
         // Check if tables exist, create if not
 
-        check_tables(); // Check if tables exist - throws if bad
+        delete_all_tables(); // For testing - delete all tables first
+        std::cerr<<"##################### Tables deleted!!"<<std::endl;
+        bool tables_ready = check_tables(); // Check if tables exist - throws if bad, false if not all present
         create_tables(); // TODO decide whether to skip this if the tables exist
     }
     ~databaseStore(){

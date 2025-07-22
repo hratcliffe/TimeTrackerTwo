@@ -27,7 +27,7 @@ class dataIO{
 
     virtual std::vector<fullProjectData> fetchProjectList() = 0; /**< \brief Fetch list of projects from the data source */
     virtual std::vector<fullSubProjectData> fetchSubprojectList() = 0; /**< \brief Fetch list of subprojects from the data source */
-    virtual std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1) = 0; /**< \brief Fetch tracker entries from the data source, optionally within a time range */
+    virtual std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1) = 0; /**< \brief Fetch ORDERED tracker entries from the data source, optionally within a time range */
 
 };
 
@@ -37,6 +37,12 @@ class flatfileIO : public dataIO{
     ~flatfileIO(){;};
 };
 
+/**
+ * @brief Data handling class implementing dataIO interface using a Database
+ * 
+ * For sqlite, to use a different db file create a new instance of this class
+ * 
+ */
 class databaseIO : public dataIO{
 
   databaseStore dbStore; /**< \brief Database store for handling database operations */

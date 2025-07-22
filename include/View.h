@@ -1,8 +1,10 @@
 #include <QObject>
 #include <QMainWindow>
 #include <QCloseEvent>
+#include <QFrame>
 
 #include "ui_Main.h"
+#include "ui_AddProjectDialog.h"
 
 #include "project.h"
 #include "projectbutton.h"
@@ -121,10 +123,22 @@ Q_OBJECT
           button->projectId = proj.uid;
           button->fullName = proj.name;
           button->setText(QString::fromStdString(proj.name));
-          button->setFixedWidth(150);
+          button->setFixedWidth(100);
           connect(button, &projectButton::clicked, this, [this, button](){this->viewProjectClicked(button);});
           ui->p_project_layout->layout()->addWidget(button);
         }
+        //Adding hline
+        auto line = new QFrame();
+        line->setFrameShape(QFrame::HLine);
+        line->setFrameShadow(QFrame::Sunken);
+        ui->p_project_layout->layout()->addWidget(line);
+
+        QPushButton * addButton = new QPushButton();
+        addButton->setText("Add");
+        addButton->setFixedWidth(100);
+        connect(addButton, &QPushButton::clicked, this, &View::showAddDialog);
+        ui->p_project_layout->layout()->addWidget(addButton);
+
       }
     }
 
@@ -146,6 +160,22 @@ Q_OBJECT
       updateAvailableActions(false);
     }
 
+    void showAddDialog(){
+
+      auto addDialog = new QDialog(this);
+      Ui::addProjectDialog addUi;
+      addUi.setupUi(addDialog);
+      bool result = addDialog->exec();
+
+      //If OK was clicked, signal to add a project
+      if(result){
+        float FTE = (float)addUi.FTEField->value()/100.0;
+        emit projectAddRequested(projectData{addUi.NameField->text().toStdString(), FTE});
+      }
+      std::cout<<result<<std::endl;
+
+    }
+
   signals:
     void projectSelectedTrack(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project button is clicked */
     void projectSelectedView(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project view button is clicked to view details */
@@ -153,5 +183,8 @@ Q_OBJECT
     void resumeRequested(); /**< \brief Signal emitted when the resume button is clicked */
     void stopRequested(); /**< \brief Signal emitted when the stop button is clicked */
     void closeRequested(bool silent);/**< \brief Signal emitted when the close button is clicked, silent is true if the silent close button is clicked */
-};
+
+    void projectAddRequested(const projectData & data);
+
+  };
 

@@ -6,6 +6,9 @@
 
 #include <sqlite3.h>
 
+#include "dataObjects.h"
+#include "idGenerators.h"
+
 
 inline int DBUnpackSingleLong(void* data, int argc, char** argv, char** azColName)
 {
@@ -111,12 +114,120 @@ class databaseStore{
         err = sqlite3_step(prep_cmd);
         if(err == SQLITE_DONE) err = SQLITE_OK;
         if(err != SQLITE_OK){
-       //     std::cerr << "Error writing project: " << errMsg << std::endl;
-         //   sqlite3_free(errMsg);
+            std::cerr<< sqlite3_errmsg(DB) << std::endl;
             throw std::runtime_error("Failed to write project");
         }
         sqlite3_finalize(prep_cmd);
     }
+    void writeSubProject(const std::string &id, const std::string &name, double frac, const std::string &parent_id){
+        std::string cmd;
+        sqlite3_stmt * prep_cmd;
+        int err = 0;
+        cmd = "insert into subprojects values(?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, frac=excluded.frac, parent_id=excluded.parent_id;"; // TODO check the conflict clause
+        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, id.c_str(), id.length(), SQLITE_STATIC);
+        sqlite3_bind_text(prep_cmd, 2, name.c_str(), name.length(), SQLITE_STATIC);
+        sqlite3_bind_double(prep_cmd, 3, frac);
+        sqlite3_bind_text(prep_cmd, 4, parent_id.c_str(), parent_id.length(), SQLITE_STATIC);
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            std::cerr<< sqlite3_errmsg(DB) << std::endl;
+            throw std::runtime_error("Failed to write subproject");
+        }
+        sqlite3_finalize(prep_cmd);
+    }
+    void writeTrackerEntry(long time, const std::string &project_id){
+        std::string cmd;
+        sqlite3_stmt * prep_cmd;
+        int err = 0;
+        cmd = "insert into timestamps(time, project_id) values(?, ?)"; // No conflict clause here - if we want to avoid overlaps that is a task for the data model
+        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_int64(prep_cmd, 1, time);
+        sqlite3_bind_text(prep_cmd, 2, project_id.c_str(), project_id.length(), SQLITE_STATIC);
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            throw std::runtime_error("Failed to write tracker entry");
+        }
+        sqlite3_finalize(prep_cmd);
+    }
+
+    fullProjectData readProject(proIds::Uuid const & id){
+        std::string cmd = "SELECT name, FTE FROM projects WHERE id = ?;";
+        sqlite3_stmt * prep_cmd;
+        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, id.to_string().c_str(), id.to_string().length(), SQLITE_STATIC);
+        
+        fullProjectData ret;
+        if((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            ret.uid = id;
+            ret.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0));
+            ret.FTE = sqlite3_column_double(prep_cmd, 1);
+        }else{
+            throw std::runtime_error("Failed to read project");
+        }
+        sqlite3_finalize(prep_cmd);
+        return ret;
+    }
+    std::vector<fullProjectData> fetchProjectList(){
+        std::string cmd = "SELECT id, name, FTE FROM projects;";
+        sqlite3_stmt * prep_cmd;
+        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        
+        std::vector<fullProjectData> ret;
+        while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            fullProjectData proj;
+            proj.uid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0)));
+            proj.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1));
+            proj.FTE = sqlite3_column_double(prep_cmd, 2);
+            ret.push_back(proj);
+        }
+        if(err != SQLITE_DONE){
+            throw std::runtime_error("Failed to fetch project list");
+        }
+        sqlite3_finalize(prep_cmd);
+        return ret;
+    }
+
+    fullSubProjectData readSubproject(proIds::Uuid const & id){
+        std::string cmd = "SELECT name, frac, parent_id FROM subprojects WHERE id = ?;";
+        sqlite3_stmt * prep_cmd;
+        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, id.to_string().c_str(), id.to_string().length(), SQLITE_STATIC);
+        
+        fullSubProjectData ret;
+        if((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            ret.uid = id;
+            ret.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0));
+            ret.frac = sqlite3_column_double(prep_cmd, 1);
+            ret.parentUid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 2)));
+        }else{
+            throw std::runtime_error("Failed to read subproject");
+        }
+        sqlite3_finalize(prep_cmd);
+        return ret;
+    }
+    std::vector<fullSubProjectData> fetchSubprojectList(){
+        std::string cmd = "SELECT id, name, frac, parent_id FROM subprojects;";
+        sqlite3_stmt * prep_cmd;
+        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        std::vector<fullSubProjectData> ret;
+        while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            fullSubProjectData subproj;
+            subproj.uid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0)));
+            subproj.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1));
+            subproj.frac = sqlite3_column_double(prep_cmd, 2);
+            subproj.parentUid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 3)));
+            ret.push_back(subproj);
+        }
+        if(err != SQLITE_DONE){
+            throw std::runtime_error("Failed to fetch subproject list");
+        }
+        sqlite3_finalize(prep_cmd);
+        return ret;
+    }
+
 };
 
 #endif

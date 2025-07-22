@@ -3,6 +3,7 @@
 //  
 //
 //  Created by Heather Ratcliffe on 15/06/2018.
+// Modified 2025
 //
 //
 
@@ -48,6 +49,14 @@ namespace proIds{
       /** \brief Constructor from QUid with tag */
       uidWrapper(QUuid qID, uidTag tag){this->qID = qID; this->Itag = tag;}
 
+      uidWrapper(std::string str){
+        /** \brief Constructor from string
+        *
+        * Converts a string to a QUuid and sets the tag to none
+        */
+        this->qID = QUuid::fromString(QString::fromStdString(str));
+        this->Itag = uidTag::none;
+      }
  
       /** \brief Apply tag
         @param tag Tag to apply

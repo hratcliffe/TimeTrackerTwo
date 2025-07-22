@@ -12,6 +12,8 @@
 #include <string>
 #include <iostream>
 
+#include "idGenerators.h"
+
 /** \brief Initialisation data for project
 *
 *
@@ -45,4 +47,41 @@ inline std::ostream& operator<< (std::ostream& stream, const subProjectData& dat
   stream << data.name <<" "<<(int)(data.frac*100)<<"%";
   return stream;
 }
+
+
+class fullProjectData{
+    public:
+    proIds::Uuid uid; /**< \brief Unique identifier for the project */
+    std::string name; /**< \brief Name of the project */
+    float FTE; /**< \brief Fraction of Full-Time Equivalent this project uses */
+
+    fullProjectData() = default;
+    fullProjectData(proIds::Uuid id, projectData const &data)
+        : uid(id), name(data.name), FTE(data.FTE) {};
+};
+inline std::ostream& operator<< (std::ostream& stream, const fullProjectData& data){
+/** \brief Stream operator for fullProjectData
+*/
+  stream << data.name <<", "<<data.uid<<", "<<data.FTE;
+  return stream;
+};
+
+class fullSubProjectData{
+    public:
+    proIds::Uuid uid; /**< \brief Unique identifier for the subproject */
+    std::string name; /**< \brief Name of the subproject */
+    float frac; /**< \brief Fraction of the parent project this subproject uses */
+    proIds::Uuid parentUid; /**< \brief Unique identifier for the parent project */
+
+    fullSubProjectData() = default;
+    fullSubProjectData(proIds::Uuid id, subProjectData const &data, proIds::Uuid parentId)
+        : uid(id), name(data.name), frac(data.frac), parentUid(parentId) {};
+};
+inline std::ostream& operator<< (std::ostream& stream, const fullSubProjectData& data){
+/** \brief Stream operator for fullSubProjectData
+*/
+  stream << data.name <<", "<<data.uid<<", "<<data.frac<<", Parent: "<<data.parentUid;
+  return stream;
+};
+
 #endif

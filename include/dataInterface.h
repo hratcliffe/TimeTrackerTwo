@@ -2,37 +2,11 @@
 #define ____dataInterface__ 
 
 #include "idGenerators.h"
+#include "dataObjects.h"
 
 #include "databaseStore.h"
 
 using timecode = long long; /**< \brief Type for timecodes, representing seconds since epoch */
-
-class fullProjectData{
-    public:
-    proIds::Uuid uid; /**< \brief Unique identifier for the project */
-    std::string name; /**< \brief Name of the project */
-    float FTE; /**< \brief Fraction of Full-Time Equivalent this project uses */
-};
-inline std::ostream& operator<< (std::ostream& stream, const fullProjectData& data){
-/** \brief Stream operator for fullProjectData
-*/
-  stream << data.name <<", "<<data.uid<<", "<<data.FTE;
-  return stream;
-};
-
-class fullSubProjectData{
-    public:
-    proIds::Uuid uid; /**< \brief Unique identifier for the subproject */
-    std::string name; /**< \brief Name of the subproject */
-    float frac; /**< \brief Fraction of the parent project this subproject uses */
-    proIds::Uuid parentUid; /**< \brief Unique identifier for the parent project */
-};
-inline std::ostream& operator<< (std::ostream& stream, const fullSubProjectData& data){
-/** \brief Stream operator for fullSubProjectData
-*/
-  stream << data.name <<", "<<data.uid<<", "<<data.frac<<", Parent: "<<data.parentUid;
-  return stream;
-};
 
 class timeStamp{
     public:
@@ -96,12 +70,12 @@ class dataIO{
 
     virtual void writeReferenceTime(timecode time) = 0; /**< \brief Write a reference time for verification later*/
 
-    virtual void writeProject(fullProjectData &dat) = 0;
-    virtual fullProjectData readProject() = 0;
-    virtual void writeSubproject(fullSubProjectData) = 0;
-    virtual fullSubProjectData readSubproject() = 0;
+    virtual void writeProject(fullProjectData const& dat) = 0;
+    virtual fullProjectData readProject(proIds::Uuid const & id) = 0;
+    virtual void writeSubproject(fullSubProjectData const & dat) = 0;
+    virtual fullSubProjectData readSubproject(proIds::Uuid const & id) = 0;
 
-    virtual void writeTrackerEntry(timeStamp stamp) = 0;
+    virtual void writeTrackerEntry(timeStamp const & stamp) = 0;
     virtual timeStamp readTrackerEntry() = 0;
 
     virtual std::vector<fullProjectData> fetchProjectList() = 0; /**< \brief Fetch list of projects from the data source */
@@ -128,27 +102,25 @@ class databaseIO : public dataIO{
       // Implementation for writing reference time to database
       std::cerr<<"Writing reference time not implemented yet."<<std::endl;
     }
-    void writeProject(fullProjectData &dat) override {
+    void writeProject(fullProjectData const &dat) override {
       // Implementation for writing project data to database
         dbStore.writeProject(dat.uid.to_string(), dat.name, dat.FTE);
     }
-    fullProjectData readProject() override {
+    fullProjectData readProject(proIds::Uuid const & id ) override {
       // Implementation for reading project data from database
-        std::cerr<<"Reading project data not implemented yet."<<std::endl;
-        return fullProjectData(); // Return an empty project data object for now
+      return dbStore.readProject(id); // Assuming readProject returns fullProjectData
     }
-    void writeSubproject(fullSubProjectData) override {
+    void writeSubproject(fullSubProjectData const &dat) override {
       // Implementation for writing subproject data to database
-        std::cerr<<"Writing subproject data not implemented yet."<<std::endl;
+        dbStore.writeSubProject(dat.uid.to_string(), dat.name, dat.frac, dat.parentUid.to_string());
     }
-    fullSubProjectData readSubproject() override {
+    fullSubProjectData readSubproject(proIds::Uuid const & id) override {
       // Implementation for reading subproject data from database
-        std::cerr<<"Reading subproject data not implemented yet."<<std::endl;
-        return fullSubProjectData(); // Return an empty subproject data object for now
+        return dbStore.readSubproject(id); // Assuming readSubproject returns fullSubProjectData
     }
-    void writeTrackerEntry(timeStamp stamp) override {
+    void writeTrackerEntry(timeStamp const & stamp) override {
       // Implementation for writing tracker entry to database
-        std::cerr<<"Writing tracker entry not implemented yet."<<std::endl;
+        dbStore.writeTrackerEntry(stamp.time, stamp.projectUid.to_string());
     }
     timeStamp readTrackerEntry() override {
       // Implementation for reading tracker entry from database
@@ -157,13 +129,11 @@ class databaseIO : public dataIO{
     }
     std::vector<fullProjectData> fetchProjectList() override {
       // Implementation for fetching project list from database
-        std::cerr<<"Fetching project list not implemented yet."<<std::endl;
-        return std::vector<fullProjectData>(); // Return an empty vector for now
+        return dbStore.fetchProjectList();
     }
     std::vector<fullSubProjectData> fetchSubprojectList() override {
       // Implementation for fetching subproject list from database
-        std::cerr<<"Fetching subproject list not implemented yet."<<std::endl;
-        return std::vector<fullSubProjectData>(); // Return an empty vector for now
+        return dbStore.fetchSubprojectList();
     }
     std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1) override {
       // Implementation for fetching tracker entries from database

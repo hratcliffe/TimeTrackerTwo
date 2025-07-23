@@ -32,6 +32,7 @@ Q_OBJECT
 
     // Update the view when the project list changes
     connect(currentData, &TrackerData::projectListUpdateEvent, theView, &View::projectListUpdated);
+    connect(currentData, &TrackerData::projectTotalUpdateEvent, theView, &View::projectTimeUpdated);
 
     // Connect the project selection to the TrackerData to mark projects
     connect(theView, &View::projectSelectedTrack, currentData, &TrackerData::markProject);

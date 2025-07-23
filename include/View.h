@@ -155,6 +155,22 @@ Q_OBJECT
         //addButton->setDisabled(1); //TODO - implement....
         ui->p_project_layout->layout()->addWidget(addButton);
 
+        addButton = new QPushButton();
+        addButton->setText("Delete"); //Completely remove along with all timestamps
+        addButton->setFixedWidth(100);
+        //connect(addButton, &QPushButton::clicked, this, &View::???);
+        addButton->setDisabled(1); //TODO - implement....
+        ui->p_project_layout->layout()->addWidget(addButton);
+
+        addButton = new QPushButton();
+        addButton->setText("Deactivate"); //Remove from selections, leave data intact
+        addButton->setFixedWidth(100);
+        //connect(addButton, &QPushButton::clicked, this, &View::???);
+        addButton->setDisabled(1); //TODO - implement....
+        ui->p_project_layout->layout()->addWidget(addButton);
+
+
+
       }
     }
 

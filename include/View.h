@@ -86,6 +86,7 @@ Q_OBJECT
       QApplication::quit();
     }
     void projectListUpdated(std::vector<selectableEntity> const & newList){
+      // TODO consider splitting this giant function...
       std::cout << "Project list updated with " << newList.size() << " projects." << std::endl;
 
       //Clear existing store
@@ -145,6 +146,12 @@ Q_OBJECT
         ui->p_project_layout->layout()->addWidget(line);
 
         QPushButton * addButton = new QPushButton();
+        addButton->setText("Summary");
+        addButton->setFixedWidth(100);
+        connect(addButton, &QPushButton::clicked, this, &View::toplevelSummarySelected);
+        ui->p_project_layout->layout()->addWidget(addButton);
+
+        addButton = new QPushButton();
         addButton->setText("Add");
         addButton->setFixedWidth(100);
         connect(addButton, &QPushButton::clicked, this, &View::showAddDialog);
@@ -178,6 +185,10 @@ Q_OBJECT
     void projectTimeUpdated(float usedFTE, float freeFTE){this->usedFTE = usedFTE; this->freeFTE = freeFTE;}
 
     void projectSummaryUpdated(std::string summary){
+      // Update the project summary display
+      ui->p_project_info->setText(QString::fromStdString(summary));
+    }
+    void toplevelSummaryUpdated(std::string summary){
       // Update the project summary display
       ui->p_project_info->setText(QString::fromStdString(summary));
     }
@@ -226,6 +237,8 @@ Q_OBJECT
       Ui::addSubprojectDialog addUi;
       addUi.setupUi(addDialog);
 
+      //TODO show fractions and allow to configure these for all subs on add?
+
       //Adding projects to drop-down
       for(auto & proj: pList){
         QVariant data = QVariant(proj.uid.to_string().c_str());
@@ -249,6 +262,7 @@ Q_OBJECT
   signals:
     void projectSelectedTrack(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project button is clicked */
     void projectSelectedView(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project view button is clicked to view details */
+    void toplevelSummarySelected();
     void pauseRequested(); /**< \brief Signal emitted when the pause button is clicked */
     void resumeRequested(); /**< \brief Signal emitted when the resume button is clicked */
     void stopRequested(); /**< \brief Signal emitted when the stop button is clicked */

@@ -31,6 +31,7 @@ class projectManager{
     projectManager(const projectManager & src)=delete;
     projectManager& operator=(const projectManager&)=delete;
 
+    int projectCount(){return projects.size();}
     float allocatedFTE(){return activeFTE;}
     float availableFTE(){return maxFTE - activeFTE;}
     bool checkFTE(float requested){return (activeFTE + requested) <= maxFTE + 1e-5;} //Tiny rounding error allowance
@@ -156,7 +157,7 @@ class projectManager{
 
       if(projects.find(uid) != projects.end()){
         project & proj = projects[uid];
-        ss << proj.describe();
+        ss << proj.describe()<<'\n';
         for(auto & subId : proj.subprojects){
           if(subprojects.find(subId) != subprojects.end()){
             subproject & sub = subprojects[subId];

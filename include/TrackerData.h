@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include <vector>
+#include <sstream>
 
 #include "support.h"
 #include "dataObjects.h"
@@ -160,6 +161,12 @@ Q_OBJECT
       std::string summary = thePM.summariseProject(uid);
       emit projectSummaryReady(summary); // Notify view that a project summary is ready
     }
+    void generateToplevelSummary(){
+      std::stringstream ss;
+      ss<<thePM.projectCount()<<" projects active \n "<<(int)thePM.allocatedFTE()*100;
+      ss<<" % FTE allocated\n "<<(int)thePM.availableFTE()*100<<" % FTE available\n";
+      emit toplevelSummaryReady(ss.str());
+    }
 
     void handleCloseRequest(bool silent){
       if(silent){
@@ -177,6 +184,7 @@ Q_OBJECT
       void projectListUpdateEvent(std::vector<selectableEntity> const & newList);
       void projectTotalUpdateEvent(float usedFTE, float freeFTE);
       void projectSummaryReady(std::string summary); /**< \brief Signal emitted when a project summary is ready, with the summary text */
+      void toplevelSummaryReady(std::string summary);
       void projectRunningUpdate(std::string name); /**< \brief Signal emitted when a project is running, with the name of the project */
       void projectPaused(std::string name); /**< \brief Signal emitted when a project is paused, with the name of the project */
       void projectStopped(); /**< \brief Signal emitted when no project is running */

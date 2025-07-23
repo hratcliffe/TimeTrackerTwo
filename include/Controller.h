@@ -52,6 +52,9 @@ Q_OBJECT
     connect(theView, &View::projectSelectedView, currentData, &TrackerData::generateProjectSummary);
     connect(currentData, &TrackerData::projectSummaryReady, theView, &View::projectSummaryUpdated);
 
+    connect(theView, &View::toplevelSummarySelected, currentData, &TrackerData::generateToplevelSummary);
+    connect(currentData, &TrackerData::toplevelSummaryReady, theView, &View::toplevelSummaryUpdated);
+
     //Adding project and sub
     connect(theView, &View::projectAddRequested, currentData, &TrackerData::createProject);
     connect(theView, &View::subprojectAddRequested, currentData, &TrackerData::createSubproject);

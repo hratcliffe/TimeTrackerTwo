@@ -163,8 +163,8 @@ Q_OBJECT
     }
     void generateToplevelSummary(){
       std::stringstream ss;
-      ss<<thePM.projectCount()<<" projects active \n "<<(int)thePM.allocatedFTE()*100;
-      ss<<" % FTE allocated\n "<<(int)thePM.availableFTE()*100<<" % FTE available\n";
+      ss<<thePM.projectCount()<<" projects active \n "<<(int)(thePM.allocatedFTE()*100);
+      ss<<" % FTE allocated\n "<<(int)(thePM.availableFTE()*100)<<" % FTE available\n";
       emit toplevelSummaryReady(ss.str());
     }
 

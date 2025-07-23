@@ -90,16 +90,28 @@ class projectManager{
      * Returns a COPY vector of the projects. They are in order - so subprojects follow their parent
      */
     std::vector<selectableEntity> getOrderedProjectList(){
-      std::vector<selectableEntity> ret, tmp;
+      std::vector<selectableEntity> ret, proj, tmp;
       for(auto & it : projects){
         if(it.second.getUid().isTaggedAs(proIds::uidTag::oneoff)){
           tmp.push_back(it.second);
         }else{
-          ret.push_back(it.second);
-          for(auto & it2 : it.second.subprojects){
-            ret.push_back(subprojects[it2]);
-          }
+          proj.push_back(it.second);
+       }
+      }
+      //Sorting the list
+      std::sort(proj.begin(), proj.end(), [](selectableEntity a, selectableEntity b){return a.name < b.name;});
+
+      // Adding subprojects
+      for(auto it = proj.begin(); it != proj.end(); it++){
+        ret.push_back(*it);
+        std::vector<selectableEntity> subs;
+        for(auto & it2 : projects[it->uid].subprojects){
+          subs.push_back(subprojects[it2]);
         }
+        //Sorting subs - by fraction or by name?
+        std::sort(subs.begin(), subs.end(), [](selectableEntity a, selectableEntity b){return a.name < b.name;});
+        //Inserting subs
+        if(subs.size() > 0) ret.insert(ret.end(), subs.begin(), subs.end());
       }
       ret.insert(ret.end(), tmp.begin(), tmp.end()); // Append one-offs to end of list
       return ret;

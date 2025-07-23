@@ -227,7 +227,7 @@ class databaseStore{
         return ret;
     }
     std::vector<fullProjectData> fetchProjectList(){
-        std::string cmd = "SELECT id, name, FTE FROM projects;";
+        std::string cmd = "SELECT id, name, FTE FROM projects ORDER by name;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         
@@ -265,7 +265,7 @@ class databaseStore{
         return ret;
     }
     std::vector<fullSubProjectData> fetchSubprojectList(){
-        std::string cmd = "SELECT id, name, frac, parent_id FROM subprojects;";
+        std::string cmd = "SELECT id, name, frac, parent_id FROM subprojects ORDER by parent_id, name;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         std::vector<fullSubProjectData> ret;

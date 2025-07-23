@@ -5,6 +5,7 @@
 
 #include "ui_Main.h"
 #include "ui_AddProjectDialog.h"
+#include "ui_AddSubprojectDialog.h"
 
 #include "project.h"
 #include "projectbutton.h"
@@ -15,6 +16,7 @@ Q_OBJECT
 
     Ui::main_window * ui;
     QMainWindow * main;
+    std::vector<selectableEntity> pList; //Persistent list of projects - needed in some dialogs
 
   View(){
 
@@ -83,6 +85,9 @@ Q_OBJECT
     }
     void projectListUpdated(std::vector<selectableEntity> const & newList){
       std::cout << "Project list updated with " << newList.size() << " projects." << std::endl;
+
+      //Clear existing store
+      pList.clear();
       // Clear existing buttons
       if (ui->t_project_buttons->layout() == nullptr) {
         std::cerr << "Error: t_project_buttons layout is null." << std::endl;
@@ -109,6 +114,7 @@ Q_OBJECT
       }
 
       //Adding just top-level projects to the Projects tab sidebar
+      // Also storing data for addSub dialog
       if(ui->p_project_layout->layout() == nullptr) {
         std::cerr << "Error: p_project_layout layout is null." << std::endl;
       }else{
@@ -119,6 +125,9 @@ Q_OBJECT
         }
         for (auto & proj : newList){ 
           if(proj.uid.isTaggedAs(proIds::uidTag::oneoff) || proj.uid.isTaggedAs(proIds::uidTag::sub)) continue; //Skips one-offs and subprojects
+          //Storing for use in e.g. addSub dialog
+          pList.push_back(proj);
+          
           projectButton * button = new projectButton();
           button->projectId = proj.uid;
           button->fullName = proj.name;
@@ -137,6 +146,13 @@ Q_OBJECT
         addButton->setText("Add");
         addButton->setFixedWidth(100);
         connect(addButton, &QPushButton::clicked, this, &View::showAddDialog);
+        ui->p_project_layout->layout()->addWidget(addButton);
+
+        addButton = new QPushButton();
+        addButton->setText("Add Sub");
+        addButton->setFixedWidth(100);
+        connect(addButton, &QPushButton::clicked, this, &View::showAddSubDialog);
+        //addButton->setDisabled(1); //TODO - implement....
         ui->p_project_layout->layout()->addWidget(addButton);
 
       }
@@ -176,6 +192,32 @@ Q_OBJECT
 
     }
 
+    void showAddSubDialog(){
+
+      auto addDialog = new QDialog(this);
+      Ui::addSubprojectDialog addUi;
+      addUi.setupUi(addDialog);
+
+      //Adding projects to drop-down
+      for(auto & proj: pList){
+        QVariant data = QVariant(proj.uid.to_string().c_str());
+        addUi.ParentDropdown->addItem(proj.name.c_str(), data);
+      }
+
+      bool result = addDialog->exec();
+
+      //If OK was clicked, signal to add a project
+      if(result){
+        float frac = (float)addUi.PercentField->value()/100.0;
+        proIds::Uuid parent = proIds::Uuid(addUi.ParentDropdown->currentData().toString().toStdString());
+        emit subprojectAddRequested(subProjectData{addUi.NameField->text().toStdString(), frac}, parent);
+        std::cout<<subProjectData{addUi.NameField->text().toStdString(), frac}<<" "<<parent<<std::endl;
+
+      }
+      std::cout<<result<<std::endl;
+  }
+
+
   signals:
     void projectSelectedTrack(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project button is clicked */
     void projectSelectedView(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project view button is clicked to view details */
@@ -185,6 +227,7 @@ Q_OBJECT
     void closeRequested(bool silent);/**< \brief Signal emitted when the close button is clicked, silent is true if the silent close button is clicked */
 
     void projectAddRequested(const projectData & data);
+    void subprojectAddRequested(const subProjectData & data, const proIds::Uuid & parent);
 
   };
 

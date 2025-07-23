@@ -2,6 +2,7 @@
 #include <QMainWindow>
 #include <QCloseEvent>
 #include <QFrame>
+#include <QMessageBox>
 
 #include "ui_Main.h"
 #include "ui_AddProjectDialog.h"
@@ -17,6 +18,7 @@ Q_OBJECT
     Ui::main_window * ui;
     QMainWindow * main;
     std::vector<selectableEntity> pList; //Persistent list of projects - needed in some dialogs
+    float usedFTE = 0.0, freeFTE=0.0; //Tracks FTE fractions
 
   View(){
 
@@ -170,9 +172,10 @@ Q_OBJECT
         ui->p_project_layout->layout()->addWidget(addButton);
 
 
-
       }
     }
+
+    void projectTimeUpdated(float usedFTE, float freeFTE){this->usedFTE = usedFTE; this->freeFTE = freeFTE;}
 
     void projectSummaryUpdated(std::string summary){
       // Update the project summary display
@@ -194,9 +197,18 @@ Q_OBJECT
 
     void showAddDialog(){
 
+      if(freeFTE < 1e-5){
+        std::cout<<"No FTE to assign"<<std::endl;
+        QMessageBox box;
+        box.setText("Maximum FTE already reached. Deactivate some projects or increase maximum");
+        box.exec();
+        return;
+      }
+
       auto addDialog = new QDialog(this);
       Ui::addProjectDialog addUi;
       addUi.setupUi(addDialog);
+      addUi.FTEField->setMaximum(freeFTE*100);
       bool result = addDialog->exec();
 
       //If OK was clicked, signal to add a project

@@ -88,6 +88,7 @@ Q_OBJECT
       auto id = thePM.addProject(dat);
       dataHandler->writeProject(fullProjectData(id, dat)); // Write to data handler
       emit projectListUpdateEvent(thePM.getOrderedProjectList());
+      emit projectTotalUpdateEvent(thePM.allocatedFTE(), thePM.availableFTE());
     }
     void createSubproject(const subProjectData & dat, const proIds::Uuid & parentId){
       //Create a new sub under and existing project
@@ -111,6 +112,7 @@ Q_OBJECT
         thePM.restoreSubproject(it);
       }
       emit projectListUpdateEvent(thePM.getOrderedProjectList());
+      emit projectTotalUpdateEvent(thePM.allocatedFTE(), thePM.availableFTE());
     }
 
     void markProject(proIds::Uuid uid, std::string name){
@@ -173,6 +175,7 @@ Q_OBJECT
 
     signals:
       void projectListUpdateEvent(std::vector<selectableEntity> const & newList);
+      void projectTotalUpdateEvent(float usedFTE, float freeFTE);
       void projectSummaryReady(std::string summary); /**< \brief Signal emitted when a project summary is ready, with the summary text */
       void projectRunningUpdate(std::string name); /**< \brief Signal emitted when a project is running, with the name of the project */
       void projectPaused(std::string name); /**< \brief Signal emitted when a project is paused, with the name of the project */

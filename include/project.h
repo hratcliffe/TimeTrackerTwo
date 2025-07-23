@@ -72,7 +72,7 @@ class subproject: public projectLike{
     operator selectableEntity()override{return selectableEntity{name, uid, 1};} //Level 1 in display hierarchy
 
     proIds::Uuid getParentUid() const{return parentUid;}; /**< \brief Get the unique id of the parent project */
-
+    float getFrac(){return frac;}
     std::string describe()override{
       /** \brief String description of subproject */
       return "Subproject "+name + '\n' + std::to_string((int)(frac*100))+" %\n";
@@ -114,6 +114,7 @@ class project : public projectLike{
     void addSubproject(proIds::Uuid sub_id){subprojects.push_back(sub_id);}
     ~project()=default;
 
+    float getFTE(){return FTE;}
     std::string describe()override{
       return !active ? "\nProject is inactive\n" : name+" "+ std::to_string((int)(FTE*100))+" % FTE\n "+ std::to_string(subprojects.size()) + " subprojects";
     }

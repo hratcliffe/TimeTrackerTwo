@@ -33,6 +33,10 @@ Q_OBJECT
     connect(ui->t_resume_button, &QPushButton::clicked, [this](){emit resumeRequested();});
     connect(ui->t_stop_button, &QPushButton::clicked, [this](){emit stopRequested();});
 
+    //Connecting Tab bar to refresh actions
+    connect(ui->tabWidget, &QTabWidget::currentChanged, [this](int index){if(index == 1) emit timeSummaryRequested(timeSummaryUnit::debug);}); //TODO - use unit from UI
+
+
     updateLFooter("Not Tracking");
     updateAvailableActions(false);
     
@@ -221,6 +225,7 @@ Q_OBJECT
       addUi.setupUi(addDialog);
       addUi.FTEField->setMaximum(freeFTE*100);
       bool result = addDialog->exec();
+      //TODO -disallow blank name field!
 
       //If OK was clicked, signal to add a project
       if(result){
@@ -258,11 +263,18 @@ Q_OBJECT
       std::cout<<result<<std::endl;
   }
 
+    void timeSummaryUpdated(std::vector<timeSummaryItem> summary){
+      for(auto & item : summary){
+        std::cout<<item<<std::endl;
+      }
+    }
+
 
   signals:
     void projectSelectedTrack(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project button is clicked */
     void projectSelectedView(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project view button is clicked to view details */
     void toplevelSummarySelected();
+    void timeSummaryRequested(timeSummaryUnit unit);
     void pauseRequested(); /**< \brief Signal emitted when the pause button is clicked */
     void resumeRequested(); /**< \brief Signal emitted when the resume button is clicked */
     void stopRequested(); /**< \brief Signal emitted when the stop button is clicked */

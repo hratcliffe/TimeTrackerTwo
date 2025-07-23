@@ -11,6 +11,7 @@
 #include "projectManager.h"
 #include "dataInterface.h"
 #include "timeWrapper.h"
+#include "timestampProcessor.h"
 
 namespace trackerTypes{
 
@@ -168,6 +169,69 @@ Q_OBJECT
       emit toplevelSummaryReady(ss.str());
     }
 
+    void generateTimeSummary(timeSummaryUnit units){
+      std::vector<timeSummaryItem> summary;
+      // A vector of items to be displayed in order - expect display to add newlines between items
+
+      //Fetching timedata - TODO limit bounds?
+      // TODO how to select time range for summary
+      std::vector<timeStamp> timestamps = dataHandler->fetchTrackerEntries();
+
+      timecode window = timestampProcessor::stampsToWindow(timestamps);
+      std::map<proIds::Uuid, timecode> durations = timestampProcessor::stampsToDurations(timestamps);
+
+      std::string unit_str = unitToString(units);
+      timecode unit_factor = unitToDivisor(units);
+
+      std::string tmp_str = std::to_string(window/unit_factor); //TODO rounding
+      timeSummaryItem item = {"Showing summary for past " + tmp_str +" "+unit_str, timeSummaryStatus::none};
+      summary.push_back(item);
+
+      timecode uptime = 0;
+      for(auto & item : durations){
+        uptime += item.second;
+      }
+
+      tmp_str = std::to_string(uptime/unit_factor); //TODO rounding
+      item = {"Total uptime "+tmp_str+" "+unit_str, timeSummaryStatus::none};
+      summary.push_back(item);
+
+
+      //Allowing tracking under top-level, OR sub
+      // Project totals are for main and all subs
+      // Fractions apply to subs against total project time
+      // Fractions should add to at most 1
+
+      auto projects = thePM.getOrderedProjectRefs();
+      for(auto & proj : projects){
+        auto subs = thePM.getOrderedSubRefs(*proj);
+ 
+        item = {proj->getName(), timeSummaryStatus::none};
+        summary.push_back(item);
+
+        auto time = (durations.count(proj->getUid()) > 0) ?  durations[proj->getUid()] : 0; // Time on project itself
+        timecode subTimes = 0;
+        for(auto & sub : subs){
+          subTimes += (durations.count(sub->getUid()) > 0) ? durations[sub->getUid()] : 0; //Sum on subs
+        }
+
+        item = {"Time on project and subs: "+ std::to_string(time + subTimes), timeSummaryStatus::none};
+        summary.push_back(item);
+        if(subs.size() > 0){
+          // Has subprojects
+          for(auto & sub : subs){
+            item = {proj->getName() + ": " + sub->getName(), timeSummaryStatus::none};
+            summary.push_back(item);
+            auto subOnlyTime = durations.count(sub->getUid()) > 0 ? durations[sub->getUid()]: 0;
+            item = {"Time on sub " + std::to_string(subOnlyTime), timeSummaryStatus::none};
+            summary.push_back(item);
+          }
+        }
+      }
+      emit timeSummaryReady(summary);
+
+    }
+
     void handleCloseRequest(bool silent){
       if(silent){
         // Just ensure data is saved and exit
@@ -185,6 +249,7 @@ Q_OBJECT
       void projectTotalUpdateEvent(float usedFTE, float freeFTE);
       void projectSummaryReady(std::string summary); /**< \brief Signal emitted when a project summary is ready, with the summary text */
       void toplevelSummaryReady(std::string summary);
+      void timeSummaryReady(std::vector<timeSummaryItem> summary);
       void projectRunningUpdate(std::string name); /**< \brief Signal emitted when a project is running, with the name of the project */
       void projectPaused(std::string name); /**< \brief Signal emitted when a project is paused, with the name of the project */
       void projectStopped(); /**< \brief Signal emitted when no project is running */

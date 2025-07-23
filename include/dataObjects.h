@@ -12,6 +12,7 @@
 #include <string>
 #include <iostream>
 
+#include "support.h"
 #include "idGenerators.h"
 
 /** \brief Initialisation data for project
@@ -135,6 +136,29 @@ inline bool operator==(const timeStamp &lhs, const timecode &rhs){
 };
 inline bool operator!=(const timeStamp &lhs, const timecode &rhs){
   return !(lhs == rhs);
+};
+
+// For display - time unit in use
+enum class timeSummaryUnit{hour, minute, debug};
+inline std::string unitToString(timeSummaryUnit unit){return unit == timeSummaryUnit::hour ? "hours" : (unit == timeSummaryUnit::minute ? "minutes" : "units");}
+inline timecode unitToDivisor(timeSummaryUnit unit){return unit == timeSummaryUnit::hour ? timeFactors::hour : (unit == timeSummaryUnit::minute ? timeFactors::minute : 1);}
+// For display - whether items in time summary are correct to targets
+enum class timeSummaryStatus{none, onTarget, underTarget, overTarget};
+struct timeSummaryItem{
+  std::string text;
+  timeSummaryStatus stat;
+};
+inline std::ostream& operator<< (std::ostream& stream, const timeSummaryItem& ts){
+  //Stream status use annotation not colour
+  if(ts.stat == timeSummaryStatus::onTarget){
+    stream<< "== ";
+  }else if(ts.stat == timeSummaryStatus::underTarget){
+    stream<<"---- ";
+  }else if(ts.stat == timeSummaryStatus::overTarget){
+    stream<<"++++ ";
+  }
+  stream<<ts.text;
+  return stream;
 };
 
 #endif

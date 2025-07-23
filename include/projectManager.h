@@ -125,7 +125,31 @@ class projectManager{
           ret.push_back(it.second);
         }
       }
+      std::sort(ret.begin(), ret.end(),[](selectableEntity a, selectableEntity b){return a.name < b.name;});
       return ret;
+    }
+
+    // Subprojects getting
+    const std::vector<project *> getOrderedProjectRefs(){
+      //List of refs to the actual projects, so can access full info
+      std::vector<project *> refs;
+      for(auto & it : projects){
+        if(it.second.getUid().isTaggedAs(proIds::uidTag::none)){
+          refs.push_back(&it.second);
+        }
+      }
+      std::sort(refs.begin(), refs.end(), [](project * a, project * b){return a->getName() < b->getName();});
+      return refs;
+    }
+
+    const std::vector<subproject *> getOrderedSubRefs(project & proj){
+      //List of refs to sub, from a project ref
+      std::vector<subproject *> refs;
+      for(auto & sub : proj.subprojects){
+        refs.push_back(&subprojects[sub]);
+      }
+      std::sort(refs.begin(), refs.end(), [](subproject * a, subproject * b){return a->getName() < b->getName();});
+      return refs;
     }
 
     void deleteProjectById(proIds::Uuid uid){projects.erase(uid);};

@@ -60,6 +60,10 @@ Q_OBJECT
     connect(theView, &View::projectAddRequested, currentData, &TrackerData::createProject);
     connect(theView, &View::subprojectAddRequested, currentData, &TrackerData::createSubproject);
 
+    //Time summary view
+    connect(theView, &View::timeSummaryRequested, currentData, &TrackerData::generateTimeSummary);
+    connect(currentData, &TrackerData::timeSummaryReady, theView, &View::timeSummaryUpdated);
+
   }
 
 };

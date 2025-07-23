@@ -28,7 +28,8 @@ HEADERS += include/Controller.h \
            include/projectManager.h \
            include/TrackerData.h \
            include/dataInterface.h \
-           include/timeWrapper.h
+           include/timeWrapper.h \
+           include/timestampProcessor.h
 
 OBJECTS_DIR = ./obj
 MOC_DIR = ./moc

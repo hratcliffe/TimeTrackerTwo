@@ -70,6 +70,7 @@ class projectManager{
       auto id = dat.uid;
       if(!id.isTaggedAs(proIds::uidTag::none)) throw std::runtime_error("Id is not for a project");
       projects[id] = project(dat);
+      activeFTE += dat.FTE;
     }
 
     void restoreSubproject(const fullSubProjectData & dat){

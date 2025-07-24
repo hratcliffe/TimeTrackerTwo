@@ -119,7 +119,7 @@ class databaseStore{
     }
 
     void delete_all_tables(){
-        std::string cmd = "DROP TABLE IF EXISTS subprojects; DROP TABLE IF EXISTS projects; DROP TABLE IF EXISTS timestamps; DROP TABLE IF EXISTS app_data;";
+        std::string cmd = "DROP TABLE IF EXISTS subprojects; DROP TABLE IF EXISTS projects; DROP TABLE IF EXISTS oneoffs; DROP TABLE IF EXISTS timestamps; DROP TABLE IF EXISTS app_data;";
         int err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
         if(err != SQLITE_OK){
             std::cerr << "Error deleting tables: " << errMsg << std::endl;
@@ -314,6 +314,44 @@ class databaseStore{
         }
         if(err != SQLITE_DONE){
             throw std::runtime_error("Failed to fetch subproject list");
+        }
+        sqlite3_finalize(prep_cmd);
+        return ret;
+    }
+
+    fullOneOffProjectData readOneOff(proIds::Uuid const & id){
+        
+        std::string cmd = "SELECT name, descr FROM oneoffs WHERE id = ?;";
+        sqlite3_stmt * prep_cmd;
+        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, id.to_string().c_str(), id.to_string().length(), SQLITE_STATIC);
+        
+        fullOneOffProjectData ret;
+        if((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            ret.uid = id;
+            ret.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0));
+            ret.description = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1));
+        }else{
+            throw std::runtime_error("Failed to read one off");
+        }
+        sqlite3_finalize(prep_cmd);
+        return ret; 
+    }
+     std::vector<fullOneOffProjectData> fetchOneOffList(){
+        std::string cmd = "SELECT id, name, descr FROM oneoffs ORDER by name;";
+        sqlite3_stmt * prep_cmd;
+        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        std::vector<fullOneOffProjectData> ret;
+        while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            fullOneOffProjectData proj;
+            proj.uid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0)));
+            proj.uid.tag(proIds::uidTag::oneoff);
+            proj.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1));
+            proj.description = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 2));
+            ret.push_back(proj);
+        }
+        if(err != SQLITE_DONE){
+            throw std::runtime_error("Failed to fetch one-offs list");
         }
         sqlite3_finalize(prep_cmd);
         return ret;

@@ -21,6 +21,7 @@ Q_OBJECT
 
     currentData->loadProjects();
 
+    //TODO consolidate stamps into daily digests and store per entity - easier reporting and better long-term use
   }
 
   void connectSignals(){
@@ -55,10 +56,10 @@ Q_OBJECT
 
     //Project information tab events
     connect(theView, &View::projectSelectedView, currentData, &TrackerData::generateProjectSummary);
-    connect(currentData, &TrackerData::projectSummaryReady, theView, &View::projectSummaryUpdated);
-
     connect(theView, &View::toplevelSummarySelected, currentData, &TrackerData::generateToplevelSummary);
-    connect(currentData, &TrackerData::toplevelSummaryReady, theView, &View::toplevelSummaryUpdated);
+    connect(theView, &View::oneoffSummarySelected, currentData, &TrackerData::generateOneOffSummary);
+   //All cases update the view the same way
+    connect(currentData, &TrackerData::projectSummaryReady, theView, &View::summaryDisplayUpdated);
 
     //Adding project and sub
     connect(theView, &View::projectAddRequested, currentData, &TrackerData::createProject);

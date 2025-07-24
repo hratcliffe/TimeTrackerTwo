@@ -198,7 +198,21 @@ Q_OBJECT
       std::stringstream ss;
       ss<<thePM.projectCount()<<" projects active \n "<<(int)(thePM.allocatedFTE()*100);
       ss<<" % FTE allocated\n "<<(int)(thePM.availableFTE()*100)<<" % FTE available\n";
-      emit toplevelSummaryReady(ss.str());
+      emit projectSummaryReady(ss.str());
+    }
+    void generateOneOffSummary(){
+      auto list = dataHandler->fetchOneOffProjectList();
+      std::stringstream ss;
+      if(list.size() == 0){
+        ss<<"No One Offs found";
+      }else{
+        ss<<list.size()<<" One Off projects found:\n";
+        for(auto & item: list){
+          ss<<item.name<<'\n';
+        }
+      }
+      emit projectSummaryReady(ss.str());
+
     }
 
     void generateTimeSummary(timeSummaryUnit units){
@@ -320,8 +334,7 @@ Q_OBJECT
     signals:
       void projectListUpdateEvent(std::vector<selectableEntity> const & newList);
       void projectTotalUpdateEvent(float usedFTE, float freeFTE);
-      void projectSummaryReady(std::string summary); /**< \brief Signal emitted when a project summary is ready, with the summary text */
-      void toplevelSummaryReady(std::string summary);
+      void projectSummaryReady(std::string summary); /**< \brief Signal emitted when a summary is ready, with the summary text */
       void timeSummaryReady(std::vector<timeSummaryItem> summary);
       void projectRunningUpdate(std::string name); /**< \brief Signal emitted when a project is running, with the name of the project */
       void projectPaused(std::string name); /**< \brief Signal emitted when a project is paused, with the name of the project */

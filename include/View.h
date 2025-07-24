@@ -190,6 +190,17 @@ Q_OBJECT
         ui->p_project_layout->layout()->addWidget(addButton);
 
         addButton = new QPushButton();
+        addButton->setText("One Offs");
+        addButton->setFixedWidth(100);
+        connect(addButton, &QPushButton::clicked, this, &View::oneoffSummarySelected);
+        ui->p_project_layout->layout()->addWidget(addButton);
+
+        line = new QFrame();
+        line->setFrameShape(QFrame::HLine);
+        line->setFrameShadow(QFrame::Sunken);
+        ui->p_project_layout->layout()->addWidget(line);
+
+        addButton = new QPushButton();
         addButton->setText("Add");
         addButton->setFixedWidth(100);
         connect(addButton, &QPushButton::clicked, this, &View::showAddDialog);
@@ -222,12 +233,9 @@ Q_OBJECT
 
     void projectTimeUpdated(float usedFTE, float freeFTE){this->usedFTE = usedFTE; this->freeFTE = freeFTE;}
 
-    void projectSummaryUpdated(std::string summary){
+    void summaryDisplayUpdated(std::string summary){
       // Update the project summary display
-      ui->p_project_info->setText(QString::fromStdString(summary));
-    }
-    void toplevelSummaryUpdated(std::string summary){
-      // Update the project summary display
+      // TODO swap from single string to vector of items?
       ui->p_project_info->setText(QString::fromStdString(summary));
     }
 
@@ -350,6 +358,7 @@ Q_OBJECT
     void projectOneOffAdd(const proIds::Uuid &, const std::string &, const std::string &);
     void projectSelectedView(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project view button is clicked to view details */
     void toplevelSummarySelected();
+    void oneoffSummarySelected();
     void timeSummaryRequested(timeSummaryUnit unit);
     void pauseRequested(); /**< \brief Signal emitted when the pause button is clicked */
     void resumeRequested(); /**< \brief Signal emitted when the resume button is clicked */

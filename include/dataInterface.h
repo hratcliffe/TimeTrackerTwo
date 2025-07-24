@@ -82,8 +82,7 @@ class databaseIO : public dataIO{
         dbStore.writeOneOff(dat);
     }
     fullOneOffProjectData readOneOffProject(proIds::Uuid const &id) override{
-      throw std::runtime_error("Not implemented"); 
-        //return dbStore.readOneOff(id);
+        return dbStore.readOneOff(id);
     }
 
     void writeTrackerEntry(timeStamp const & stamp) override {
@@ -100,7 +99,7 @@ class databaseIO : public dataIO{
     }
 
     std::vector<fullOneOffProjectData> fetchOneOffProjectList() override{
-      throw std::runtime_error("Not implemented");
+        return dbStore.fetchOneOffList();
     }
     std::vector<fullOneOffProjectData> fetchOneOffProjectsInTimeRange(timecode start, timecode end) override{
       throw std::runtime_error("Not implemented");

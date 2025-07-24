@@ -26,7 +26,7 @@ class projectManager{
     void setupGenerator(){this->gen = new uniqueIdGenerator();}; 
   public:
 
-    projectManager(){setupGenerator(); auto id_tmp = gen->getOnesId(); id_tmp.tag(proIds::uidTag::oneoff); project dummy = project({"One Off", 0.0}, id_tmp); projects[id_tmp] = dummy;}; /**< \brief Default constructor */
+    projectManager(){setupGenerator();}; /**< \brief Default constructor */
     ~projectManager(){ if(gen) delete gen;}
     projectManager(const projectManager & src)=delete;
     projectManager& operator=(const projectManager&)=delete;
@@ -66,6 +66,13 @@ class projectManager{
       return tmp.getUid();
     }
 
+    bool isProject(proIds::Uuid id ){return projects.count(id) > 0;};
+    bool isSubProject(proIds::Uuid id ){return subprojects.count(id) > 0;};
+
+    proIds::Uuid getNextOneOffId(){
+      return gen->getNextId(proIds::uidTag::oneoff);
+    }
+
     void restoreProject(const fullProjectData & dat){
       //Restore a project from e.g. file - i.e. one that already HAS a uid
       auto id = dat.uid;
@@ -90,13 +97,9 @@ class projectManager{
      * Returns a COPY vector of the projects. They are in order - so subprojects follow their parent
      */
     std::vector<selectableEntity> getOrderedProjectList(){
-      std::vector<selectableEntity> ret, proj, tmp;
+      std::vector<selectableEntity> ret, proj;
       for(auto & it : projects){
-        if(it.second.getUid().isTaggedAs(proIds::uidTag::oneoff)){
-          tmp.push_back(it.second);
-        }else{
-          proj.push_back(it.second);
-       }
+        proj.push_back(it.second);
       }
       //Sorting the list
       std::sort(proj.begin(), proj.end(), [](selectableEntity a, selectableEntity b){return a.name < b.name;});
@@ -113,7 +116,6 @@ class projectManager{
         //Inserting subs
         if(subs.size() > 0) ret.insert(ret.end(), subs.begin(), subs.end());
       }
-      ret.insert(ret.end(), tmp.begin(), tmp.end()); // Append one-offs to end of list
       return ret;
     }
 

@@ -7,6 +7,7 @@
 #include "ui_Main.h"
 #include "ui_AddProjectDialog.h"
 #include "ui_AddSubprojectDialog.h"
+#include "ui_AddOneOffDialog.h"
 
 #include "project.h"
 #include "projectbutton.h"
@@ -30,6 +31,7 @@ Q_OBJECT
     std::vector<selectableEntity> pList; //Persistent list of projects - needed in some dialogs
     float usedFTE = 0.0, freeFTE=0.0; //Tracks FTE fractions
     viewProperties prop; //TODO - should there be any way to alter this?
+    projectButton * oneOffTrackerButton = nullptr; // Tracker button for special entries
 
   View(){
 
@@ -100,6 +102,15 @@ Q_OBJECT
       std::cout << "Exiting UI" << std::endl;
       QApplication::quit();
     }
+
+    void updateOneOffId(proIds::Uuid next){
+      //Storing Id ready for future click
+      // TODO - if there were multiple entities, should each bind their own?
+      if(oneOffTrackerButton){
+        oneOffTrackerButton->projectId = next;
+      }
+    }
+
     void projectListUpdated(std::vector<selectableEntity> const & newList){
       // TODO consider splitting this giant function...
       std::cout << "Project list updated with " << newList.size() << " projects." << std::endl;
@@ -129,6 +140,18 @@ Q_OBJECT
           connect(button, &projectButton::clicked, this, [this, button](){this->trackProjectClicked(button);});
           ui->t_project_buttons->layout()->addWidget(button);
         }
+        //Adding the 'one off' button - note this will 'waste' uids by getting a new one
+        // with every added project but that is best alternative
+        oneOffTrackerButton = new projectButton();
+        oneOffTrackerButton->projectId = proIds::NullUid; //Temporary
+        oneOffTrackerButton->fullName = "One Off";
+        oneOffTrackerButton->setText("One Off");
+        oneOffTrackerButton->setStyleSheet("background-color: blue;"); 
+        oneOffTrackerButton->setFixedWidth(150);
+        connect(oneOffTrackerButton, &projectButton::clicked, this, [this](){this->showOneOffDialog(this->oneOffTrackerButton->projectId);}); // TODO - have this pop up the name entry form instead....
+        ui->t_project_buttons->layout()->addWidget(oneOffTrackerButton);
+        emit oneOffIdRequired();
+
       }
 
       //Adding just top-level projects to the Projects tab sidebar
@@ -274,6 +297,22 @@ Q_OBJECT
       std::cout<<result<<std::endl;
   }
 
+    void showOneOffDialog(proIds::Uuid id){
+      
+      auto addDialog = new QDialog(this);
+      Ui::addOneOffDialog addUi;
+      addUi.setupUi(addDialog);
+      bool result = addDialog->exec();
+      //TODO -disallow blank name field!
+
+      //If OK was clicked, signal to mark one-off with constructed name
+      if(result){
+        emit projectOneOffAdd(id, addUi.name->text().toStdString(), addUi.descr->text().toStdString()); // NOTE - this may change the bound ID of the button!
+        emit projectSelectedTrack(id, addUi.name->text().toStdString());
+      }
+      std::cout<<result<<std::endl;
+    }
+
     void timeSummaryUpdated(std::vector<timeSummaryItem> summary){
       
       auto layout = ui->s_summary_items;
@@ -308,6 +347,7 @@ Q_OBJECT
 
   signals:
     void projectSelectedTrack(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project button is clicked */
+    void projectOneOffAdd(const proIds::Uuid &, const std::string &, const std::string &);
     void projectSelectedView(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project view button is clicked to view details */
     void toplevelSummarySelected();
     void timeSummaryRequested(timeSummaryUnit unit);
@@ -318,6 +358,7 @@ Q_OBJECT
 
     void projectAddRequested(const projectData & data);
     void subprojectAddRequested(const subProjectData & data, const proIds::Uuid & parent);
+    void oneOffIdRequired();
 
   };
 

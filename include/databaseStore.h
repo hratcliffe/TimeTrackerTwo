@@ -45,7 +45,7 @@ class databaseStore{
     void enable_foreign_keys(){sqlite3_exec(DB, "PRAGMA foreign_keys = ON", nullptr, nullptr, nullptr);}
     bool check_tables(){
 
-        auto expected_tables = std::vector<std::string>{"projects", "subprojects", "timestamps", "app_data"};
+        auto expected_tables = std::vector<std::string>{"projects", "subprojects", "timestamps", "app_data", "oneoffs"};
         // Get list of tables in the database
         std::string cmd = "SELECT name FROM sqlite_master WHERE type='table';";
         sqlite3_stmt *stmt;
@@ -98,6 +98,15 @@ class databaseStore{
             throw std::runtime_error("Failed to create timestamps table");
         }
 
+        // Table for logging names/info about oneoff projects - expect SHORT description
+        cmd = "CREATE TABLE IF NOT EXISTS oneoffs(id CHAR(36) PRIMARY KEY, name TEXT, descr TEXT);";
+        err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
+        if(err != SQLITE_OK){
+            std::cerr << "Error creating oneoffs table: " << errMsg << std::endl;
+            sqlite3_free(errMsg);
+            throw std::runtime_error("Failed to create oneoffs table");
+        }
+
         cmd = "CREATE TABLE IF NOT EXISTS app_data(key TEXT PRIMARY KEY, value TEXT);";
         err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
         if(err != SQLITE_OK){
@@ -105,6 +114,8 @@ class databaseStore{
             sqlite3_free(errMsg);
             throw std::runtime_error("Failed to create app_data table");
         }
+
+        // TODO - extended descriptions table - could add all sorts of extra info
     }
 
     void delete_all_tables(){
@@ -185,6 +196,29 @@ class databaseStore{
         if(err != SQLITE_OK){
             std::cerr<< sqlite3_errmsg(DB) << std::endl;
             throw std::runtime_error("Failed to write subproject");
+        }
+        sqlite3_finalize(prep_cmd);
+    }
+    void writeOneOff(const fullOneOffProjectData & dat){
+
+        //Unpacking
+        const std::string & id = dat.uid.to_string();
+        const std::string & name = dat.name;
+        const std::string & descr = dat.description; //TODO - limit length on input?
+
+        std::string cmd;
+        sqlite3_stmt * prep_cmd;
+        int err = 0;
+        cmd = "insert into oneoffs values(?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, descr=excluded.descr;"; // TODO check the conflict clause
+        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, id.c_str(), id.length(), SQLITE_STATIC);
+        sqlite3_bind_text(prep_cmd, 2, name.c_str(), name.length(), SQLITE_STATIC);
+        sqlite3_bind_text(prep_cmd, 3, descr.c_str(), descr.length(), SQLITE_STATIC);
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            std::cerr<< sqlite3_errmsg(DB) << std::endl;
+            throw std::runtime_error("Failed to write oneoff");
         }
         sqlite3_finalize(prep_cmd);
     }
@@ -286,7 +320,7 @@ class databaseStore{
     }
 
     std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1){
-
+        //TODO - should the Uid tags be handled down here?
       //TODO - is there an elegant way to do this with prepared statements?
       std::string where_clause ="";
       if(start != -1){

@@ -19,6 +19,7 @@ enum class projectStatusFlag{none, active, paused}; // None- no active project, 
 class projectStatus{
   public:
     proIds::Uuid uid; /**< \brief Pointer to project, null if none in progress */
+    std::string name;
     projectStatusFlag status = projectStatusFlag::none; /**< \brief Status of project */
 };
 };
@@ -97,6 +98,16 @@ Q_OBJECT
       auto idS = thePM.addSubproject(dat, parentId);
       dataHandler->writeSubproject(fullSubProjectData(idS, dat, parentId)); // Write to data handler
       emit projectListUpdateEvent(thePM.getOrderedProjectList());
+    }
+
+    void createOneOff(proIds::Uuid uid, std::string name, std::string descr){
+      dataHandler->writeOneOffProject({uid, name, descr});
+      oneOffIdRequired();
+    }
+
+    void oneOffIdRequired(){
+      proIds::Uuid id = thePM.getNextOneOffId();
+      emit oneOffIdUpdate(id);
     }
 
     //Load existing projects from the data backend
@@ -210,9 +221,12 @@ Q_OBJECT
       timeSummaryItem item = {"Showing summary for past " + tmp_str +" "+unit_str, timeSummaryStatus::none};
       summary.push_back(item);
 
-      timecode uptime = 0;
+      timecode uptime = 0, oneoffs = 0;
       for(auto & item : durations){
         uptime += item.second;
+        if(!thePM.isProject(item.first) && !thePM.isSubProject(item.first) && item.first != proIds::NullUid){
+          oneoffs += item.second;
+        } 
       }
 
       tmp_str = std::to_string(uptime/unit_factor); //TODO rounding
@@ -281,6 +295,10 @@ Q_OBJECT
           summary.push_back(item);
         }
       }
+      
+      //Adding total for one-offs
+      summary.push_back({"One Off Projects: "+ std::to_string(oneoffs)+" "+unit_str, timeSummaryStatus::none});
+      
       emit timeSummaryReady(summary);
 
     }
@@ -309,5 +327,6 @@ Q_OBJECT
       void projectPaused(std::string name); /**< \brief Signal emitted when a project is paused, with the name of the project */
       void projectStopped(); /**< \brief Signal emitted when no project is running */
       void readyToClose(); /**< \brief Signal emitted when data is saved and app is ready to close */
+      void oneOffIdUpdate(proIds::Uuid);
 };
 #endif // ____trackerData__

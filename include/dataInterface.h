@@ -22,11 +22,16 @@ class dataIO{
     virtual fullProjectData readProject(proIds::Uuid const & id) = 0;
     virtual void writeSubproject(fullSubProjectData const & dat) = 0;
     virtual fullSubProjectData readSubproject(proIds::Uuid const & id) = 0;
+    virtual void writeOneOffProject(fullOneOffProjectData const &dat) = 0;
+    virtual fullOneOffProjectData readOneOffProject(proIds::Uuid const &id) = 0;
 
     virtual void writeTrackerEntry(timeStamp const & stamp) = 0;
 
     virtual std::vector<fullProjectData> fetchProjectList() = 0; /**< \brief Fetch list of projects from the data source */
     virtual std::vector<fullSubProjectData> fetchSubprojectList() = 0; /**< \brief Fetch list of subprojects from the data source */
+    virtual std::vector<fullOneOffProjectData> fetchOneOffProjectList() = 0;
+    virtual std::vector<fullOneOffProjectData> fetchOneOffProjectsInTimeRange(timecode start, timecode end) = 0;
+
     virtual std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1) = 0; /**< \brief Fetch ORDERED tracker entries from the data source, optionally within a time range */
     virtual timeStamp fetchLatestTrackerEntry() = 0;/**< \brief Fetch the latest (most recent) tracker entry */
 
@@ -72,6 +77,15 @@ class databaseIO : public dataIO{
       // Implementation for reading subproject data from database
         return dbStore.readSubproject(id);
     }
+
+    void writeOneOffProject(fullOneOffProjectData const & dat) override{
+        dbStore.writeOneOff(dat);
+    }
+    fullOneOffProjectData readOneOffProject(proIds::Uuid const &id) override{
+      throw std::runtime_error("Not implemented"); 
+        //return dbStore.readOneOff(id);
+    }
+
     void writeTrackerEntry(timeStamp const & stamp) override {
       // Implementation for writing tracker entry to database
         dbStore.writeTrackerEntry(stamp);
@@ -84,6 +98,14 @@ class databaseIO : public dataIO{
       // Implementation for fetching subproject list from database
         return dbStore.fetchSubprojectList();
     }
+
+    std::vector<fullOneOffProjectData> fetchOneOffProjectList() override{
+      throw std::runtime_error("Not implemented");
+    }
+    std::vector<fullOneOffProjectData> fetchOneOffProjectsInTimeRange(timecode start, timecode end) override{
+      throw std::runtime_error("Not implemented");
+    }
+
     std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1) override {
       // Implementation for fetching tracker entries from database
       return dbStore.fetchTrackerEntries(start, end);

@@ -39,6 +39,10 @@ Q_OBJECT
     // And back, to show status
     connect(currentData, &TrackerData::projectRunningUpdate, theView, &View::updateRunningProjectDisplay);
 
+    //Connect updates to 'next One Off id'
+    connect(theView, &View::oneOffIdRequired, currentData, &TrackerData::oneOffIdRequired);
+    connect(currentData, &TrackerData::oneOffIdUpdate, theView, &View::updateOneOffId);
+
     //Pausing a project:
     connect(theView, &View::pauseRequested, currentData, &TrackerData::pauseProject);
     connect(currentData, &TrackerData::projectPaused, theView, &View::updatePausedProjectDisplay);
@@ -59,6 +63,7 @@ Q_OBJECT
     //Adding project and sub
     connect(theView, &View::projectAddRequested, currentData, &TrackerData::createProject);
     connect(theView, &View::subprojectAddRequested, currentData, &TrackerData::createSubproject);
+    connect(theView, &View::projectOneOffAdd, currentData, &TrackerData::createOneOff);
 
     //Time summary view
     connect(theView, &View::timeSummaryRequested, currentData, &TrackerData::generateTimeSummary);

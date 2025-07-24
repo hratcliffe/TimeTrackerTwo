@@ -48,7 +48,18 @@ inline std::ostream& operator<< (std::ostream& stream, const subProjectData& dat
   stream << data.name <<" "<<(int)(data.frac*100)<<"%";
   return stream;
 }
+struct oneOffProjectData{
 
+  std::string name;/**< \brief Name of project */
+  std::string description;
+};
+
+inline std::ostream& operator<< (std::ostream& stream, const oneOffProjectData& data){
+/** \brief Stream op for projectData
+*/
+  stream << data.name <<" "<<data.description;
+  return stream;
+}
 
 //NOTE: data on project BUT does NOT contain list of subs!
 class fullProjectData{
@@ -83,6 +94,23 @@ inline std::ostream& operator<< (std::ostream& stream, const fullSubProjectData&
 /** \brief Stream operator for fullSubProjectData
 */
   stream << data.name <<", "<<data.uid<<", "<<data.frac<<", Parent: "<<data.parentUid;
+  return stream;
+};
+
+class fullOneOffProjectData{
+    public:
+    proIds::Uuid uid; // For consistency - note should be 
+    std::string name; /**< \brief Name of the project */
+    std::string description; /**< \brief Short description */
+
+    fullOneOffProjectData() = default;
+    fullOneOffProjectData(proIds::Uuid id, std::string const &name, std::string const & descr)
+        : uid(id), name(name), description(descr){};
+};
+inline std::ostream& operator<< (std::ostream& stream, const fullOneOffProjectData& data){
+/** \brief Stream operator for fullProjectData
+*/
+  stream << data.name<<" ()"<<data.description<<")";
   return stream;
 };
 

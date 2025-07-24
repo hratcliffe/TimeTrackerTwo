@@ -211,14 +211,14 @@ Q_OBJECT
       // TODO how to select time range for summary
       std::vector<timeStamp> timestamps = dataHandler->fetchTrackerEntries();
 
-      timecode window = timestampProcessor::stampsToWindow(timestamps);
+      timecode window = timeWrapper::toSeconds(timeWrapper::now()) - timestamps[0].time; 
       std::map<proIds::Uuid, timecode> durations = timestampProcessor::stampsToDurations(timestamps);
 
       std::string unit_str = unitToString(units);
       timecode unit_factor = unitToDivisor(units);
 
-      std::string tmp_str = std::to_string(window/unit_factor); //TODO rounding
-      timeSummaryItem item = {"Showing summary for past " + tmp_str +" "+unit_str, timeSummaryStatus::none};
+      std::string tmp_str = std::to_string(window/timeFactors::day + 1); //TODO rounding
+      timeSummaryItem item = {"Showing summary for past " + tmp_str +" days", timeSummaryStatus::none};
       summary.push_back(item);
 
       timecode uptime = 0, oneoffs = 0;

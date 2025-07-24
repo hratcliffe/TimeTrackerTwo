@@ -23,6 +23,7 @@ const std::string appName = "Time Tracker Two";
 * Factors for quick conversions from seconds etc. For important time values use timeWrapper
 */
 namespace timeFactors{
+  const int day = 60*60*24;
   const int hour = 60*60;/**< \brief Seconds to hours */
   const int minute = 60;/**< \brief Seconds to minutes */
 }

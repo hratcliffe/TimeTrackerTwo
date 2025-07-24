@@ -11,6 +11,17 @@
 #include "project.h"
 #include "projectbutton.h"
 
+struct viewProperties{
+
+  float targetThresholdFractionFTE = 0.01; // Amount of mismatch that counts as over/under target
+  float targetThresholdFractionFrac = 0.01; // Ditto for sub fracs
+  std::string overTargetEffects = "QLabel { color : purple; }";
+  std::string onTargetEffects = "QLabel { color : green; }";
+  std::string underTargetEffects = "QLabel { color : red; }";
+
+};
+
+
 class View: public QWidget{
 Q_OBJECT
   public:
@@ -19,6 +30,7 @@ Q_OBJECT
     QMainWindow * main;
     std::vector<selectableEntity> pList; //Persistent list of projects - needed in some dialogs
     float usedFTE = 0.0, freeFTE=0.0; //Tracks FTE fractions
+    viewProperties prop; //TODO - should there be any way to alter this?
 
   View(){
 
@@ -267,6 +279,21 @@ Q_OBJECT
       for(auto & item : summary){
         std::cout<<item<<std::endl;
       }
+      auto layout = ui->s_summary_items;
+
+     for(auto & item : summary){
+        auto label = new QLabel(this);
+        label->setText(item.text.c_str());
+        if(item.stat == timeSummaryStatus::onTarget){
+          label->setStyleSheet(prop.onTargetEffects.c_str());
+        }else if(item.stat == timeSummaryStatus::overTarget){
+          label->setStyleSheet(prop.overTargetEffects.c_str());
+         }else if(item.stat == timeSummaryStatus::underTarget){
+          label->setStyleSheet(prop.underTargetEffects.c_str());
+        }
+        layout->addWidget(label);
+      }
+
     }
 
 

@@ -217,13 +217,31 @@ Q_OBJECT
 
         item = {"Time on project and subs: "+ std::to_string(time + subTimes), timeSummaryStatus::none};
         summary.push_back(item);
+
+        float frac = (float)(time+subTimes)/(float)uptime; //TODO protect from uptime == 0
+        timeSummaryStatus tag = timeSummaryStatus::onTarget;
+        if(frac > proj->getFTE()){
+          tag = timeSummaryStatus::overTarget; //TODO add threshold for mismatch
+        }else if(frac < proj->getFTE()){
+          tag = timeSummaryStatus::underTarget;
+        }
+        item = {"Fraction of uptime " + std::to_string(frac), tag}; // TODO add target and round to percents
+        summary.push_back(item);
+
         if(subs.size() > 0){
           // Has subprojects
           for(auto & sub : subs){
             item = {proj->getName() + ": " + sub->getName(), timeSummaryStatus::none};
             summary.push_back(item);
             auto subOnlyTime = durations.count(sub->getUid()) > 0 ? durations[sub->getUid()]: 0;
-            item = {"Time on sub " + std::to_string(subOnlyTime), timeSummaryStatus::none};
+            tag = timeSummaryStatus::onTarget;
+            frac = (float)subOnlyTime/(float)(time+subTimes); // TODO protect division
+            if(frac > sub->getFrac()){
+              tag = timeSummaryStatus::overTarget; //TODO threshold as above
+            }else if(frac < sub->getFrac()){
+              tag = timeSummaryStatus::underTarget;
+            }
+            item = {"Fraction on sub " + std::to_string(frac), tag};
             summary.push_back(item);
           }
         }

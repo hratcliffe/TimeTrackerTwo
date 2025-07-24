@@ -13,11 +13,10 @@
 
 struct viewProperties{
 
-  float targetThresholdFractionFTE = 0.01; // Amount of mismatch that counts as over/under target
-  float targetThresholdFractionFrac = 0.01; // Ditto for sub fracs
   std::string overTargetEffects = "QLabel { color : purple; }";
   std::string onTargetEffects = "QLabel { color : green; }";
   std::string underTargetEffects = "QLabel { color : red; }";
+  std::string errorEffects = "QLabel {color: red; font-weight: bold;}";
 
 };
 
@@ -290,6 +289,8 @@ Q_OBJECT
           label->setStyleSheet(prop.overTargetEffects.c_str());
          }else if(item.stat == timeSummaryStatus::underTarget){
           label->setStyleSheet(prop.underTargetEffects.c_str());
+        }else if(item.stat == timeSummaryStatus::error){
+          label->setStyleSheet(prop.errorEffects.c_str());
         }
         layout->addWidget(label);
       }

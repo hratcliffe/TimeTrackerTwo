@@ -173,6 +173,8 @@ Q_OBJECT
       std::vector<timeSummaryItem> summary;
       // A vector of items to be displayed in order - expect display to add newlines between items
 
+      const float targetThresholdFTE = 0.01;
+      const float targetThresholdFractionFrac = 0.01; // Ditto for sub fracs
       //Fetching timedata - TODO limit bounds?
       // TODO how to select time range for summary
       std::vector<timeStamp> timestamps = dataHandler->fetchTrackerEntries();
@@ -196,6 +198,14 @@ Q_OBJECT
       item = {"Total uptime "+tmp_str+" "+unit_str, timeSummaryStatus::none};
       summary.push_back(item);
 
+      // If there's no uptime, there's no point showing projects
+      if(uptime == 0){
+        summary.push_back({"Zero uptime - skipping project display", timeSummaryStatus::error});
+        emit timeSummaryReady(summary);
+        return;
+      }
+
+      // NOTE: from here we know uptime is non-zero and rely on this below
 
       //Allowing tracking under top-level, OR sub
       // Project totals are for main and all subs
@@ -218,32 +228,36 @@ Q_OBJECT
         item = {"Time on project and subs: "+ std::to_string(time + subTimes), timeSummaryStatus::none};
         summary.push_back(item);
 
-        float frac = (float)(time+subTimes)/(float)uptime; //TODO protect from uptime == 0
+        float frac = (float)(time+subTimes)/(float)uptime; //See above - uptime cannot be zero here
         timeSummaryStatus tag = timeSummaryStatus::onTarget;
-        if(frac > proj->getFTE()){
-          tag = timeSummaryStatus::overTarget; //TODO add threshold for mismatch
-        }else if(frac < proj->getFTE()){
+        if(frac - proj->getFTE() > targetThresholdFTE){
+          tag = timeSummaryStatus::overTarget;
+        }else if(proj->getFTE() - frac > targetThresholdFTE){
           tag = timeSummaryStatus::underTarget;
         }
         item = {"Fraction of uptime " + std::to_string(frac), tag}; // TODO add target and round to percents
         summary.push_back(item);
 
-        if(subs.size() > 0){
+        if(subs.size() > 0 and time+subTimes > 0){
           // Has subprojects
           for(auto & sub : subs){
             item = {proj->getName() + ": " + sub->getName(), timeSummaryStatus::none};
             summary.push_back(item);
             auto subOnlyTime = durations.count(sub->getUid()) > 0 ? durations[sub->getUid()]: 0;
             tag = timeSummaryStatus::onTarget;
-            frac = (float)subOnlyTime/(float)(time+subTimes); // TODO protect division
-            if(frac > sub->getFrac()){
-              tag = timeSummaryStatus::overTarget; //TODO threshold as above
-            }else if(frac < sub->getFrac()){
+            frac = (float)subOnlyTime/(float)(time+subTimes); // Cannot be zero per if above
+            if(frac - sub->getFrac() > targetThresholdFractionFrac){
+              tag = timeSummaryStatus::overTarget;
+            }else if(sub->getFrac() - frac > targetThresholdFractionFrac){
               tag = timeSummaryStatus::underTarget;
             }
             item = {"Fraction on sub " + std::to_string(frac), tag};
             summary.push_back(item);
           }
+        }else if(subs.size() > 0){
+          //Has subprojects but nothing to show
+          item = {"No time expended, omitting subproject breakdown", timeSummaryStatus::none};
+          summary.push_back(item);
         }
       }
       emit timeSummaryReady(summary);

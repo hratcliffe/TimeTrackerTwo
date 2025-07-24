@@ -142,8 +142,8 @@ inline bool operator!=(const timeStamp &lhs, const timecode &rhs){
 enum class timeSummaryUnit{hour, minute, debug};
 inline std::string unitToString(timeSummaryUnit unit){return unit == timeSummaryUnit::hour ? "hours" : (unit == timeSummaryUnit::minute ? "minutes" : "units");}
 inline timecode unitToDivisor(timeSummaryUnit unit){return unit == timeSummaryUnit::hour ? timeFactors::hour : (unit == timeSummaryUnit::minute ? timeFactors::minute : 1);}
-// For display - whether items in time summary are correct to targets
-enum class timeSummaryStatus{none, onTarget, underTarget, overTarget};
+// For display - whether items in time summary are correct to targets - error for 'other issue' such as missing
+enum class timeSummaryStatus{none, onTarget, underTarget, overTarget, error};
 struct timeSummaryItem{
   std::string text;
   timeSummaryStatus stat;

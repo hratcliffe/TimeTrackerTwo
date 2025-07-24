@@ -337,7 +337,7 @@ class databaseStore{
         sqlite3_finalize(prep_cmd);
         return ret; 
     }
-     std::vector<fullOneOffProjectData> fetchOneOffList(){
+    std::vector<fullOneOffProjectData> fetchOneOffList(){
         std::string cmd = "SELECT id, name, descr FROM oneoffs ORDER by name;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
@@ -355,6 +355,29 @@ class databaseStore{
         }
         sqlite3_finalize(prep_cmd);
         return ret;
+    }
+    std::vector<fullOneOffProjectData> fetchOneOffsInRange(timecode start, timecode end){
+        std::string cmd =  "SELECT ts.time, oo.id, oo.name, oo.descr FROM timestamps AS ts INNER JOIN oneoffs AS oo ON ts.project_id = oo.id WHERE ts.time > ? and ts.time < ?;";
+        sqlite3_stmt * prep_cmd;
+        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_int64(prep_cmd, 1, start);
+        sqlite3_bind_int64(prep_cmd, 2, end);
+
+        std::vector<fullOneOffProjectData> ret;
+        while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            fullOneOffProjectData proj;
+            proj.uid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1)));
+            proj.uid.tag(proIds::uidTag::oneoff);
+            proj.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 2));
+            proj.description = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 3));
+            ret.push_back(proj);
+        }
+        if(err != SQLITE_DONE){
+            throw std::runtime_error("Failed to fetch one-offs list");
+        }
+        sqlite3_finalize(prep_cmd);
+        return ret; 
+
     }
 
     std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1){

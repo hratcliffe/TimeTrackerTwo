@@ -102,7 +102,7 @@ class databaseIO : public dataIO{
         return dbStore.fetchOneOffList();
     }
     std::vector<fullOneOffProjectData> fetchOneOffProjectsInTimeRange(timecode start, timecode end) override{
-      throw std::runtime_error("Not implemented");
+      return dbStore.fetchOneOffsInRange(start, end);
     }
 
     std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1) override {

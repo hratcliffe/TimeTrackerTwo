@@ -190,7 +190,7 @@ Q_OBJECT
         ui->p_project_layout->layout()->addWidget(addButton);
 
         addButton = new QPushButton();
-        addButton->setText("One Offs");
+        addButton->setText("One Offs"); //TODO allow selecting an interval to list these from?
         addButton->setFixedWidth(100);
         connect(addButton, &QPushButton::clicked, this, &View::oneoffSummarySelected);
         ui->p_project_layout->layout()->addWidget(addButton);

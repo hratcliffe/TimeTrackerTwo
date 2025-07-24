@@ -275,12 +275,20 @@ Q_OBJECT
   }
 
     void timeSummaryUpdated(std::vector<timeSummaryItem> summary){
-      for(auto & item : summary){
-        std::cout<<item<<std::endl;
-      }
+      
       auto layout = ui->s_summary_items;
 
-     for(auto & item : summary){
+      if (ui->s_summary_items->layout() == nullptr) {
+        std::cerr << "Error: s_summary_items layout is null." << std::endl;
+      }else{
+        QLayoutItem *child;
+        while ((child = ui->s_summary_items->layout()->takeAt(0)) != nullptr) {
+          delete child->widget();
+          delete child;
+        }
+      }
+
+      for(auto & item : summary){
         auto label = new QLabel(this);
         label->setText(item.text.c_str());
         if(item.stat == timeSummaryStatus::onTarget){

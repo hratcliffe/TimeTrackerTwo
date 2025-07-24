@@ -117,52 +117,64 @@ Q_OBJECT
       emit projectTotalUpdateEvent(thePM.allocatedFTE(), thePM.availableFTE());
 
       // Check if there is an ongoing project
-      auto latest = dataHandler->fetchLatestTrackerEntry();
-      if(latest.projectUid != proIds::NullUid){
-        // Project in progress. Place a mark
-        //TODO - if it has been a long time, offer an option to place an end mark?
-        std::cout<<"Starting with active project :"<<thePM.getName(latest.projectUid)<<std::endl;
-        markProject(latest.projectUid, thePM.getName(latest.projectUid));
+      try{
+        auto latest = dataHandler->fetchLatestTrackerEntry();
+        if(latest.projectUid != proIds::NullUid){
+          // Project in progress. Place a mark
+          //TODO - if it has been a long time, offer an option to place an end mark?
+          std::cout<<"Starting with active project :"<<thePM.getName(latest.projectUid)<<std::endl;
+          markProject(latest.projectUid, thePM.getName(latest.projectUid));
+        }
+      }catch (const std::runtime_error &e){
+        //Probably there is no timestamp entry - pass
       }
+
     }
 
     void markProject(proIds::Uuid uid, std::string name){
       //Timestamp project with current 'time' - (NB app time, not necessarily real time)
 
-      //Temporary - just log the request
       auto stamp = timeStamp{timeWrapper::toSeconds(timeWrapper::now()), uid};
       std::cout << "Marking project "<<name<< " UID: " << uid << " "<<timeWrapper::formatTime(timeWrapper::fromSeconds(stamp.time))<< std::endl;
+ 
       currentProjectStatus.uid = uid;
       currentProjectStatus.status = trackerTypes::projectStatusFlag::active;
+      currentProjectStatus.name = name;
       dataHandler->writeTrackerEntry(stamp); // Write to data handler
       emit projectRunningUpdate(name); // Notify view that a project is running
 
-      auto end = timeWrapper::toSeconds(timeWrapper::now()) - 10;
-      auto list = dataHandler->fetchTrackerEntries(-1, end);
-      for(const auto & it : list){
-        std::cout<<it<<'\n';
-      }
-
     }
+
     void stopProject(){
       if(currentProjectStatus.status == trackerTypes::projectStatusFlag::active){
         std::cout << "Stopping project with UID: " << currentProjectStatus.uid << std::endl;
         currentProjectStatus.status = trackerTypes::projectStatusFlag::none;
         emit projectStopped(); // Notify view that no project is running
+        dataHandler->writeTrackerEntry({timeWrapper::toSeconds(timeWrapper::now()), proIds::NullUid});
       } //If nothing is active, do nothing
     }
     void pauseProject(){
       if(currentProjectStatus.status == trackerTypes::projectStatusFlag::active){
         std::cout << "Pausing project with UID: " << currentProjectStatus.uid << std::endl;
         currentProjectStatus.status = trackerTypes::projectStatusFlag::paused;
-        emit projectPaused(thePM.getName(currentProjectStatus.uid)); // Notify view that a project is paused
+        if(currentProjectStatus.uid.isTaggedAs(proIds::uidTag::oneoff)){
+          emit projectRunningUpdate(currentProjectStatus.name); //If it's a one-off, use stored name
+        }else{
+          emit projectRunningUpdate(thePM.getName(currentProjectStatus.uid)); // Notify view that a project is running
+        }
+        dataHandler->writeTrackerEntry({timeWrapper::toSeconds(timeWrapper::now()), proIds::NullUid});
       } //If nothing is active, do nothing
     }
     void resumeProject(){
       if(currentProjectStatus.status == trackerTypes::projectStatusFlag::paused){
         std::cout << "Resuming project with UID: " << currentProjectStatus.uid << std::endl;
         currentProjectStatus.status = trackerTypes::projectStatusFlag::active;
-        emit projectRunningUpdate(thePM.getName(currentProjectStatus.uid)); // Notify view that a project is running
+        if(currentProjectStatus.uid.isTaggedAs(proIds::uidTag::oneoff)){
+          emit projectRunningUpdate(currentProjectStatus.name); //If it's a one-off, use stored name
+        }else{
+          emit projectRunningUpdate(thePM.getName(currentProjectStatus.uid)); // Notify view that a project is running
+        }
+        dataHandler->writeTrackerEntry({timeWrapper::toSeconds(timeWrapper::now()), currentProjectStatus.uid});
       } //If nothing is paused, do nothing
     }
 
@@ -281,6 +293,8 @@ Q_OBJECT
 
       }else{
         std::cout<<" Closing requested. Saving data..." << std::endl;
+        stopProject();
+
       }
       emit readyToClose(); // Done, ready to shutdown now
     }

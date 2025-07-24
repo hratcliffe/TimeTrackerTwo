@@ -10,9 +10,7 @@
 #ifndef _idGenerators_h
 #define _idGenerators_h
 
-#include <ctime>
 #include <string>
-#include <vector>
 #include <iostream>
 
 #include <QUuid>
@@ -143,6 +141,8 @@ class IdGenerator{
     /** \brief Get null id*/
     virtual proIds::Uuid getNullId(){return proIds::NullUid;};
 
+    virtual proIds::Uuid getOnesId() = 0;
+
     /** \brief Get tagged next id*/
     virtual proIds::Uuid getNextId(proIds::uidTag tag) = 0;
 };
@@ -165,7 +165,8 @@ class uniqueIdGenerator : public IdGenerator{
     virtual proIds::Uuid getNextId(){return QUuid::createUuid();};
     /** \brief Get null unique id*/
     virtual proIds::Uuid getNullId(){return proIds::NullUid;};
-    /** \brief Not yet implemented*/
+    virtual proIds::Uuid getOnesId(){return proIds::Uuid("{11111111-1111-1111-1111-111111111111}");}
+    /** \brief Not next unique id with tag*/
     virtual proIds::Uuid getNextId(proIds::uidTag tag){return proIds::Uuid(QUuid::createUuid(), tag);};
 };
 

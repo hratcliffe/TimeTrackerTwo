@@ -26,7 +26,7 @@ class projectManager{
     void setupGenerator(){this->gen = new uniqueIdGenerator();}; 
   public:
 
-    projectManager(){setupGenerator(); auto id_tmp = gen->getNullId(); id_tmp.tag(proIds::uidTag::oneoff); project dummy = project({"One Off", 0.0}, id_tmp); projects[id_tmp] = dummy;}; /**< \brief Default constructor */
+    projectManager(){setupGenerator(); auto id_tmp = gen->getOnesId(); id_tmp.tag(proIds::uidTag::oneoff); project dummy = project({"One Off", 0.0}, id_tmp); projects[id_tmp] = dummy;}; /**< \brief Default constructor */
     ~projectManager(){ if(gen) delete gen;}
     projectManager(const projectManager & src)=delete;
     projectManager& operator=(const projectManager&)=delete;

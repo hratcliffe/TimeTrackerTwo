@@ -318,6 +318,20 @@ class databaseStore{
         return ret;
     }
 
+    timeStamp fetchLatestTrackerEntry(){
+        std::string cmd = "SELECT time, project_id from timestamps t ORDER BY time DESC LIMIT 1;";
+        sqlite3_stmt * prep_cmd;
+        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        timeStamp ret;
+        if((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            ret.time = sqlite3_column_int64(prep_cmd, 0);
+            ret.projectUid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1)));
+        }else{
+            throw std::runtime_error("Failed to read timestamp");
+        }
+        sqlite3_finalize(prep_cmd);
+        return ret;
+    }
 };
 
 #endif

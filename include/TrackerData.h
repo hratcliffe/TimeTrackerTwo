@@ -115,6 +115,15 @@ Q_OBJECT
       }
       emit projectListUpdateEvent(thePM.getOrderedProjectList());
       emit projectTotalUpdateEvent(thePM.allocatedFTE(), thePM.availableFTE());
+
+      // Check if there is an ongoing project
+      auto latest = dataHandler->fetchLatestTrackerEntry();
+      if(latest.projectUid != proIds::NullUid){
+        // Project in progress. Place a mark
+        //TODO - if it has been a long time, offer an option to place an end mark?
+        std::cout<<"Starting with active project :"<<thePM.getName(latest.projectUid)<<std::endl;
+        markProject(latest.projectUid, thePM.getName(latest.projectUid));
+      }
     }
 
     void markProject(proIds::Uuid uid, std::string name){
@@ -268,7 +277,7 @@ Q_OBJECT
       if(silent){
         // Just ensure data is saved and exit
         std::cout << "Silent close requested. Saving data..." << std::endl;
-        // \TODO IMPLEMENT saving etc
+        if(currentProjectStatus.status == trackerTypes::projectStatusFlag::active) std::cout<<"Leaving Project Active: "<<thePM.getName(currentProjectStatus.uid)<<std::endl;
 
       }else{
         std::cout<<" Closing requested. Saving data..." << std::endl;

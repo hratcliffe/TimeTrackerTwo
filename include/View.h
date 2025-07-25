@@ -251,6 +251,10 @@ Q_OBJECT
       updateAvailableActions(false);
     }
 
+    void updateClockDisplay(std::string time){
+      updateRFooter(time);
+    }
+
     void showAddDialog(){
 
       if(freeFTE < 1e-5){

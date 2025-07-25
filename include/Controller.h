@@ -1,7 +1,10 @@
 #include <iostream>
 
 #include <QWidget>
+#include <QTimer>
 #include "support.h"
+
+#include "appClock.h"
 #include "View.h"
 #include "TrackerData.h"
 #include "projectbutton.h"
@@ -10,6 +13,8 @@ class Controller : public QWidget{
 Q_OBJECT
   View * theView;
   TrackerData * currentData;
+  appClock * clock;
+  QTimer * clockTicker;
 
   public:
   Controller(appConfig config){
@@ -20,6 +25,8 @@ Q_OBJECT
     connectSignals();
 
     currentData->loadProjects();
+
+    clock = new appClock();
 
     //TODO consolidate stamps into daily digests and store per entity - easier reporting and better long-term use
   }
@@ -70,6 +77,17 @@ Q_OBJECT
     connect(theView, &View::timeSummaryRequested, currentData, &TrackerData::generateTimeSummary);
     connect(currentData, &TrackerData::timeSummaryReady, theView, &View::timeSummaryUpdated);
 
+
+    //Clock ticking
+    clockTicker = new QTimer();
+    clockTicker->start(1000);
+    connect(clockTicker, &QTimer::timeout, [this](){this->clock->tick(); emit clockUpdated(this->clock->shortTimeString());});
+    connect(this, &Controller::clockUpdated, theView, &View::updateClockDisplay);
+
   }
+
+  signals:
+
+  void clockUpdated(std::string newTime); // Signal from controller as appClock is not QT aware
 
 };

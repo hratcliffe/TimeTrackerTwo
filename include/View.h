@@ -30,7 +30,7 @@ Q_OBJECT
     QMainWindow * main;
     std::vector<selectableEntity> pList; //Persistent list of projects - needed in some dialogs
     float usedFTE = 0.0, freeFTE=0.0; //Tracks FTE fractions
-    viewProperties prop; //TODO - should there be any way to alter this?
+    viewProperties prop; //TODO - should there be any way to alter this? - maybe settings and some presets?
     projectButton * oneOffTrackerButton = nullptr; // Tracker button for special entries
 
   View(){
@@ -210,7 +210,6 @@ Q_OBJECT
         addButton->setText("Add Sub");
         addButton->setFixedWidth(100);
         connect(addButton, &QPushButton::clicked, this, &View::showAddSubDialog);
-        //addButton->setDisabled(1); //TODO - implement....
         ui->p_project_layout->layout()->addWidget(addButton);
 
         addButton = new QPushButton();
@@ -224,7 +223,7 @@ Q_OBJECT
         addButton->setText("Deactivate"); //Remove from selections, leave data intact
         addButton->setFixedWidth(100);
         //connect(addButton, &QPushButton::clicked, this, &View::???);
-        addButton->setDisabled(1); //TODO - implement....
+        addButton->setDisabled(1); //TODO - implement.... - note depends on project start/end date feature
         ui->p_project_layout->layout()->addWidget(addButton);
 
 

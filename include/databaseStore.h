@@ -10,32 +10,6 @@
 #include "idGenerators.h"
 
 
-inline int DBUnpackSingleLong(void* data, int argc, char** argv, char** azColName)
-{
-  //Fills data structure with a single long value
-  auto val = static_cast<long *>(data);
-  if(argc > 0){
-    *val = atol(argv[0]);
-    return 0;
-  }else{
-    return 1;
-  }
-
-}
-
-inline int DBUnpackSingleString(void* data, int argc, char** argv, char** azColName)
-{
-  //Fills data structure with a single string
-  auto val = static_cast<std::string *>(data);
-  if(argc > 0){
-    *val = argv[0];
-    return 0;
-  }else{
-    return 1;
-  }
-
-}
-
 class databaseStore{
 
     sqlite3 *DB; /**< \brief SQLite database connection */

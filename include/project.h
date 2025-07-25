@@ -90,9 +90,6 @@ class project : public projectLike{
       *
       * Reference is used in reports etc
       */
-    std::string billing_ref;
-    time_t start; /**< \brief Running date start for project*/
-    time_t end; /**< \brief Running date end for project*/
 
     bool active; /**< \brief Flag to allow project to be deactivated for any reason*/
   public:

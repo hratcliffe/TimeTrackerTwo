@@ -46,45 +46,6 @@ Q_OBJECT
 
     ~TrackerData(){if(dataHandler) delete dataHandler;};
 
-    // Demo - filling in some fake projects to the UI
-    void fillDemoData(){
-      std::cout<< "Filling demo data" << std::endl;
-
-      auto tmp = projectData{"Demo Project 1", 0.5};
-      auto id = thePM.addProject(tmp);
-      // TODO replace this testing idiom with sensible real flow
-      fullProjectData demoData(id, tmp);
-      dataHandler->writeProject(demoData); // Write to data handler
-
-      tmp = projectData{"Demo Project 2", 0.3};
-      id = thePM.addProject(tmp);
-      demoData = fullProjectData(id, tmp);
-      dataHandler->writeProject(demoData); // Write to data handler
-
-      tmp = projectData{"Demo Project 3", 0.2};
-      id = thePM.addProject(tmp);
-      dataHandler->writeProject(fullProjectData(id, tmp)); // Write to data handler
-      auto tmpS = subProjectData{"Demo Subproject 3.1", 0.5};
-      auto idS = thePM.addSubproject(tmpS, id);
-      dataHandler->writeSubproject(fullSubProjectData(idS, tmpS, id)); // Write to data handler
-      tmpS = subProjectData{"Demo Subproject 3.2", 0.5};
-      idS = thePM.addSubproject(tmpS, id);
-      dataHandler->writeSubproject(fullSubProjectData(idS, tmpS, id)); // Write to data handler
-
-      auto lst = dataHandler->fetchProjectList();
-      std::cout<< lst.size() << " projects in data handler" << std::endl;
-      for(const auto & it : lst){
-        std::cout<< it<<'\n';
-      }
-      auto lstS = dataHandler->fetchSubprojectList();
-      std::cout<< lstS.size() << " subprojects in data handler" << std::endl;
-      for(const auto & it : lstS){
-        std::cout<< it<<'\n';
-      }
-
-      emit projectListUpdateEvent(thePM.getOrderedProjectList()); // NOTE: if weird bugs start appearing, check the rules for prolonging rvalues against how emit works again
-    }
-
     //Creating new projects - e.g from UI command
     void createProject(const projectData & dat){
       //Create a new project from data - adds it to the manager and writes to the backend

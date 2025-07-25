@@ -321,7 +321,7 @@ Q_OBJECT
       if(silent){
         // Just ensure data is saved and exit
         std::cout << "Silent close requested. Saving data..." << std::endl;
-        if(currentProjectStatus.status == trackerTypes::projectStatusFlag::active) std::cout<<"Leaving Project Active: "<<thePM.getName(currentProjectStatus.uid)<<std::endl;
+        if(currentProjectStatus.status == trackerTypes::projectStatusFlag::active) std::cout<<"Leaving Project Active: "<<thePM.getName(currentProjectStatus.uid)<<std::endl; //TODO - can we persist a pause?
 
       }else{
         std::cout<<" Closing requested. Saving data..." << std::endl;

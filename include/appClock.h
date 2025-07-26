@@ -15,7 +15,7 @@ class appClock{
   public:
 
     appClock(){appTime = timeWrapper::now();};
-    // Update the clock
+    // Update the clock - does not _advance_ the clock - syncs it with the built-in
     void tick(){
         if(t_travelling){
             //Update to correct duration since zero-hour

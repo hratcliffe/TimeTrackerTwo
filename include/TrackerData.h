@@ -72,7 +72,7 @@ Q_OBJECT
     }
 
     //Load existing projects from the data backend
-    void loadProjects(){
+    void loadProjects(timecode now){
       if(! dataHandler) throw std::runtime_error("No Data Backend Found");
 
       std::cout<<"Loading projects from backend"<<std::endl;
@@ -95,7 +95,7 @@ Q_OBJECT
           // Project in progress. Place a mark
           //TODO - if it has been a long time, offer an option to place an end mark?
           std::cout<<"Starting with active project :"<<thePM.getName(latest.projectUid)<<std::endl;
-          markProject(latest.projectUid, thePM.getName(latest.projectUid));
+          markProject(latest.projectUid, thePM.getName(latest.projectUid), now);
         }
       }catch (const std::runtime_error &e){
         //Probably there is no timestamp entry - pass
@@ -103,10 +103,10 @@ Q_OBJECT
 
     }
 
-    void markProject(proIds::Uuid uid, std::string name){
+    void markProject(proIds::Uuid uid, std::string name, timecode now){
       //Timestamp project with current 'time' - (NB app time, not necessarily real time)
 
-      auto stamp = timeStamp{timeWrapper::toSeconds(timeWrapper::now()), uid};
+      auto stamp = timeStamp{now, uid};
       std::cout << "Marking project "<<name<< " UID: " << uid << " "<<timeWrapper::formatTime(timeWrapper::fromSeconds(stamp.time))<< std::endl;
  
       currentProjectStatus.uid = uid;
@@ -117,15 +117,15 @@ Q_OBJECT
 
     }
 
-    void stopProject(){
+    void stopProject(timecode now){
       if(currentProjectStatus.status == trackerTypes::projectStatusFlag::active){
         std::cout << "Stopping project with UID: " << currentProjectStatus.uid << std::endl;
         currentProjectStatus.status = trackerTypes::projectStatusFlag::none;
         emit projectStopped(); // Notify view that no project is running
-        dataHandler->writeTrackerEntry({timeWrapper::toSeconds(timeWrapper::now()), proIds::NullUid});
+        dataHandler->writeTrackerEntry({now, proIds::NullUid});
       } //If nothing is active, do nothing
     }
-    void pauseProject(){
+    void pauseProject(timecode now){
       if(currentProjectStatus.status == trackerTypes::projectStatusFlag::active){
         std::cout << "Pausing project with UID: " << currentProjectStatus.uid << std::endl;
         currentProjectStatus.status = trackerTypes::projectStatusFlag::paused;
@@ -134,10 +134,10 @@ Q_OBJECT
         }else{
           emit projectRunningUpdate(thePM.getName(currentProjectStatus.uid)); // Notify view that a project is running
         }
-        dataHandler->writeTrackerEntry({timeWrapper::toSeconds(timeWrapper::now()), proIds::NullUid});
+        dataHandler->writeTrackerEntry({now, proIds::NullUid});
       } //If nothing is active, do nothing
     }
-    void resumeProject(){
+    void resumeProject(timecode now){
       if(currentProjectStatus.status == trackerTypes::projectStatusFlag::paused){
         std::cout << "Resuming project with UID: " << currentProjectStatus.uid << std::endl;
         currentProjectStatus.status = trackerTypes::projectStatusFlag::active;
@@ -146,7 +146,7 @@ Q_OBJECT
         }else{
           emit projectRunningUpdate(thePM.getName(currentProjectStatus.uid)); // Notify view that a project is running
         }
-        dataHandler->writeTrackerEntry({timeWrapper::toSeconds(timeWrapper::now()), currentProjectStatus.uid});
+        dataHandler->writeTrackerEntry({now, currentProjectStatus.uid});
       } //If nothing is paused, do nothing
     }
 
@@ -186,6 +186,7 @@ Q_OBJECT
       // TODO how to select time range for summary
       std::vector<timeStamp> timestamps = dataHandler->fetchTrackerEntries();
 
+      //TODO - should this always go until now? C.f. previous - time range selection?
       timecode window = timeWrapper::toSeconds(timeWrapper::now()) - timestamps[0].time; 
       std::map<proIds::Uuid, timecode> durations = timestampProcessor::stampsToDurations(timestamps);
 
@@ -278,7 +279,7 @@ Q_OBJECT
 
     }
 
-    void handleCloseRequest(bool silent){
+    void handleCloseRequest(bool silent, timecode now){
       if(silent){
         // Just ensure data is saved and exit
         std::cout << "Silent close requested. Saving data..." << std::endl;
@@ -286,7 +287,7 @@ Q_OBJECT
 
       }else{
         std::cout<<" Closing requested. Saving data..." << std::endl;
-        stopProject();
+        stopProject(now);
 
       }
       emit readyToClose(); // Done, ready to shutdown now

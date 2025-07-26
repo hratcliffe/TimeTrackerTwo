@@ -4,7 +4,7 @@
 #include <iostream>
 
 #include "timeWrapper.h"
-
+#include "dataObjects.h"
 
 //Stateful class to allow 'time travel' gimmick - go to a specific time and use the app
 class appClock{
@@ -26,6 +26,9 @@ class appClock{
 
     }
 
+    timecode now(){
+        return timeWrapper::toSeconds(appTime);
+    }
     std::string fullTimeString(){
         return timeWrapper::formatTime(appTime);
     }

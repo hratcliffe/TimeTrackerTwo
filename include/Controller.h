@@ -24,7 +24,7 @@ Q_OBJECT
     currentData = new TrackerData(config);
     connectSignals();
 
-    currentData->loadProjects();
+    currentData->loadProjects(clock->now());
 
     clock = new appClock();
 
@@ -35,7 +35,8 @@ Q_OBJECT
     // Collect all the connections from View to Model (TrackerData)
 
     // Close, and silent close. Close will mark current project as stopped. Silent close will not...
-    connect(theView, &View::closeRequested, currentData, &TrackerData::handleCloseRequest);
+    connect(theView, &View::closeRequested, [this](bool silent){currentData->handleCloseRequest(silent, this->clock->now());});
+ 
     connect(currentData, &TrackerData::readyToClose, theView, &View::exitApp);
 
     // Update the view when the project list changes
@@ -43,7 +44,7 @@ Q_OBJECT
     connect(currentData, &TrackerData::projectTotalUpdateEvent, theView, &View::projectTimeUpdated);
 
     // Connect the project selection to the TrackerData to mark projects
-    connect(theView, &View::projectSelectedTrack, currentData, &TrackerData::markProject);
+    connect(theView, &View::projectSelectedTrack, [this](proIds::Uuid uid, std::string name){currentData->markProject(uid, name, this->clock->now());});
     // And back, to show status
     connect(currentData, &TrackerData::projectRunningUpdate, theView, &View::updateRunningProjectDisplay);
 
@@ -52,13 +53,13 @@ Q_OBJECT
     connect(currentData, &TrackerData::oneOffIdUpdate, theView, &View::updateOneOffId);
 
     //Pausing a project:
-    connect(theView, &View::pauseRequested, currentData, &TrackerData::pauseProject);
+    connect(theView, &View::pauseRequested, [this](){currentData->pauseProject(this->clock->now());});
     connect(currentData, &TrackerData::projectPaused, theView, &View::updatePausedProjectDisplay);
     // Resuming a project
-    connect(theView, &View::resumeRequested, currentData, &TrackerData::resumeProject);
+    connect(theView, &View::resumeRequested, [this](){currentData->resumeProject(this->clock->now());});
     connect(currentData, &TrackerData::projectRunningUpdate, theView, &View::updateRunningProjectDisplay);
     // Stopping a project
-    connect(theView, &View::stopRequested, currentData, &TrackerData::stopProject);
+    connect(theView, &View::stopRequested, [this](){currentData->stopProject(this->clock->now());});
     connect(currentData, &TrackerData::projectStopped, theView, &View::updateStoppedProjectDisplay);
 
     //Project information tab events

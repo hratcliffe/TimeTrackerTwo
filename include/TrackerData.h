@@ -180,10 +180,12 @@ Q_OBJECT
       std::vector<timeSummaryItem> summary;
       // A vector of items to be displayed in order - expect display to add newlines between items
 
+      //TODO - add an FTE/week and compare absolute
+
       const float targetThresholdFTE = 0.01;
       const float targetThresholdFractionFrac = 0.01; // Ditto for sub fracs
       //Fetching timedata - TODO limit bounds?
-      // TODO how to select time range for summary
+      // TODO how to select time range for summary - c.f. View - filtering dialog and data struct?
       std::vector<timeStamp> timestamps = dataHandler->fetchTrackerEntries();
 
       //TODO - should this always go until now? C.f. previous - time range selection?
@@ -193,7 +195,7 @@ Q_OBJECT
       std::string unit_str = unitToString(units);
       timecode unit_factor = unitToDivisor(units);
 
-      std::string tmp_str = std::to_string(window/timeFactors::day + 1); //TODO rounding
+      std::string tmp_str = displayFloatQuarters(window/timeFactors::day + 0.249); //Quarter day increment, rounding up
       timeSummaryItem item = {"Showing summary for past " + tmp_str +" days", timeSummaryStatus::none};
       summary.push_back(item);
 
@@ -205,7 +207,7 @@ Q_OBJECT
         } 
       }
 
-      tmp_str = std::to_string(uptime/unit_factor); //TODO rounding
+      tmp_str = displayFloat(uptime/unit_factor, 1); //TODO rounding
       item = {"Total uptime "+tmp_str+" "+unit_str, timeSummaryStatus::none};
       summary.push_back(item);
 
@@ -236,17 +238,18 @@ Q_OBJECT
           subTimes += (durations.count(sub->getUid()) > 0) ? durations[sub->getUid()] : 0; //Sum on subs
         }
 
-        item = {"Time on project and subs: "+ std::to_string(time + subTimes), timeSummaryStatus::none};
+        item = {"Time on project and subs: "+ displayFloatQuarters((time + subTimes)/unit_factor) + " "+unit_str, timeSummaryStatus::none};
         summary.push_back(item);
 
         float frac = (float)(time+subTimes)/(float)uptime; //See above - uptime cannot be zero here
+        float FTE = proj->getFTE();
         timeSummaryStatus tag = timeSummaryStatus::onTarget;
-        if(frac - proj->getFTE() > targetThresholdFTE){
+        if(frac - FTE > targetThresholdFTE){
           tag = timeSummaryStatus::overTarget;
-        }else if(proj->getFTE() - frac > targetThresholdFTE){
+        }else if(FTE - frac > targetThresholdFTE){
           tag = timeSummaryStatus::underTarget;
         }
-        item = {"Fraction of uptime " + std::to_string(frac), tag}; // TODO add target and round to percents
+        item = {"Fraction of uptime " + displayFloat(frac*100, 0) +"% (target "+displayFloat(FTE*100, 0)+"%)", tag};
         summary.push_back(item);
 
         if(subs.size() > 0 and time+subTimes > 0){
@@ -262,7 +265,7 @@ Q_OBJECT
             }else if(sub->getFrac() - frac > targetThresholdFractionFrac){
               tag = timeSummaryStatus::underTarget;
             }
-            item = {"Fraction on sub " + std::to_string(frac), tag};
+            item = {"Fraction on sub " + displayFloat(frac*100, 0) +"% (target" +displayFloat(sub->getFrac()*100,0)+"%)", tag};
             summary.push_back(item);
           }
         }else if(subs.size() > 0){

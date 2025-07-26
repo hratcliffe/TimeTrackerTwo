@@ -47,7 +47,8 @@ Q_OBJECT
     connect(ui->t_stop_button, &QPushButton::clicked, [this](){emit stopRequested();});
 
     //Connecting Tab bar to refresh actions
-    connect(ui->tabWidget, &QTabWidget::currentChanged, [this](int index){if(index == 1) emit timeSummaryRequested(timeSummaryUnit::debug);}); //TODO - use unit from UI
+    connect(ui->tabWidget, &QTabWidget::currentChanged, [this](int index){if(index == 1) emit timeSummaryRequested(timeSummaryUnit::minute);}); //TODO - minutes for dev, -> hours for real
+    //TODO - add summary filtering dialog
 
 
     updateLFooter("Not Tracking");

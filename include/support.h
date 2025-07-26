@@ -50,8 +50,18 @@ inline std::string displayFloat(float value, int dp=2){
   //Create a string from given float with exactly dp decimal places
   // Simple, but nice to have inline
   std::stringstream ss;
-  ss<<std::setprecision(dp+1)<<value; // +1 for decimal pt?
+  ss<<std::fixed<<std::setprecision(dp)<<value;
   return ss.str();
+}
+inline std::string displayFloatHalves(float value){
+  //Create string for given float to nearest 0.5
+  return displayFloat(std::floor(value * 2 + 0.5)/2.0, 1);
+}
+inline std::string displayFloatQuarters(float value){
+  //Create string for given float to nearest 0.5
+  float flt = std::floor(value * 4 + 0.5);
+  float rem = std::remainder(flt, 4);
+  return displayFloat(flt/4.0, (rem == 1 or rem == 3) ? 2: 1);
 }
 
 #endif

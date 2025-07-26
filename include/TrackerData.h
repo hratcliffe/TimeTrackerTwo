@@ -130,9 +130,9 @@ Q_OBJECT
         std::cout << "Pausing project with UID: " << currentProjectStatus.uid << std::endl;
         currentProjectStatus.status = trackerTypes::projectStatusFlag::paused;
         if(currentProjectStatus.uid.isTaggedAs(proIds::uidTag::oneoff)){
-          emit projectRunningUpdate(currentProjectStatus.name); //If it's a one-off, use stored name
+          emit projectPaused(currentProjectStatus.name); //If it's a one-off, use stored name
         }else{
-          emit projectRunningUpdate(thePM.getName(currentProjectStatus.uid)); // Notify view that a project is running
+          emit projectPaused(thePM.getName(currentProjectStatus.uid)); // Notify view that a project is running
         }
         dataHandler->writeTrackerEntry({now, proIds::NullUid});
       } //If nothing is active, do nothing

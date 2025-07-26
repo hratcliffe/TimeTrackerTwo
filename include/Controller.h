@@ -24,11 +24,11 @@ Q_OBJECT
     currentData = new TrackerData(config);
     connectSignals();
 
-    currentData->loadProjects(clock->now());
-
     clock = new appClock();
 
-    //TODO consolidate stamps into daily digests and store per entity - easier reporting and better long-term use
+    currentData->loadProjects(clock->now());
+
+      //TODO consolidate stamps into daily digests and store per entity - easier reporting and better long-term use
   }
 
   void connectSignals(){

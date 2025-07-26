@@ -8,6 +8,7 @@
 #include "ui_AddProjectDialog.h"
 #include "ui_AddSubprojectDialog.h"
 #include "ui_AddOneOffDialog.h"
+#include "ui_TimeTravelDialog.h"
 
 #include "project.h"
 #include "projectbutton.h"
@@ -45,6 +46,9 @@ Q_OBJECT
     connect(ui->t_pause_button, &QPushButton::clicked, [this](){emit pauseRequested();});
     connect(ui->t_resume_button, &QPushButton::clicked, [this](){emit resumeRequested();});
     connect(ui->t_stop_button, &QPushButton::clicked, [this](){emit stopRequested();});
+    
+    //Need to collect the time from backend before showing the dialog
+    connect(ui->t_ttravel_button, &QPushButton::clicked, [this](){emit fetchTimeTravelInfo();});
 
     //Connecting Tab bar to refresh actions
     connect(ui->tabWidget, &QTabWidget::currentChanged, [this](int index){if(index == 1) emit timeSummaryRequested(timeSummaryUnit::minute);}); //TODO - minutes for dev, -> hours for real
@@ -325,6 +329,23 @@ Q_OBJECT
       std::cout<<result<<std::endl;
     }
 
+    void showTimeTravelDialog(std::string clockTime, QDateTime time){
+
+      //TODO offer a pop-up showing time-marks for a specific window
+      auto ttDialog = new QDialog(this);
+      Ui::timeTravelDialog ttUi;
+      ttUi.setupUi(ttDialog);
+      ttUi.realtimeLabel->setText(clockTime.c_str());
+      ttUi.dateTimeEdit->setDateTime(time);
+      //The now button in Dialog resets the edit to this - NOTE this time does not track, it is the time when
+      // dialog starts...
+      connect(ttUi.nowButton, &QPushButton::clicked, [time, ttUi](){ttUi.dateTimeEdit->setDateTime(time);});
+      bool result = ttDialog->exec();
+      if(result){
+        emit timeTravelRequested(ttUi.dateTimeEdit->dateTime());
+      }
+    }
+
     void timeSummaryUpdated(std::vector<timeSummaryItem> summary){
       
       auto layout = ui->s_summary_items;
@@ -372,6 +393,9 @@ Q_OBJECT
     void projectAddRequested(const projectData & data);
     void subprojectAddRequested(const subProjectData & data, const proIds::Uuid & parent);
     void oneOffIdRequired();
+
+    void fetchTimeTravelInfo();
+    void timeTravelRequested(QDateTime time);
 
   };
 

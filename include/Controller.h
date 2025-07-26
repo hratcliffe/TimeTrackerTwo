@@ -29,6 +29,7 @@ Q_OBJECT
     currentData->loadProjects(clock->now());
 
       //TODO consolidate stamps into daily digests and store per entity - easier reporting and better long-term use
+      //TODO be careful of embedding 'day' too deeply - what if something runs past midnight? What about travelling to another time Zone? 
   }
 
   void connectSignals(){
@@ -85,6 +86,20 @@ Q_OBJECT
     connect(clockTicker, &QTimer::timeout, [this](){this->clock->tick(); emit clockUpdated(this->clock->shortTimeString());});
     connect(this, &Controller::clockUpdated, theView, &View::updateClockDisplay);
 
+    //Time travelling:
+    //To show a dialog, view needs to know the time now:
+    connect(theView, &View::fetchTimeTravelInfo, [this](){theView->showTimeTravelDialog(this->clock->shortTimeString(), QDateTime::currentDateTime());});
+    connect(theView, &View::timeTravelRequested, [this](QDateTime time){this->clock->travelTo(fromQDateTime(time));});
+
+  }
+  TW_timePoint fromQDateTime(QDateTime time){
+    //Convert from QT time to app time, going via a string
+    // Format  "%Y-%m-%d %H:%M:%S"
+    std::string time_str;
+    time_str = time.toString("yyyy-MM-dd hh:mm:ss").toStdString();
+    //std::cout<<time_str<<std::endl;
+    //std::cout<<timeWrapper::formatTime(timeWrapper::parseTimeZoned(time_str))<<std::endl;
+    return timeWrapper::parseTimeZoned(time_str);
   }
 
   signals:

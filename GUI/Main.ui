@@ -230,7 +230,7 @@
                   <item>
                    <widget class="QPushButton" name="t_ttravel_button">
                     <property name="enabled">
-                     <bool>false</bool>
+                     <bool>true</bool>
                     </property>
                     <property name="maximumSize">
                      <size>

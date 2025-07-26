@@ -49,12 +49,24 @@ class timeWrapper{
       return std::string(buffer);
     }
     static timePoint parseTime(const std::string &timeStr) {
+      //Assumes string is GMT, does not attempt to parse any zoning
       std::tm tm = {};
       std::istringstream ss(timeStr);
-      ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S"); /**< \brief Parse a time string into a time_point */
+      ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
       if (ss.fail()) {
         throw std::runtime_error("Failed to parse time string: " + timeStr);
       }
+      return clock::from_time_t(std::mktime(&tm));
+    }
+    static timePoint parseTimeZoned(const std::string &timeStr) {
+      //Parse the time string correctly as clock time in current time zone
+      std::tm tm = {};
+      std::istringstream ss(timeStr);
+      ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
+      if (ss.fail()) {
+        throw std::runtime_error("Failed to parse time string: " + timeStr);
+      }
+      tm.tm_isdst = -1; //TODO - try and verify that this works?
       return clock::from_time_t(std::mktime(&tm));
     }
 

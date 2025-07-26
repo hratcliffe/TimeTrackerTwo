@@ -16,7 +16,11 @@ QT += widgets
 DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 # Input
-FORMS += GUI/Main.ui GUI/AddProjectDialog.ui GUI/AddSubprojectDialog.ui GUI/AddOneOffDialog.ui
+FORMS += GUI/Main.ui \
+         GUI/AddProjectDialog.ui \
+         GUI/AddSubprojectDialog.ui \
+         GUI/AddOneOffDialog.ui \
+         GUI/TimeTravelDialog.ui
 SOURCES += src/main.cpp
 
 HEADERS += include/Controller.h \

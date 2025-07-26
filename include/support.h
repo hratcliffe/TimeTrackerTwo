@@ -46,7 +46,7 @@ struct appConfig{
   dataBackendType backend = dataBackendType::database; /**< \brief Type of data backend to use */
 };
 
-inline std::string displayFloat(float value, float dp=2){
+inline std::string displayFloat(float value, int dp=2){
   //Create a string from given float with exactly dp decimal places
   // Simple, but nice to have inline
   std::stringstream ss;

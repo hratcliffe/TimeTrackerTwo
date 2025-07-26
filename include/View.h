@@ -117,122 +117,19 @@ Q_OBJECT
     }
 
     void projectListUpdated(std::vector<selectableEntity> const & newList){
-      // TODO consider splitting this giant function...
       std::cout << "Project list updated with " << newList.size() << " projects." << std::endl;
 
-      //Clear existing store
+      //Clear existing store, refresh from new list
       pList.clear();
-      // Clear existing buttons
-      if (ui->t_project_buttons->layout() == nullptr) {
-        std::cerr << "Error: t_project_buttons layout is null." << std::endl;
-      }else{
-        QLayoutItem *child;
-        while ((child = ui->t_project_buttons->layout()->takeAt(0)) != nullptr) {
-          delete child->widget();
-          delete child;
-        }
-        for (auto & proj : newList){
-          projectButton * button = new projectButton();
-          button->projectId = proj.uid;
-          button->fullName = proj.name;
-          button->setText(QString::fromStdString(proj.name));
-          if(proj.level == 0){
-            button->setStyleSheet("background-color: lightblue;"); // Top level projects 
-          }else if(proj.level == 1){
-            button->setStyleSheet("background-color: lightgreen;"); // Subprojects
-          }
-          button->setFixedWidth(150);
-          connect(button, &projectButton::clicked, this, [this, button](){this->trackProjectClicked(button);});
-          ui->t_project_buttons->layout()->addWidget(button);
-        }
-        //Adding the 'one off' button - note this will 'waste' uids by getting a new one
-        // with every added project but that is best alternative
-        oneOffTrackerButton = new projectButton();
-        oneOffTrackerButton->projectId = proIds::NullUid; //Temporary
-        oneOffTrackerButton->fullName = "One Off";
-        oneOffTrackerButton->setText("One Off");
-        oneOffTrackerButton->setStyleSheet("background-color: blue;"); 
-        oneOffTrackerButton->setFixedWidth(150);
-        connect(oneOffTrackerButton, &projectButton::clicked, this, [this](){this->showOneOffDialog(this->oneOffTrackerButton->projectId);}); // TODO - have this pop up the name entry form instead....
-        ui->t_project_buttons->layout()->addWidget(oneOffTrackerButton);
-        emit oneOffIdRequired();
-
-      }
-
-      //Adding just top-level projects to the Projects tab sidebar
-      // Also storing data for addSub dialog
-      if(ui->p_project_layout->layout() == nullptr) {
-        std::cerr << "Error: p_project_layout layout is null." << std::endl;
-      }else{
-        QLayoutItem *child;
-        while ((child = ui->p_project_layout->layout()->takeAt(0)) != nullptr) {
-          delete child->widget();
-          delete child; // Clear existing buttons
-        }
-        for (auto & proj : newList){ 
+      for (auto & proj : newList){ 
           if(proj.uid.isTaggedAs(proIds::uidTag::oneoff) || proj.uid.isTaggedAs(proIds::uidTag::sub)) continue; //Skips one-offs and subprojects
           //Storing for use in e.g. addSub dialog
           pList.push_back(proj);
-          
-          projectButton * button = new projectButton();
-          button->projectId = proj.uid;
-          button->fullName = proj.name;
-          button->setText(QString::fromStdString(proj.name));
-          button->setFixedWidth(100);
-          connect(button, &projectButton::clicked, this, [this, button](){this->viewProjectClicked(button);});
-          ui->p_project_layout->layout()->addWidget(button);
-        }
-        //Adding hline
-        auto line = new QFrame();
-        line->setFrameShape(QFrame::HLine);
-        line->setFrameShadow(QFrame::Sunken);
-        ui->p_project_layout->layout()->addWidget(line);
-
-        QPushButton * addButton = new QPushButton();
-        addButton->setText("Summary");
-        addButton->setFixedWidth(100);
-        connect(addButton, &QPushButton::clicked, this, &View::toplevelSummarySelected);
-        ui->p_project_layout->layout()->addWidget(addButton);
-
-        addButton = new QPushButton();
-        addButton->setText("One Offs"); //TODO allow selecting an interval to list these from?
-        addButton->setFixedWidth(100);
-        connect(addButton, &QPushButton::clicked, this, &View::oneoffSummarySelected);
-        ui->p_project_layout->layout()->addWidget(addButton);
-
-        line = new QFrame();
-        line->setFrameShape(QFrame::HLine);
-        line->setFrameShadow(QFrame::Sunken);
-        ui->p_project_layout->layout()->addWidget(line);
-
-        addButton = new QPushButton();
-        addButton->setText("Add");
-        addButton->setFixedWidth(100);
-        connect(addButton, &QPushButton::clicked, this, &View::showAddDialog);
-        ui->p_project_layout->layout()->addWidget(addButton);
-
-        addButton = new QPushButton();
-        addButton->setText("Add Sub");
-        addButton->setFixedWidth(100);
-        connect(addButton, &QPushButton::clicked, this, &View::showAddSubDialog);
-        ui->p_project_layout->layout()->addWidget(addButton);
-
-        addButton = new QPushButton();
-        addButton->setText("Delete"); //Completely remove along with all timestamps
-        addButton->setFixedWidth(100);
-        //connect(addButton, &QPushButton::clicked, this, &View::???);
-        addButton->setDisabled(1); //TODO - implement....
-        ui->p_project_layout->layout()->addWidget(addButton);
-
-        addButton = new QPushButton();
-        addButton->setText("Deactivate"); //Remove from selections, leave data intact
-        addButton->setFixedWidth(100);
-        //connect(addButton, &QPushButton::clicked, this, &View::???);
-        addButton->setDisabled(1); //TODO - implement.... - note depends on project start/end date feature
-        ui->p_project_layout->layout()->addWidget(addButton);
-
-
       }
+
+      updateTButtons(newList);
+      updatePButtons(newList);
+     
     }
 
     void projectTimeUpdated(float usedFTE, float freeFTE){this->usedFTE = usedFTE; this->freeFTE = freeFTE;}
@@ -396,6 +293,131 @@ Q_OBJECT
 
     void fetchTimeTravelInfo();
     void timeTravelRequested(QDateTime time);
+
+
+  private:
+
+    /** \brief Clear and replace Tracker pane buttons
+     * 
+     * Places projects and subprojects from the given list (expected in order) and adds a 'One Off' button at the end
+     */
+    void updateTButtons(std::vector<selectableEntity> const & newList){
+      // Clear existing buttons
+      if (ui->t_project_buttons->layout() == nullptr) {
+        std::cerr << "Error: t_project_buttons layout is null." << std::endl;
+      }else{
+        QLayoutItem *child;
+        while ((child = ui->t_project_buttons->layout()->takeAt(0)) != nullptr) {
+          delete child->widget();
+          delete child;
+        }
+        for (auto & proj : newList){
+          projectButton * button = new projectButton();
+          button->projectId = proj.uid;
+          button->fullName = proj.name;
+          button->setText(QString::fromStdString(proj.name));
+          if(proj.level == 0){
+            button->setStyleSheet("background-color: lightblue;"); // Top level projects 
+          }else if(proj.level == 1){
+            button->setStyleSheet("background-color: lightgreen;"); // Subprojects
+          }
+          button->setFixedWidth(150);
+          connect(button, &projectButton::clicked, this, [this, button](){this->trackProjectClicked(button);});
+          ui->t_project_buttons->layout()->addWidget(button);
+        }
+        //Adding the 'one off' button - note this will 'waste' uids by getting a new one
+        // with every added project but that is best alternative
+        oneOffTrackerButton = new projectButton();
+        oneOffTrackerButton->projectId = proIds::NullUid; //Temporary
+        oneOffTrackerButton->fullName = "One Off";
+        oneOffTrackerButton->setText("One Off");
+        oneOffTrackerButton->setStyleSheet("background-color: blue;"); 
+        oneOffTrackerButton->setFixedWidth(150);
+        connect(oneOffTrackerButton, &projectButton::clicked, this, [this](){this->showOneOffDialog(this->oneOffTrackerButton->projectId);}); // TODO - have this pop up the name entry form instead....
+        ui->t_project_buttons->layout()->addWidget(oneOffTrackerButton);
+        emit oneOffIdRequired();
+
+      }
+    }
+
+    /** \brief Clear and replace Project pane buttons
+     * 
+     * Places projects from the given list (expected in order) and adds special function buttons at the end
+     */
+    void updatePButtons(std::vector<selectableEntity> const & newList){
+      //Adding just top-level projects to the Projects tab sidebar
+      if(ui->p_project_layout->layout() == nullptr) {
+        std::cerr << "Error: p_project_layout layout is null." << std::endl;
+      }else{
+        QLayoutItem *child;
+        while ((child = ui->p_project_layout->layout()->takeAt(0)) != nullptr) {
+          delete child->widget();
+          delete child; // Clear existing buttons
+        }
+        for (auto & proj : newList){ 
+          if(proj.uid.isTaggedAs(proIds::uidTag::oneoff) || proj.uid.isTaggedAs(proIds::uidTag::sub)) continue; //Skips one-offs and subprojects
+          
+          projectButton * button = new projectButton();
+          button->projectId = proj.uid;
+          button->fullName = proj.name;
+          button->setText(QString::fromStdString(proj.name));
+          button->setFixedWidth(100);
+          connect(button, &projectButton::clicked, this, [this, button](){this->viewProjectClicked(button);});
+          ui->p_project_layout->layout()->addWidget(button);
+        }
+        //Adding hline
+        auto line = new QFrame();
+        line->setFrameShape(QFrame::HLine);
+        line->setFrameShadow(QFrame::Sunken);
+        ui->p_project_layout->layout()->addWidget(line);
+
+        QPushButton * addButton = new QPushButton();
+        addButton->setText("Summary");
+        addButton->setFixedWidth(100);
+        connect(addButton, &QPushButton::clicked, this, &View::toplevelSummarySelected);
+        ui->p_project_layout->layout()->addWidget(addButton);
+
+        addButton = new QPushButton();
+        addButton->setText("One Offs"); //TODO allow selecting an interval to list these from?
+        addButton->setFixedWidth(100);
+        connect(addButton, &QPushButton::clicked, this, &View::oneoffSummarySelected);
+        ui->p_project_layout->layout()->addWidget(addButton);
+
+        line = new QFrame();
+        line->setFrameShape(QFrame::HLine);
+        line->setFrameShadow(QFrame::Sunken);
+        ui->p_project_layout->layout()->addWidget(line);
+
+        addButton = new QPushButton();
+        addButton->setText("Add");
+        addButton->setFixedWidth(100);
+        connect(addButton, &QPushButton::clicked, this, &View::showAddDialog);
+        ui->p_project_layout->layout()->addWidget(addButton);
+
+        addButton = new QPushButton();
+        addButton->setText("Add Sub");
+        addButton->setFixedWidth(100);
+        connect(addButton, &QPushButton::clicked, this, &View::showAddSubDialog);
+        ui->p_project_layout->layout()->addWidget(addButton);
+
+        addButton = new QPushButton();
+        addButton->setText("Delete"); //Completely remove along with all timestamps
+        addButton->setFixedWidth(100);
+        //connect(addButton, &QPushButton::clicked, this, &View::???);
+        addButton->setDisabled(1); //TODO - implement....
+        ui->p_project_layout->layout()->addWidget(addButton);
+
+        addButton = new QPushButton();
+        addButton->setText("Deactivate"); //Remove from selections, leave data intact
+        addButton->setFixedWidth(100);
+        //connect(addButton, &QPushButton::clicked, this, &View::???);
+        addButton->setDisabled(1); //TODO - implement.... - note depends on project start/end date feature
+        ui->p_project_layout->layout()->addWidget(addButton);
+
+
+      }
+    }
+
 
   };
 

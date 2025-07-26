@@ -58,7 +58,18 @@ class timeWrapper{
       return clock::from_time_t(std::mktime(&tm));
     }
 
-};
+    // Get the time which is the midnight (start of day) containing the given time
+    static timePoint midnightBefore(timePoint tp){
+      std::time_t theTime = clock::to_time_t(tp);
+      auto timeInfo = localtime(&theTime);
+      std::cout<<timeInfo->tm_hour<<" "<<timeInfo->tm_min<<std::endl;
+      timeInfo->tm_hour = 0;
+      timeInfo->tm_min = 0;
+      timeInfo->tm_sec = 0;
+      return clock::from_time_t(mktime(timeInfo));
+    }
+
+  };
 
 
 

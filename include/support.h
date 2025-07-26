@@ -14,6 +14,8 @@
 #include <cstdlib>
 #include <vector>
 #include <string>
+#include <sstream>
+#include <iomanip>
 
 const std::string appVersion = "0.2.0";
 const std::string appName = "Time Tracker Two";
@@ -43,5 +45,13 @@ struct appConfig{
   std::string dataFileName = "";
   dataBackendType backend = dataBackendType::database; /**< \brief Type of data backend to use */
 };
+
+inline std::string displayFloat(float value, float dp=2){
+  //Create a string from given float with exactly dp decimal places
+  // Simple, but nice to have inline
+  std::stringstream ss;
+  ss<<std::setprecision(dp+1)<<value; // +1 for decimal pt?
+  return ss.str();
+}
 
 #endif

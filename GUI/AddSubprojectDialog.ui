@@ -68,7 +68,11 @@
      </widget>
     </item>
     <item row="1" column="1">
-     <widget class="QComboBox" name="ParentDropdown"/>
+     <widget class="QComboBox" name="ParentDropdown">
+      <property name="placeholderText">
+       <string>&lt;Select a Parent&gt;</string>
+      </property>
+     </widget>
     </item>
     <item row="2" column="1">
      <widget class="QSpinBox" name="PercentField">

@@ -3,6 +3,7 @@
 #include <QCloseEvent>
 #include <QFrame>
 #include <QMessageBox>
+#include <QLineEdit>
 
 #include "ui_Main.h"
 #include "ui_AddProjectDialog.h"
@@ -172,8 +173,12 @@ Q_OBJECT
       Ui::addProjectDialog addUi;
       addUi.setupUi(addDialog);
       addUi.FTEField->setMaximum(freeFTE*100);
+
+      //Disable OK button and require NameField to be not blank for it to enable
+      addUi.buttonBox->button(QDialogButtonBox::Ok)->setDisabled(true);
+      connect(addUi.NameField, &QLineEdit::textChanged, [this, &addUi](QString txt){this->enableOnRequiredFields(addUi.buttonBox->button(QDialogButtonBox::Ok), &addUi);});
+      
       bool result = addDialog->exec();
-      //TODO -disallow blank name field!
 
       //If OK was clicked, signal to add a project
       if(result){
@@ -197,6 +202,14 @@ Q_OBJECT
         QVariant data = QVariant(proj.uid.to_string().c_str());
         addUi.ParentDropdown->addItem(proj.name.c_str(), data);
       }
+
+      //Disable OK button and require fields set to enable it
+      //Have to connect the enable function to ALL required field inputs sadly
+      // TODO - look for how to bind to _any_ input into the dialog
+      addUi.buttonBox->button(QDialogButtonBox::Ok)->setDisabled(true);
+      connect(addUi.NameField, &QLineEdit::textChanged, [this, &addUi](QString txt){this->enableOnRequiredFields(addUi.buttonBox->button(QDialogButtonBox::Ok), &addUi);});
+      connect(addUi.ParentDropdown, &QComboBox::currentIndexChanged, [this, &addUi](int index){this->enableOnRequiredFields(addUi.buttonBox->button(QDialogButtonBox::Ok), &addUi);});
+
 
       bool result = addDialog->exec();
 
@@ -417,6 +430,40 @@ Q_OBJECT
 
 
       }
+    }
+
+    /**
+     * @brief Enforce non-blankness of a SINGLE field
+     *
+     *  Can be hooked onto a QTextEdit to enforce that if the field contains only
+     * whitespace OR nothing, the given button is disabled, else it is enabled. NOTE: can handle one-and-only-one
+     * determining field!
+     * Use like: connect(addUi.NameField, &QLineEdit::textChanged, [this, addUi](QString txt){this->disableButtonIfFieldIsBlankElseEnable(addUi.buttonBox->button(QDialogButtonBox::Ok), addUi.NameField);});
+     */
+    void disableButtonIfFieldIsBlankElseEnable(QPushButton * theButton, QLineEdit * fld){
+      auto txt = fld->text().toStdString();
+      if(txt.find_first_not_of("\t ") == std::string::npos){
+        theButton->setDisabled(true);
+      }else{
+        theButton->setDisabled(false);
+      }
+    }
+
+    void enableOnRequiredFields(QPushButton * theButton, Ui::addProjectDialog * dialog){
+      //Enforce the required fields for an addProjectDialog - theButton is disabled unless the following are met
+      // NameField is not blank or whitespace
+      auto txt = dialog->NameField->text().toStdString();
+      bool state_bad = txt.find_first_not_of("\t ") == std::string::npos;
+      theButton->setDisabled(state_bad);
+    }
+    void enableOnRequiredFields(QPushButton * theButton, Ui::addSubprojectDialog * dialog){
+      //Enforce the required fields for an addSubprojectDialog - theButton is disabled unless the following are met
+      // NameField is not blank or whitespace
+      // ParentDropdown is set to a valid project (index > 0)
+      auto txt = dialog->NameField->text().toStdString();
+      bool state_bad = txt.find_first_not_of("\t ") == std::string::npos;
+      state_bad |= (dialog->ParentDropdown->currentIndex() < 0 ); //Index of -1 for the placeholder
+      theButton->setDisabled(state_bad);
     }
 
 

@@ -64,4 +64,17 @@ inline std::string displayFloatQuarters(float value){
   return displayFloat(flt/4.0, (rem == 1 or rem == 3) ? 2: 1);
 }
 
+// Functor to wrap pointer-to-member -
+// Getting parse errors from QT MOC creation so this wrapper
+// leaves a normal signature for a signal taking a 
+// 'pointer-to-member-function' 
+// This could be variadic, but it's horrible enough already
+template<typename T, typename arg>
+struct callbackWrapper{
+  void (T::*fn)(arg);
+  void operator()(T* that, arg a){(that->*fn)(a);};
+  callbackWrapper(void (T::*fn_in)(arg)):fn(fn_in){;};
+};
+
+
 #endif

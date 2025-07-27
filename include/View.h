@@ -11,6 +11,7 @@
 #include "ui_AddOneOffDialog.h"
 #include "ui_TimeTravelDialog.h"
 
+#include "support.h"
 #include "project.h"
 #include "projectbutton.h"
 
@@ -182,7 +183,7 @@ Q_OBJECT
 
     void showAddSubDialog(){
       //Can't show dialog yet - need the details
-      emit projectDetailsRequiredAll();
+      emit projectDetailsRequiredAll(callbackWrapper<View, std::map<proIds::Uuid, projectDetails> >(&View::showAddSubDialogImpl));
     }
 
     void showAddSubDialogImpl(std::map<proIds::Uuid, projectDetails> details){
@@ -304,7 +305,7 @@ Q_OBJECT
     void projectAddRequested(const projectData & data);
     void subprojectAddRequested(const subProjectData & data, const proIds::Uuid & parent);
     void oneOffIdRequired();
-    void projectDetailsRequiredAll();
+    void projectDetailsRequiredAll(callbackWrapper<View, std::map<proIds::Uuid, projectDetails> > functor);
     void projectDetailsRequired(const proIds::Uuid & proj);
 
     void fetchTimeTravelInfo();

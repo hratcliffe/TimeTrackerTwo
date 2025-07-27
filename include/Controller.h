@@ -59,9 +59,8 @@ Q_OBJECT
     connect(theView, &View::oneOffIdRequired, currentData, &TrackerData::oneOffIdRequired);
     connect(currentData, &TrackerData::oneOffIdUpdate, theView, &View::updateOneOffId);
 
-    //To add a subproject, view needs an up-to-date list of projects - gather this and then call the Impl
-    connect(theView, &View::projectDetailsRequiredAll, [this](){theView->showAddSubDialogImpl(currentData->projectDetailsRequired());});
-
+    //To add a subproject, view needs an up-to-date list of projects - gather this and then call the provided callback
+    connect(theView, &View::projectDetailsRequiredAll, [this](callbackWrapper<View,std::map<proIds::Uuid, projectDetails> > functor){functor(theView, currentData->projectDetailsRequired());});
 
     //Pausing a project:
     connect(theView, &View::pauseRequested, [this](){currentData->pauseProject(this->clock->now());});

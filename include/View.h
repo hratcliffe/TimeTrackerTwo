@@ -159,7 +159,8 @@ Q_OBJECT
 
     void showAddDialog(){
 
-      if(freeFTE < 1e-5){
+      std::cout<<freeFTE<<std::endl;
+      if(freeFTE < 0.01){ //TODO - this should be the minimum FTE increment from app settings
         std::cout<<"No FTE to assign"<<std::endl;
         QMessageBox box;
         box.setText("Maximum FTE already reached. Deactivate some projects or increase maximum");

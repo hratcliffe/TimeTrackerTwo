@@ -210,7 +210,6 @@ Q_OBJECT
       connect(addUi.NameField, &QLineEdit::textChanged, [this, &addUi](QString txt){this->enableOnRequiredFields(addUi.buttonBox->button(QDialogButtonBox::Ok), &addUi);});
       connect(addUi.ParentDropdown, &QComboBox::currentIndexChanged, [this, &addUi](int index){this->enableOnRequiredFields(addUi.buttonBox->button(QDialogButtonBox::Ok), &addUi);});
 
-
       bool result = addDialog->exec();
 
       //If OK was clicked, signal to add a project
@@ -432,6 +431,11 @@ Q_OBJECT
       }
     }
 
+    // Check given string is valid as a name - currently not blank nor all whitespace
+    bool isValidNameString(std::string name)const{
+      return name.find_first_not_of("\t ") != std::string::npos;
+    }
+
     /**
      * @brief Enforce non-blankness of a SINGLE field
      *
@@ -453,7 +457,7 @@ Q_OBJECT
       //Enforce the required fields for an addProjectDialog - theButton is disabled unless the following are met
       // NameField is not blank or whitespace
       auto txt = dialog->NameField->text().toStdString();
-      bool state_bad = txt.find_first_not_of("\t ") == std::string::npos;
+      bool state_bad = !isValidNameString(txt);
       theButton->setDisabled(state_bad);
     }
     void enableOnRequiredFields(QPushButton * theButton, Ui::addSubprojectDialog * dialog){
@@ -461,11 +465,10 @@ Q_OBJECT
       // NameField is not blank or whitespace
       // ParentDropdown is set to a valid project (index > 0)
       auto txt = dialog->NameField->text().toStdString();
-      bool state_bad = txt.find_first_not_of("\t ") == std::string::npos;
+      bool state_bad = !isValidNameString(txt);
       state_bad |= (dialog->ParentDropdown->currentIndex() < 0 ); //Index of -1 for the placeholder
       theButton->setDisabled(state_bad);
     }
-
 
   };
 

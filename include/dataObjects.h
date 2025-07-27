@@ -114,6 +114,28 @@ inline std::ostream& operator<< (std::ostream& stream, const fullOneOffProjectDa
   return stream;
 };
 
+
+// All the stuff needed to assess/invite user actions on a project
+struct projectDetails{
+
+    proIds::Uuid uid=proIds::NullUid; /**< \brief Unique identifier for the project */
+    std::string name=""; /**< \brief Name of the project */
+    float FTE=0.0; /**< \brief Fraction of Full-Time Equivalent this project uses */
+    int subprojectCount=0; /**< Number of subprojects */
+    float assignedSubprojFraction=0.0; /**< Total fraction allocated to subprojects */
+    bool active = true;
+};
+inline std::ostream& operator<< (std::ostream& stream, const projectDetails& data){
+/** \brief Stream operator for fullProjectData
+*/
+  stream << data.name<<" "<<data.uid<<" "<<": FTE " <<data.FTE*100 <<" % with "<<data.subprojectCount;
+  stream << " subprojects totalling "<<data.assignedSubprojFraction*100 <<" % ";
+  if(!data.active){
+    stream<<"(inactive)";
+  }
+  return stream;
+};
+
 using timecode = long long; /**< \brief Type for timecodes, representing seconds since epoch. SIGNED to allow -1 for sentinel*/
 
 class timeStamp{

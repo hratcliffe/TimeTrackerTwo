@@ -30,6 +30,12 @@ Q_OBJECT
 
       //TODO consolidate stamps into daily digests and store per entity - easier reporting and better long-term use
       //TODO be careful of embedding 'day' too deeply - what if something runs past midnight? What about travelling to another time Zone? 
+
+      //TODO allow editing of projects
+      //TODO - allow editing of inactive projects? For those that will start in the future? "Upcoming"
+      //TODO ditto subprojects
+
+      //TODO allow review of stamps
   }
 
   void connectSignals(){
@@ -52,6 +58,10 @@ Q_OBJECT
     //Connect updates to 'next One Off id'
     connect(theView, &View::oneOffIdRequired, currentData, &TrackerData::oneOffIdRequired);
     connect(currentData, &TrackerData::oneOffIdUpdate, theView, &View::updateOneOffId);
+
+    //To add a subproject, view needs an up-to-date list of projects - gather this and then call the Impl
+    connect(theView, &View::projectDetailsRequiredAll, [this](){theView->showAddSubDialogImpl(currentData->projectDetailsRequired());});
+
 
     //Pausing a project:
     connect(theView, &View::pauseRequested, [this](){currentData->pauseProject(this->clock->now());});

@@ -11,8 +11,6 @@
 /** \brief Holds and manages projects
 *
 * Deals with listing of projects, delegating assignments of Uids etc
-\todo Add function to check projects sum FTE 
-    \todo Add functionality to check subprojects sum fractions
  */
 class projectManager{
 
@@ -26,7 +24,7 @@ class projectManager{
     void setupGenerator(){this->gen = new uniqueIdGenerator();}; 
   public:
 
-    projectManager(){setupGenerator();}; /**< \brief Default constructor */
+    projectManager(){setupGenerator();};
     ~projectManager(){ if(gen) delete gen;}
     projectManager(const projectManager & src)=delete;
     projectManager& operator=(const projectManager&)=delete;
@@ -37,12 +35,21 @@ class projectManager{
     bool checkFTE(float requested){return (activeFTE + requested) <= maxFTE + 1e-5;} //Tiny rounding error allowance
 
     float availableSubFrac(const proIds::Uuid & proj){
-      auto & project = projects[proj];
+      if(projects.count(proj) > 0){
+        return availableSubFrac(projects[proj]);
+      }else{
+        return 0.0;
+      }
+    }
+    float availableSubFrac(const project & proj){
       float total = 0.0;
-      for(auto & sub : project.subprojects){
+      for(auto & sub : proj.subprojects){
         total += subprojects[sub].getFrac();
       }
       return 1.0 - total;
+    }
+    bool checkFrac(const proIds::Uuid & proj){
+      return availableSubFrac(proj) > 0.0;
     }
 
     project createProject(const projectData & data){
@@ -52,6 +59,7 @@ class projectManager{
       return subproject(data, gen->getNextId(proIds::uidTag::sub), parentUid); 
     }
     proIds::Uuid addProject(const projectData & dat){
+      if(!checkFTE(dat.FTE)) throw std::runtime_error("Not enough FTE to add project");
       project tmp = createProject(dat); 
       projects[tmp.getUid()] = tmp;
       activeFTE += tmp.FTE;
@@ -60,6 +68,7 @@ class projectManager{
 
     proIds::Uuid addSubproject(const subProjectData & dat, const proIds::Uuid & parentUid){
       if(parentUid.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Parent must not be a subproject"); //TODO re-examine this?
+      if(!checkFrac(parentUid)) throw std::runtime_error("Fraction too large to add subproject");
       subproject tmp = createSubproject(dat, parentUid);
       subprojects[tmp.getUid()] = tmp;
       projects[parentUid].addSubproject(tmp.getUid());
@@ -180,6 +189,27 @@ class projectManager{
       }else{
         return "Not a subproject";
       }
+    }
+
+    projectDetails getDetails(proIds::Uuid uid){
+      projectDetails details; 
+      details.uid = uid;
+      if(projects.count(uid) > 0){
+        auto & proj = projects[uid];
+        details.name = proj.name;
+        details.FTE = proj.FTE;
+        details.subprojectCount = proj.subprojects.size();
+        details.assignedSubprojFraction = 1.0 - availableSubFrac(proj);
+        details.active = true;
+      }
+      return details;
+    }
+    std::map<proIds::Uuid, projectDetails> getDetailsForAll(){
+      std::map<proIds::Uuid, projectDetails> ret;
+      for(auto & it : projects){
+        ret[it.first] = getDetails(it.first);
+      }
+      return ret;
     }
 
     /** \brief Summarise project config information

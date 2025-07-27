@@ -30,7 +30,6 @@ Q_OBJECT
 
     Ui::main_window * ui;
     QMainWindow * main;
-    std::vector<selectableEntity> pList; //Persistent list of projects - needed in some dialogs
     float usedFTE = 0.0, freeFTE=0.0; //Tracks FTE fractions
     viewProperties prop; //TODO - should there be any way to alter this? - maybe settings and some presets?
     projectButton * oneOffTrackerButton = nullptr; // Tracker button for special entries
@@ -120,14 +119,6 @@ Q_OBJECT
     void projectListUpdated(std::vector<selectableEntity> const & newList){
       std::cout << "Project list updated with " << newList.size() << " projects." << std::endl;
 
-      //Clear existing store, refresh from new list
-      pList.clear();
-      for (auto & proj : newList){ 
-          if(proj.uid.isTaggedAs(proIds::uidTag::oneoff) || proj.uid.isTaggedAs(proIds::uidTag::sub)) continue; //Skips one-offs and subprojects
-          //Storing for use in e.g. addSub dialog
-          pList.push_back(proj);
-      }
-
       updateTButtons(newList);
       updatePButtons(newList);
      
@@ -190,6 +181,11 @@ Q_OBJECT
     }
 
     void showAddSubDialog(){
+      //Can't show dialog yet - need the details
+      emit projectDetailsRequiredAll();
+    }
+
+    void showAddSubDialogImpl(std::map<proIds::Uuid, projectDetails> details){
 
       auto addDialog = new QDialog(this);
       Ui::addSubprojectDialog addUi;
@@ -198,9 +194,10 @@ Q_OBJECT
       //TODO show fractions and allow to configure these for all subs on add?
 
       //Adding projects to drop-down
-      for(auto & proj: pList){
-        QVariant data = QVariant(proj.uid.to_string().c_str());
-        addUi.ParentDropdown->addItem(proj.name.c_str(), data);
+      for(auto & proj: details){
+        QVariant data = QVariant(proj.first.to_string().c_str());
+        addUi.ParentDropdown->addItem(proj.second.name.c_str(), data);
+        std::cout<<proj.second<<std::endl;
       }
 
       //Disable OK button and require fields set to enable it
@@ -209,6 +206,10 @@ Q_OBJECT
       addUi.buttonBox->button(QDialogButtonBox::Ok)->setDisabled(true);
       connect(addUi.NameField, &QLineEdit::textChanged, [this, &addUi](QString txt){this->enableOnRequiredFields(addUi.buttonBox->button(QDialogButtonBox::Ok), &addUi);});
       connect(addUi.ParentDropdown, &QComboBox::currentIndexChanged, [this, &addUi](int index){this->enableOnRequiredFields(addUi.buttonBox->button(QDialogButtonBox::Ok), &addUi);});
+
+      //When a project is selected, update the available fraction input from the details list
+      //NOTE: ID must be present in details because we filled them in from it above
+      connect(addUi.ParentDropdown, &QComboBox::currentIndexChanged, [&addUi, &details](int index){proIds::Uuid parent = proIds::Uuid(addUi.ParentDropdown->currentData().toString().toStdString()); auto pdetails = details[parent]; float perc = (1.0 - pdetails.assignedSubprojFraction)*100; addUi.PercentField->setMaximum(perc); addUi.PercentField->setValue(perc/2.0); addUi.PercentHint->setText(displayFloatHalves(perc).c_str());});
 
       bool result = addDialog->exec();
 
@@ -303,6 +304,8 @@ Q_OBJECT
     void projectAddRequested(const projectData & data);
     void subprojectAddRequested(const subProjectData & data, const proIds::Uuid & parent);
     void oneOffIdRequired();
+    void projectDetailsRequiredAll();
+    void projectDetailsRequired(const proIds::Uuid & proj);
 
     void fetchTimeTravelInfo();
     void timeTravelRequested(QDateTime time);

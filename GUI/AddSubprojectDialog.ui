@@ -39,10 +39,10 @@
     </rect>
    </property>
    <layout class="QGridLayout" name="gridLayout">
-    <item row="2" column="0">
-     <widget class="QLabel" name="label_3">
-      <property name="text">
-       <string>Percentage</string>
+    <item row="1" column="1">
+     <widget class="QComboBox" name="ParentDropdown">
+      <property name="placeholderText">
+       <string>&lt;Select a Parent&gt;</string>
       </property>
      </widget>
     </item>
@@ -50,6 +50,22 @@
      <widget class="QLabel" name="label_2">
       <property name="text">
        <string>Parent Project</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="1">
+     <widget class="QSpinBox" name="PercentField">
+      <property name="minimum">
+       <number>5</number>
+      </property>
+      <property name="maximum">
+       <number>100</number>
+      </property>
+      <property name="singleStep">
+       <number>5</number>
+      </property>
+      <property name="value">
+       <number>20</number>
       </property>
      </widget>
     </item>
@@ -67,26 +83,39 @@
       </property>
      </widget>
     </item>
-    <item row="1" column="1">
-     <widget class="QComboBox" name="ParentDropdown">
-      <property name="placeholderText">
-       <string>&lt;Select a Parent&gt;</string>
+    <item row="2" column="0">
+     <widget class="QLabel" name="label_4">
+      <property name="text">
+       <string>Available:</string>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="0">
+     <widget class="QLabel" name="label_3">
+      <property name="text">
+       <string>Percentage</string>
       </property>
      </widget>
     </item>
     <item row="2" column="1">
-     <widget class="QSpinBox" name="PercentField">
-      <property name="minimum">
-       <number>5</number>
+     <widget class="QLabel" name="PercentHint">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
       </property>
-      <property name="maximum">
-       <number>100</number>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>30</height>
+       </size>
       </property>
-      <property name="singleStep">
-       <number>5</number>
+      <property name="toolTip">
+       <string extracomment="Default HALF of the available fraction"/>
       </property>
-      <property name="value">
-       <number>20</number>
+      <property name="text">
+       <string/>
       </property>
      </widget>
     </item>

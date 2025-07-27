@@ -71,6 +71,14 @@ Q_OBJECT
       emit oneOffIdUpdate(id);
     }
 
+    std::map<proIds::Uuid, projectDetails> projectDetailsRequired(){
+      //Get for all Ids
+      return thePM.getDetailsForAll();
+    }
+    projectDetails projectDetailsRequired(proIds::Uuid id){
+      return thePM.getDetails(id);
+    }
+
     //Load existing projects from the data backend
     void loadProjects(timecode now){
       if(! dataHandler) throw std::runtime_error("No Data Backend Found");

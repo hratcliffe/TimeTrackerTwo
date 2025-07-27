@@ -28,7 +28,7 @@ class selectableEntity{
 
 /** Prototype class for project-like things, dictating what they must do */
 class projectLike{
-
+  friend class projectManager;
   protected:
     std::string name; /**< \brief Name for entity */
     proIds::Uuid uid; /**< \brief Unique identifier for entity */
@@ -48,6 +48,7 @@ class projectLike{
 * Subprojects always have a parent project and are the units worked on, such as a single work package, or type of work
 */
 class subproject: public projectLike{
+  friend class projectManager;
   private:
     float frac; /**< \brief Fraction of parent time on this sub */
     proIds::Uuid parentUid; /**< \brief Unique identifier for parent project*/
@@ -85,16 +86,13 @@ class subproject: public projectLike{
 * Projects are work forming a single billable, named entity. They have sub-projects which are the work chunks.
 */
 class project : public projectLike{
+  friend class projectManager;
   private:
-      /** \brief Billing reference string
-      *
-      * Reference is used in reports etc
-      */
 
     bool active; /**< \brief Flag to allow project to be deactivated for any reason*/
-  public:
-    std::vector<proIds::Uuid> subprojects;/**< \brief Subprojects belonging to this project */
     float FTE;/**< \brief Fraction of FTE for this project */
+    std::vector<proIds::Uuid> subprojects;/**< \brief Subprojects belonging to this project */
+  public:
     project() = default;
     project(const fullProjectData &data){
       name = data.name;

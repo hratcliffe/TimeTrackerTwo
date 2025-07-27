@@ -103,6 +103,47 @@ Q_OBJECT
     ui->t_stop_button->setEnabled(active || paused);
   }
 
+  void showAddSubDialogImpl(std::map<proIds::Uuid, projectDetails> details){
+
+      auto addDialog = new QDialog(this);
+      Ui::addSubprojectDialog addUi;
+      addUi.setupUi(addDialog);
+
+      //TODO show fractions and allow to configure these for all subs on add?
+
+      //Adding projects to drop-down
+      for(auto & proj: details){
+        QVariant data = QVariant(proj.first.to_string().c_str());
+        addUi.ParentDropdown->addItem(proj.second.name.c_str(), data);
+        std::cout<<proj.second<<std::endl;
+      }
+
+      //Disable OK button and require fields set to enable it
+      //Have to connect the enable function to ALL required field inputs sadly
+      // TODO - look for how to bind to _any_ input into the dialog
+      addUi.buttonBox->button(QDialogButtonBox::Ok)->setDisabled(true);
+      connect(addUi.NameField, &QLineEdit::textChanged, [this, &addUi](QString txt){this->enableOnRequiredFields(addUi.buttonBox->button(QDialogButtonBox::Ok), &addUi);});
+      connect(addUi.ParentDropdown, &QComboBox::currentIndexChanged, [this, &addUi](int index){this->enableOnRequiredFields(addUi.buttonBox->button(QDialogButtonBox::Ok), &addUi);});
+
+      //When a project is selected, update the available fraction input from the details list
+      //NOTE: ID must be present in details because we filled them in from it above
+      connect(addUi.ParentDropdown, &QComboBox::currentIndexChanged, [&addUi, &details](int index){proIds::Uuid parent = proIds::Uuid(addUi.ParentDropdown->currentData().toString().toStdString()); auto pdetails = details[parent]; float perc = (1.0 - pdetails.assignedSubprojFraction)*100; addUi.PercentField->setMaximum(perc); addUi.PercentField->setValue(perc/2.0); addUi.PercentHint->setText(displayFloatHalves(perc).c_str());});
+
+      bool result = addDialog->exec();
+
+      //If OK was clicked, signal to add a project
+      if(result){
+        float frac = (float)addUi.PercentField->value()/100.0;
+        proIds::Uuid parent = proIds::Uuid(addUi.ParentDropdown->currentData().toString().toStdString());
+        emit subprojectAddRequested(subProjectData{addUi.NameField->text().toStdString(), frac}, parent);
+        std::cout<<subProjectData{addUi.NameField->text().toStdString(), frac}<<" "<<parent<<std::endl;
+
+      }
+      std::cout<<result<<std::endl;
+  }
+
+  using addSubCallbackType = decltype(makeCallback(&View::showAddSubDialogImpl));
+
   public slots:
     void exitApp(){
       std::cout << "Exiting UI" << std::endl;
@@ -183,47 +224,8 @@ Q_OBJECT
 
     void showAddSubDialog(){
       //Can't show dialog yet - need the details
-      emit projectDetailsRequiredAll(callbackWrapper<View, std::map<proIds::Uuid, projectDetails> >(&View::showAddSubDialogImpl));
+      emit projectDetailsRequiredAll(makeCallback(&View::showAddSubDialogImpl));
     }
-
-    void showAddSubDialogImpl(std::map<proIds::Uuid, projectDetails> details){
-
-      auto addDialog = new QDialog(this);
-      Ui::addSubprojectDialog addUi;
-      addUi.setupUi(addDialog);
-
-      //TODO show fractions and allow to configure these for all subs on add?
-
-      //Adding projects to drop-down
-      for(auto & proj: details){
-        QVariant data = QVariant(proj.first.to_string().c_str());
-        addUi.ParentDropdown->addItem(proj.second.name.c_str(), data);
-        std::cout<<proj.second<<std::endl;
-      }
-
-      //Disable OK button and require fields set to enable it
-      //Have to connect the enable function to ALL required field inputs sadly
-      // TODO - look for how to bind to _any_ input into the dialog
-      addUi.buttonBox->button(QDialogButtonBox::Ok)->setDisabled(true);
-      connect(addUi.NameField, &QLineEdit::textChanged, [this, &addUi](QString txt){this->enableOnRequiredFields(addUi.buttonBox->button(QDialogButtonBox::Ok), &addUi);});
-      connect(addUi.ParentDropdown, &QComboBox::currentIndexChanged, [this, &addUi](int index){this->enableOnRequiredFields(addUi.buttonBox->button(QDialogButtonBox::Ok), &addUi);});
-
-      //When a project is selected, update the available fraction input from the details list
-      //NOTE: ID must be present in details because we filled them in from it above
-      connect(addUi.ParentDropdown, &QComboBox::currentIndexChanged, [&addUi, &details](int index){proIds::Uuid parent = proIds::Uuid(addUi.ParentDropdown->currentData().toString().toStdString()); auto pdetails = details[parent]; float perc = (1.0 - pdetails.assignedSubprojFraction)*100; addUi.PercentField->setMaximum(perc); addUi.PercentField->setValue(perc/2.0); addUi.PercentHint->setText(displayFloatHalves(perc).c_str());});
-
-      bool result = addDialog->exec();
-
-      //If OK was clicked, signal to add a project
-      if(result){
-        float frac = (float)addUi.PercentField->value()/100.0;
-        proIds::Uuid parent = proIds::Uuid(addUi.ParentDropdown->currentData().toString().toStdString());
-        emit subprojectAddRequested(subProjectData{addUi.NameField->text().toStdString(), frac}, parent);
-        std::cout<<subProjectData{addUi.NameField->text().toStdString(), frac}<<" "<<parent<<std::endl;
-
-      }
-      std::cout<<result<<std::endl;
-  }
 
     void showOneOffDialog(proIds::Uuid id){
       
@@ -305,7 +307,7 @@ Q_OBJECT
     void projectAddRequested(const projectData & data);
     void subprojectAddRequested(const subProjectData & data, const proIds::Uuid & parent);
     void oneOffIdRequired();
-    void projectDetailsRequiredAll(callbackWrapper<View, std::map<proIds::Uuid, projectDetails> > functor);
+    void projectDetailsRequiredAll(addSubCallbackType);
     void projectDetailsRequired(const proIds::Uuid & proj);
 
     void fetchTimeTravelInfo();

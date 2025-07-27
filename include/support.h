@@ -68,13 +68,18 @@ inline std::string displayFloatQuarters(float value){
 // Getting parse errors from QT MOC creation so this wrapper
 // leaves a normal signature for a signal taking a 
 // 'pointer-to-member-function' 
-// This could be variadic, but it's horrible enough already
-template<typename T, typename arg>
+//Any return type and any number of arguments
+// Suggest using makeCallback which does type-inference so can be used like:
+// auto callbk = makeCallback(&myClass::myFunction);
+template<typename T, typename ret, typename... Args>
 struct callbackWrapper{
-  void (T::*fn)(arg);
-  void operator()(T* that, arg a){(that->*fn)(a);};
-  callbackWrapper(void (T::*fn_in)(arg)):fn(fn_in){;};
+  ret (T::*fn)(Args...);
+  ret operator()(T* that, Args... args){return (that->*fn)(std::forward<Args>(args)...);};
+  callbackWrapper(ret (T::*fn_in)(Args...)):fn(fn_in){;};
 };
-
+template<typename T, typename ret, typename... Args>
+auto makeCallback(ret (T::*fn_in)(Args... args)){
+  return callbackWrapper<T, ret, Args...>(fn_in);
+};
 
 #endif

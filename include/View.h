@@ -4,6 +4,10 @@
 #include <QFrame>
 #include <QMessageBox>
 #include <QLineEdit>
+#include <QChart>
+#include <QChartView>
+#include <QPieSeries>
+#include <QLegendMarker>
 
 #include "ui_Main.h"
 #include "ui_AddProjectDialog.h"
@@ -52,7 +56,9 @@ Q_OBJECT
     connect(ui->t_ttravel_button, &QPushButton::clicked, [this](){emit fetchTimeTravelInfo();});
 
     //Connecting Tab bar to refresh actions
-    connect(ui->tabWidget, &QTabWidget::currentChanged, [this](int index){if(index == 1) emit timeSummaryRequested(timeSummaryUnit::minute);}); //TODO - minutes for dev, -> hours for real
+    connect(ui->tabWidget, &QTabWidget::currentChanged, [this](int index){if(index == 1) emit timeSummaryRequested(timeSummaryUnit::minute); if(index == 3) this->reportSelected();});
+    //TODO maybe use a call not a lambda
+    //TODO - minutes for dev, -> hours for real
     //TODO - add summary filtering dialog
 
 
@@ -142,7 +148,43 @@ Q_OBJECT
       std::cout<<result<<std::endl;
   }
 
-  using addSubCallbackType = decltype(makeCallback(&View::showAddSubDialogImpl));
+  using projectDetailsArgCallbackType = decltype(makeCallback(&View::showAddSubDialogImpl));
+
+  void fillReportsImpl(std::map<proIds::Uuid, projectDetails> details){
+
+    QPieSeries *series = new QPieSeries();
+    int i=0;
+    std::vector<std::string> labels, legendText;
+    for(auto & item : details){
+      if(item.second.FTE > 0.0){
+        series->append(item.second.name.c_str(), item.second.FTE*100);
+        labels.push_back(displayFloat(item.second.FTE*100)+" %");
+        legendText.push_back(item.second.name);
+        //auto & slice = series->at(qsizetype(i));
+        //slice.setLabel((displayFloat(item.second.FTE*100)+" %").c_str());
+        std::cout<<item.second.name<<" "<<item.second.FTE<<std::endl;
+      }
+    }
+    series->setLabelsVisible();
+    series->setLabelsPosition(QPieSlice::LabelInsideHorizontal);
+    for(auto & slice : series->slices()){
+      slice->setLabel(labels[i].c_str());
+      i++;
+    }
+
+    QChart *chart = new QChart();
+    chart->addSeries(series);
+    chart->setTitle("Project FTE Breakdown");
+    i=0;
+    for(auto &item : chart->legend()->markers()){
+      item->setLabel(legendText[i].c_str());
+      i++;
+    }
+
+    QChartView *chartview = new QChartView(chart);
+    ui->r_report_layout->addWidget(chartview);
+
+  }
 
   public slots:
     void exitApp(){
@@ -291,6 +333,11 @@ Q_OBJECT
 
     }
 
+    void reportSelected(){
+      //Need project details
+      emit projectDetailsRequiredAll(makeCallback(&View::fillReportsImpl));
+
+    }
 
   signals:
     void projectSelectedTrack(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project button is clicked */
@@ -307,7 +354,7 @@ Q_OBJECT
     void projectAddRequested(const projectData & data);
     void subprojectAddRequested(const subProjectData & data, const proIds::Uuid & parent);
     void oneOffIdRequired();
-    void projectDetailsRequiredAll(addSubCallbackType);
+    void projectDetailsRequiredAll(projectDetailsArgCallbackType);
     void projectDetailsRequired(const proIds::Uuid & proj);
 
     void fetchTimeTravelInfo();

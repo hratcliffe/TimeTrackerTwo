@@ -522,6 +522,17 @@
           <attribute name="title">
            <string>Reports</string>
           </attribute>
+          <widget class="QWidget" name="gridLayoutWidget">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>0</y>
+             <width>441</width>
+             <height>491</height>
+            </rect>
+           </property>
+           <layout class="QGridLayout" name="r_report_layout"/>
+          </widget>
          </widget>
         </widget>
        </item>

@@ -196,6 +196,14 @@ Q_OBJECT
       // TODO how to select time range for summary - c.f. View - filtering dialog and data struct?
       std::vector<timeStamp> timestamps = dataHandler->fetchTrackerEntries();
 
+      if(timestamps.size() == 0){
+        summary.push_back({"No time entries found!", timeSummaryStatus::error});
+        emit timeSummaryReady(summary);
+        return;
+      }
+
+      std::cout<<"Fetched "<<timestamps.size()<<std::endl;
+
       //TODO - should this always go until now? C.f. previous - time range selection?
       timecode window = timeWrapper::toSeconds(timeWrapper::now()) - timestamps[0].time; 
       std::map<proIds::Uuid, timecode> durations = timestampProcessor::stampsToDurations(timestamps);

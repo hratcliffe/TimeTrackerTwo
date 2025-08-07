@@ -32,6 +32,8 @@ class projectLike{
   protected:
     std::string name; /**< \brief Name for entity */
     proIds::Uuid uid; /**< \brief Unique identifier for entity */
+    bool hasStart=false, hasEnd=false; /**< Whether or not there is a start or end */
+    timecode start=timecodeNull, end=timecodeNull; /**< Time for the start and end */
 
   public:
     virtual std::string describe()=0; /**< \brief Describe the project */
@@ -39,8 +41,29 @@ class projectLike{
     virtual std::string getName() const{return name;}; /**< \brief Get the name of the project */
     virtual ~projectLike(){;}; /**< \brief Destructor */
     virtual operator selectableEntity(){return selectableEntity{name, uid};} /**< \brief Convert to selectable entity */
+    virtual std::pair<timecode, timecode> getDateRange() const{
+      timecode start_t = hasStart ? start : timecodeNull;
+      timecode end_t = hasEnd ? end : timecodeNull;
+      return std::make_pair(start_t, end_t);
+    }
+    virtual void setDateRange(timecode start_in, timecode end_in){
+      //Pass null for 'no end specified' - this will override any existing value
+      // IF there emerges a reason to set only one or other, consider allowing this
+      if(start_in != timecodeNull){
+        start = start_in; 
+        hasStart = true;
+      }else{
+        hasStart = false;
+      }
+      if(end_in != timecodeNull){ 
+        end=end_in; 
+        hasEnd = true;
+      }else{
+        hasEnd = false;
+      }
+    }
 
-};
+  };
 
 
 /** \brief An item which is worked on
@@ -91,6 +114,8 @@ class project : public projectLike{
 
     bool active; /**< \brief Flag to allow project to be deactivated for any reason*/
     float FTE;/**< \brief Fraction of FTE for this project */
+    bool hasStart=false, hasEnd=false; /**< Whether or not there is a start or end */
+    timecode start=timecodeNull, end=timecodeNull; /**< Time for the start and end */
     std::vector<proIds::Uuid> subprojects;/**< \brief Subprojects belonging to this project */
   public:
     project() = default;
@@ -98,12 +123,20 @@ class project : public projectLike{
       name = data.name;
       uid = data.uid;
       FTE = data.FTE;
+      hasStart = data.useStart;
+      hasEnd = data.useEnd;
+      start = data.start;
+      end = data.end;
       active = true;
     }
     project(projectData data, proIds::Uuid uid_in){
         name = data.name;
         uid =  uid_in;
         FTE = data.FTE;
+        hasStart = data.useStart;
+        hasEnd = data.useEnd;
+        start = data.start;
+        end = data.end;
         active = true;
     };
     void addSubproject(proIds::Uuid sub_id){subprojects.push_back(sub_id);}

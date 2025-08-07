@@ -14,6 +14,12 @@
 
 #include "support.h"
 #include "idGenerators.h"
+#include "timeWrapper.h"
+
+using timecode = long long; /**< \brief Type for timecodes, representing seconds since epoch. SIGNED to allow -1 for sentinel below*/
+
+inline const timecode timecodeNull = -1; /**< \brief Sentinel for null time * * Need a sentinel - do not rely on this value, use the named constant */
+
 
 /** \brief Initialisation data for project
 *
@@ -23,6 +29,8 @@ struct projectData{
 
   std::string name;/**< \brief Name of project */
   float FTE;/**< \brief Fraction of FTE this uses */
+  timecode start, end;
+  bool useStart, useEnd;
 };
 
 inline std::ostream& operator<< (std::ostream& stream, const projectData& data){
@@ -67,15 +75,20 @@ class fullProjectData{
     proIds::Uuid uid; /**< \brief Unique identifier for the project */
     std::string name; /**< \brief Name of the project */
     float FTE; /**< \brief Fraction of Full-Time Equivalent this project uses */
+    timecode start, end;
+    bool useStart, useEnd;
 
     fullProjectData() = default;
     fullProjectData(proIds::Uuid id, projectData const &data)
-        : uid(id), name(data.name), FTE(data.FTE) {};
+        : uid(id), name(data.name), FTE(data.FTE), start(data.start), end(data.end), useStart(data.useStart), useEnd(data.useEnd) {};
 };
 inline std::ostream& operator<< (std::ostream& stream, const fullProjectData& data){
 /** \brief Stream operator for fullProjectData
 */
   stream << data.name <<", "<<data.uid<<", "<<data.FTE;
+  if(data.useStart) stream<<" "<<timeWrapper::formatTime(timeWrapper::fromSeconds(data.start));
+  if(data.useStart or data.useEnd) stream<< " - ";
+  if(data.useEnd) stream<<" "<<timeWrapper::formatTime(timeWrapper::fromSeconds(data.end));
   return stream;
 };
 
@@ -135,8 +148,6 @@ inline std::ostream& operator<< (std::ostream& stream, const projectDetails& dat
   }
   return stream;
 };
-
-using timecode = long long; /**< \brief Type for timecodes, representing seconds since epoch. SIGNED to allow -1 for sentinel*/
 
 class timeStamp{
     public:

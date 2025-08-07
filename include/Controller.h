@@ -36,6 +36,8 @@ Q_OBJECT
       //TODO ditto subprojects
 
       //TODO allow review of stamps
+
+      //TODO - emit signal every midnight to roll over start/end dates
   }
 
   void connectSignals(){

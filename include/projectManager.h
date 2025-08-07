@@ -8,6 +8,8 @@
 #include "project.h"
 #include "dataObjects.h"
 
+// TODO - some sort of periodic check of project active status in case app is running through start/end dates
+
 /** \brief Holds and manages projects
 *
 * Deals with listing of projects, delegating assignments of Uids etc
@@ -82,11 +84,16 @@ class projectManager{
       return gen->getNextId(proIds::uidTag::oneoff);
     }
 
-    void restoreProject(const fullProjectData & dat){
+    void restoreProject(const fullProjectData & dat, timecode now){
       //Restore a project from e.g. file - i.e. one that already HAS a uid
       auto id = dat.uid;
       if(!id.isTaggedAs(proIds::uidTag::none)) throw std::runtime_error("Id is not for a project");
-      projects[id] = project(dat);
+      project tmp = project(dat);
+      bool active = true;
+      if(tmp.hasStart && tmp.start > now) active = false;
+      if(tmp.hasEnd && tmp.end < now) active = false;
+      tmp.active = active;
+      projects[id] = tmp;
       activeFTE += dat.FTE;
     }
 
@@ -105,10 +112,13 @@ class projectManager{
      * 
      * Returns a COPY vector of the projects. They are in order - so subprojects follow their parent
      */
-    std::vector<selectableEntity> getOrderedProjectList(){
+    std::vector<selectableEntity> getOrderedProjectList(bool activeOnly=true){
       std::vector<selectableEntity> ret, proj;
       for(auto & it : projects){
-        proj.push_back(it.second);
+        // Include all OR active projects only
+        if(!activeOnly || it.second.active){
+          proj.push_back(it.second);
+        }
       }
       //Sorting the list
       std::sort(proj.begin(), proj.end(), [](selectableEntity a, selectableEntity b){return a.name < b.name;});

@@ -49,7 +49,7 @@ class databaseStore{
 
     void create_tables(){
         int err = 0;
-        std::string cmd = "CREATE TABLE IF NOT EXISTS projects(id CHAR(36) PRIMARY KEY, name TEXT, FTE REAL);";
+        std::string cmd = "CREATE TABLE IF NOT EXISTS projects(id CHAR(36) PRIMARY KEY, name TEXT, FTE REAL, start_date INTEGER, end_date INTEGER);";
         err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
         if(err != SQLITE_OK){
             std::cerr << "Error creating projects table: " << errMsg << std::endl;
@@ -135,11 +135,22 @@ class databaseStore{
         std::string cmd;
         sqlite3_stmt * prep_cmd;
         int err = 0;
-        cmd = "insert into projects values(?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, FTE=excluded.FTE;"; // TODO check the conflict clause
+        cmd = "insert into projects values(?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, FTE=excluded.FTE, start_date=excluded.start_date, end_date=excluded.end_date;"; // TODO check the conflict clause
         err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_text(prep_cmd, 1, id.c_str(), id.length(), SQLITE_STATIC);
         sqlite3_bind_text(prep_cmd, 2, name.c_str(), name.length(), SQLITE_STATIC);
         sqlite3_bind_double(prep_cmd, 3, FTE);
+        if(dat.useStart){
+            sqlite3_bind_int64(prep_cmd, 4, dat.start);
+        }else{
+            sqlite3_bind_int64(prep_cmd, 4, 0); // TODO fix null date
+        }
+        if(dat.useEnd){
+            sqlite3_bind_int64(prep_cmd, 5, dat.end);
+        }else{
+            sqlite3_bind_int64(prep_cmd, 5, 0); // TODO fix null date
+        }
+
         err = sqlite3_step(prep_cmd);
         if(err == SQLITE_DONE) err = SQLITE_OK;
         if(err != SQLITE_OK){
@@ -218,16 +229,34 @@ class databaseStore{
     }
 
     fullProjectData readProject(proIds::Uuid const & id){
-        std::string cmd = "SELECT name, FTE FROM projects WHERE id = ?;";
+        std::string cmd = "SELECT name, FTE, start_date, end_date FROM projects WHERE id = ?;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_text(prep_cmd, 1, id.to_string().c_str(), id.to_string().length(), SQLITE_STATIC);
         
         fullProjectData ret;
+        timecode tmp;
         if((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
             ret.uid = id;
             ret.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0));
             ret.FTE = sqlite3_column_double(prep_cmd, 1);
+            tmp = sqlite3_column_int64(prep_cmd, 2);
+            if(tmp != 0){ // TODO fix 0 to true null
+              ret.start = tmp;
+              ret.useStart = true;
+            }else{
+              ret.start = timecodeNull;
+              ret.useStart = false;
+            }
+            tmp = sqlite3_column_int64(prep_cmd, 3);
+            if(tmp != 0){ // TODO fix 0 to true null
+              ret.end = tmp;
+              ret.useEnd = true;
+            }else{
+              ret.end = timecodeNull;
+              ret.useEnd = false;
+            }
+
         }else{
             throw std::runtime_error("Failed to read project");
         }
@@ -235,7 +264,7 @@ class databaseStore{
         return ret;
     }
     std::vector<fullProjectData> fetchProjectList(){
-        std::string cmd = "SELECT id, name, FTE FROM projects ORDER by name;";
+        std::string cmd = "SELECT id, name, FTE, start_date, end_date FROM projects ORDER by name;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         
@@ -245,6 +274,66 @@ class databaseStore{
             proj.uid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0)));
             proj.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1));
             proj.FTE = sqlite3_column_double(prep_cmd, 2);
+            timecode tmp = sqlite3_column_int64(prep_cmd, 3);
+            if(tmp != 0){ // TODO fix 0 to true null
+              proj.start = tmp;
+              proj.useStart = true;
+            }else{
+              proj.start = timecodeNull;
+              proj.useStart = false;
+            }
+            tmp = sqlite3_column_int64(prep_cmd, 4);
+            if(tmp != 0){ // TODO fix 0 to true null
+              proj.end = tmp;
+              proj.useEnd = true;
+            }else{
+              proj.end = timecodeNull;
+              proj.useEnd = false;
+            }
+            
+            ret.push_back(proj);
+        }
+        if(err != SQLITE_DONE){
+            throw std::runtime_error("Failed to fetch project list");
+        }
+        sqlite3_finalize(prep_cmd);
+        return ret;
+    }
+    std::vector<fullProjectData> fetchProjectListActiveAt(timecode date){
+        // date should NOT be null- it will be used
+
+        // Assuming for now that '0' is the null date
+        std::string cmd = "SELECT id, name, FTE, start_date, end_date FROM projects WHERE (start_date <= {} or start_date == {}) AND (end_date >= {} OR end_date == {}) ORDER by name;";
+        sqlite3_stmt * prep_cmd;
+        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_int64(prep_cmd, 1, date);
+        sqlite3_bind_int64(prep_cmd, 2, 0); //TODO - use null value not plain 0
+        sqlite3_bind_int64(prep_cmd, 3, date);
+        sqlite3_bind_int64(prep_cmd, 4, 0); //TODO - use null value not plain 0
+        
+        std::vector<fullProjectData> ret;
+        while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            fullProjectData proj;
+            proj.uid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0)));
+            proj.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1));
+            proj.FTE = sqlite3_column_double(prep_cmd, 2);
+            timecode tmp = sqlite3_column_int64(prep_cmd, 3);
+            if(tmp != 0){ // TODO fix 0 to true null
+              proj.start = tmp;
+              proj.useStart = true;
+            }else{
+              proj.start = timecodeNull;
+              proj.useStart = false;
+            }
+            tmp = sqlite3_column_int64(prep_cmd, 4);
+            if(tmp != 0){ // TODO fix 0 to true null
+              proj.end = tmp;
+              proj.useEnd = true;
+            }else{
+              proj.end = timecodeNull;
+              proj.useEnd = false;
+            }
+
             ret.push_back(proj);
         }
         if(err != SQLITE_DONE){

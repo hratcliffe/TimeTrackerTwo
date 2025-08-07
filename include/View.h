@@ -1,3 +1,6 @@
+#ifndef ____View_h__
+#define ____View_h__
+
 #include <QObject>
 #include <QMainWindow>
 #include <QCloseEvent>
@@ -18,6 +21,27 @@
 #include "support.h"
 #include "project.h"
 #include "projectbutton.h"
+#include "timeWrapper.h"
+
+
+inline TW_timePoint fromQDateTime(QDateTime time){
+  //Convert from QT time to app time, going via a string
+  // Format  "%Y-%m-%d %H:%M:%S"
+  std::string time_str;
+  time_str = time.toString("yyyy-MM-dd hh:mm:ss").toStdString();
+  return timeWrapper::parseTimeZoned(time_str);
+}
+
+inline QDateTime toQDateTime(TW_timePoint time){
+  //Convert to QT time from app time, going via a string
+  // Format  "%Y-%m-%d %H:%M:%S"
+  std::string time_str;
+  time_str = timeWrapper::formatTime(time);
+  std::cout<<time_str<<std::endl;
+  //std::cout<<timeWrapper::formatTime(timeWrapper::parseTimeZoned(time_str))<<std::endl;
+  return QDateTime::fromString(QString::fromStdString(time_str),"yyyy-MM-dd hh:mm:ss");
+}
+
 
 struct viewProperties{
 
@@ -248,19 +272,24 @@ Q_OBJECT
       Ui::addProjectDialog addUi;
       addUi.setupUi(addDialog);
       addUi.FTEField->setMaximum(freeFTE*100);
+      addUi.startSelect->setDate(toQDateTime(timeWrapper::startOfMonth(timeWrapper::now())).date());
+      addUi.endSelect->setDate(toQDateTime(timeWrapper::startOfMonth(timeWrapper::now())).date());
+
+      //TODO make it so that end cannot be before start if both are enabled
 
       //Disable OK button and require NameField to be not blank for it to enable
       addUi.buttonBox->button(QDialogButtonBox::Ok)->setDisabled(true);
-      connect(addUi.NameField, &QLineEdit::textChanged, [this, &addUi](QString txt){this->enableOnRequiredFields(addUi.buttonBox->button(QDialogButtonBox::Ok), &addUi);});
+      connect(addUi.nameField, &QLineEdit::textChanged, [this, &addUi](QString txt){this->enableOnRequiredFields(addUi.buttonBox->button(QDialogButtonBox::Ok), &addUi);});
       
       bool result = addDialog->exec();
 
       //If OK was clicked, signal to add a project
       if(result){
         float FTE = (float)addUi.FTEField->value()/100.0;
-        emit projectAddRequested(projectData{addUi.NameField->text().toStdString(), FTE});
+        timecode start = timeWrapper::toSeconds(fromQDateTime(addUi.startSelect->dateTime()));
+        timecode end = timeWrapper::toSeconds(fromQDateTime(addUi.endSelect->dateTime()));
+        emit projectAddRequested(projectData{addUi.nameField->text().toStdString(), FTE, start, end, addUi.startEnabled->isChecked(), addUi.endEnabled->isChecked()});
       }
-      std::cout<<result<<std::endl;
 
     }
 
@@ -509,7 +538,7 @@ Q_OBJECT
     void enableOnRequiredFields(QPushButton * theButton, Ui::addProjectDialog * dialog){
       //Enforce the required fields for an addProjectDialog - theButton is disabled unless the following are met
       // NameField is not blank or whitespace
-      auto txt = dialog->NameField->text().toStdString();
+      auto txt = dialog->nameField->text().toStdString();
       bool state_bad = !isValidNameString(txt);
       theButton->setDisabled(state_bad);
     }
@@ -525,3 +554,4 @@ Q_OBJECT
 
   };
 
+#endif

@@ -88,7 +88,7 @@ Q_OBJECT
       auto subprojectList = dataHandler->fetchSubprojectList();
 
       for(const auto & it : projectList){
-        thePM.restoreProject(it);
+        thePM.restoreProject(it, now);
       }
       for(const auto & it : subprojectList){
         thePM.restoreSubproject(it);

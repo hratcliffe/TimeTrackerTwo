@@ -381,6 +381,45 @@ class databaseStore{
         sqlite3_finalize(prep_cmd);
         return ret;
     }
+    std::vector<fullSubProjectData> fetchSubprojectListForParents(std::vector<proIds::Uuid> ids){
+        //In general the list should be short, so filter on the client side. If list can be large, consider
+        // filtering after fetch to avoid unwieldy query.
+        std::string cmd = "SELECT id, name, frac, parent_id FROM subprojects WHERE";
+        std::string order_clause = "ORDER by parent_id, name;";
+        sqlite3_stmt * prep_cmd;
+
+        // Create a suitable COUNT of ids subclauses with '?' placeholder
+        std::stringstream ss;
+        for(int i = 0; i<ids.size()-1 ; i++) ss<<" parent_id == ? OR";
+        if(ids.size() > 0) ss<<" parent_id == ? "; // Last one has no 'OR' - if only one supplied, only this clause applies
+
+        // Patch together complete command
+        cmd = cmd + ss.str() + order_clause;
+        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+
+        //Bind the actual ids
+        for(int i = 0; i < ids.size(); i++){
+            std::string id = ids[i].to_string();
+            sqlite3_bind_text(prep_cmd, i+1, id.c_str(), id.length(), SQLITE_TRANSIENT); // id string has scope of loop iteration, so use TRANSIENT to prolong
+        }
+
+        std::vector<fullSubProjectData> ret;
+        while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            fullSubProjectData subproj;
+            subproj.uid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0)));
+            subproj.uid.tag(proIds::uidTag::sub);
+            subproj.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1));
+            subproj.frac = sqlite3_column_double(prep_cmd, 2);
+            subproj.parentUid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 3)));
+            ret.push_back(subproj);
+        }
+        if(err != SQLITE_DONE){
+            throw std::runtime_error("Failed to fetch subproject list");
+        }
+        sqlite3_finalize(prep_cmd);
+        return ret;
+
+    }
 
     fullOneOffProjectData readOneOff(proIds::Uuid const & id){
         

@@ -30,6 +30,7 @@ class dataIO{
     virtual std::vector<fullProjectData> fetchProjectList() = 0; /**< \brief Fetch list of projects from the data source */
     virtual std::vector<fullProjectData> fetchProjectListActiveAt(timecode date) = 0; /**< \brief Fetch list of projects from the data source which are active at given date */
     virtual std::vector<fullSubProjectData> fetchSubprojectList() = 0; /**< \brief Fetch list of subprojects from the data source */
+    virtual std::vector<fullSubProjectData> fetchSubprojectListForParents(std::vector<proIds::Uuid> ids) = 0;/**< \brief Fetch subprojects for specified parent ids */
     virtual std::vector<fullOneOffProjectData> fetchOneOffProjectList() = 0;
     virtual std::vector<fullOneOffProjectData> fetchOneOffProjectsInTimeRange(timecode start, timecode end) = 0;
 
@@ -101,6 +102,9 @@ class databaseIO : public dataIO{
     std::vector<fullSubProjectData> fetchSubprojectList() override {
       // Implementation for fetching subproject list from database
         return dbStore.fetchSubprojectList();
+    }
+    std::vector<fullSubProjectData> fetchSubprojectListForParents(std::vector<proIds::Uuid> ids) override{
+        return dbStore.fetchSubprojectListForParents(ids);
     }
 
     std::vector<fullOneOffProjectData> fetchOneOffProjectList() override{

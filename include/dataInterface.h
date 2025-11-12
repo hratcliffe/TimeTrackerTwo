@@ -34,6 +34,7 @@ class dataIO{
     virtual std::vector<fullOneOffProjectData> fetchOneOffProjectList() = 0;
     virtual std::vector<fullOneOffProjectData> fetchOneOffProjectsInTimeRange(timecode start, timecode end) = 0;
 
+    virtual timeStamp fetchTrackerAt(timecode time) = 0; /**< /brief Fetch the stamp 'active at' given time */
     virtual std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1) = 0; /**< \brief Fetch ORDERED tracker entries from the data source, optionally within a time range */
     virtual timeStamp fetchLatestTrackerEntry() = 0;/**< \brief Fetch the latest (most recent) tracker entry */
 
@@ -112,6 +113,10 @@ class databaseIO : public dataIO{
     }
     std::vector<fullOneOffProjectData> fetchOneOffProjectsInTimeRange(timecode start, timecode end) override{
       return dbStore.fetchOneOffsInRange(start, end);
+    }
+
+    timeStamp fetchTrackerAt(timecode time) override{
+      return dbStore.fetchTrackerAt(time);
     }
 
     std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1) override {

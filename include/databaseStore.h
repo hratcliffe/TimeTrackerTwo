@@ -482,6 +482,26 @@ class databaseStore{
 
     }
 
+    timeStamp fetchTrackerAt(timecode time){
+
+      //Fetch the last timestamp before the given time - i.e the one active at time
+      std::string cmd = "SELECT time, project_id from timestamps t WHERE t.time <= ? ORDER BY t.time DESC LIMIT 1;";
+      sqlite3_stmt * prep_cmd;
+      int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+      sqlite3_bind_int64(prep_cmd, 1, time);
+      timeStamp ret;
+      ret.time = -1;
+      while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            ret.time = sqlite3_column_int64(prep_cmd, 0);
+            ret.projectUid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1)));
+        }
+        if(err != SQLITE_DONE){
+            throw std::runtime_error("Failed to fetch tracker entries");
+        }
+        sqlite3_finalize(prep_cmd);
+        return ret;
+    }
+
     std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1){
         //TODO - should the Uid tags be handled down here?
       //TODO - is there an elegant way to do this with prepared statements?
@@ -498,7 +518,6 @@ class databaseStore{
       }
       std::string order_clause = "ORDER BY time";
       std::string cmd = "SELECT time, project_id from timestamps t "+where_clause + order_clause + ';';
-      std::cout<<cmd<<std::endl;
       sqlite3_stmt * prep_cmd;
       int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr); 
       std::vector<timeStamp> ret;

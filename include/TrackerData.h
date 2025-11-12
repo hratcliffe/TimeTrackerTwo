@@ -192,7 +192,7 @@ Q_OBJECT
 
       const float targetThresholdFTE = 0.01;
       const float targetThresholdFractionFrac = 0.01; // Ditto for sub fracs
-      //Fetching timedata - TODO limit bounds?
+      //Fetching timedata
       // TODO how to select time range for summary - c.f. View - filtering dialog and data struct?
       std::vector<timeStamp> timestamps = dataHandler->fetchTrackerEntries();
 
@@ -297,6 +297,43 @@ Q_OBJECT
       emit timeSummaryReady(summary);
 
     }
+
+    void generateDailyDigest(TW_timePoint start_tp){
+      //Generate the 'per-day' version of the timestamps for the GMT day starting at start
+      // TODO - timezones?
+      // TODO If it exists already, it should be replaced
+
+      //TODO - what if somebody goes back to a previous day and adds a stamp? need to regenerate the day then
+
+      //Start and end of day timestamps
+      timecode start, end, start_of_day;
+      auto next_midnight = timeWrapper::addDuration(start_tp, 0, 0, 1);
+      start = timeWrapper::toSeconds(start_tp);
+      start_of_day = start;
+      end = timeWrapper::toSeconds(next_midnight);
+      timeStamp openingProject = dataHandler->fetchTrackerAt(start); // Get active project at start
+      std::vector<timeStamp> timestamps = dataHandler->fetchTrackerEntries(start, end);
+      if(openingProject.time >= 0){
+        timestamps.insert(timestamps.begin(), openingProject);
+      }else{
+        start = -1; //Nothing was running, we started the data today
+      }
+      std::map<proIds::Uuid, timecode> durations = timestampProcessor::stampsToDurations(timestamps, start, end);
+      std::vector<timeDigestEntry> digest;
+      for(auto & item : durations){
+        std::cout<<item.first<<" "<<item.second<<std::endl;
+        //Converting into a list of digest items
+        //Skipping any nulls
+        // We also need to define a digest period - see below - we can leave the id as -1 for writing
+        if(item.first == proIds::NullUid) continue;
+        digest.push_back(timeDigestEntry{-1, item.second, item.first});
+      }
+      timeDigestPeriod period{-1, start_of_day, end};
+      dataHandler->writeDigestEntries(period, digest);
+
+
+   }
+
 
     void handleCloseRequest(bool silent, timecode now){
       if(silent){

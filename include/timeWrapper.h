@@ -91,6 +91,14 @@ class timeWrapper{
       return clock::from_time_t(mktime(timeInfo));
     }
 
+    static timePoint addDuration(timePoint pt, long minutes, long hours, long days){
+      duration offset{0};
+      offset += std::chrono::minutes(minutes);
+      offset += std::chrono::hours(hours);
+      offset += std::chrono::hours(days*24);
+      return pt + offset;
+    }
+
   };
 
 

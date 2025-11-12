@@ -81,7 +81,7 @@ class databaseStore{
         }
 
         //NOTE project id can be a project OR a subproject
-        cmd = "CREATE TABLE IF NOT EXISTS time_digests(id INTEGER PRIMARY KEY, period_id INTEGER, duration INTEGER, project_id CHAR(36), FOREIGN KEY(period_id) REFERENCES digest_periods(id);";
+        cmd = "CREATE TABLE IF NOT EXISTS time_digests(id INTEGER PRIMARY KEY, period_id INTEGER, duration INTEGER, project_id CHAR(36), FOREIGN KEY(period_id) REFERENCES digest_periods(id) UNIQUE(period_id, project_id));";
          err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
         if(err != SQLITE_OK){
             std::cerr << "Error creating timedigests table: " << errMsg << std::endl;
@@ -660,8 +660,23 @@ class databaseStore{
         sqlite3_finalize(prep_cmd);
         return ret;
     }
+
     void updateDigestEntry(timeDigestEntry entry){
         //Update an entry - the period_id and the Uuid must exist already
+        std::string cmd = "UPDATE time_digests SET duration = ? WHERE period_id = ? and project_id= ? LIMIT 1;";
+        sqlite3_stmt * prep_cmd;
+        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_int64(prep_cmd, 1, entry.duration);
+        sqlite3_bind_int64(prep_cmd, 2, entry.period);
+        const std::string & tmp = entry.projectUid.to_string();
+        sqlite3_bind_text(prep_cmd, 3, tmp.c_str(), tmp.length(), SQLITE_STATIC);
+
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            throw std::runtime_error("Failed to write period");
+        }
+        sqlite3_finalize(prep_cmd);
     }
 
 

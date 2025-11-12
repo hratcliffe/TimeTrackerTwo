@@ -38,6 +38,11 @@ class dataIO{
     virtual std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1) = 0; /**< \brief Fetch ORDERED tracker entries from the data source, optionally within a time range */
     virtual timeStamp fetchLatestTrackerEntry() = 0;/**< \brief Fetch the latest (most recent) tracker entry */
 
+    //Digests
+    virtual void writeDigestEntries(timeDigestPeriod period, std::vector<timeDigestEntry> entries) = 0;/**< \brief Write the daily digests of time spent, assuming not previously written */
+    virtual std::vector<timeDigestPeriod> fetchDigestPeriods(timecode start=-1, timecode end=-1) =0;/**<\brief Fetching the periods for time digests */
+    virtual std::vector<timeDigestEntry> fetchDigestEntries(timeDigestPeriod period) = 0; /**< \brief Fetch the daily digests of time spent*/
+    virtual void updateDigestEntry(timeDigestEntry) = 0;/**< \brief Update an entry (unique on period_id+uid) */
 };
 
 class flatfileIO : public dataIO{
@@ -126,6 +131,21 @@ class databaseIO : public dataIO{
     timeStamp fetchLatestTrackerEntry() override{
       return dbStore.fetchLatestTrackerEntry();
     }
+
+    void writeDigestEntries(timeDigestPeriod period, std::vector<timeDigestEntry> entries) override{
+      dbStore.writeDigestEntries(period, entries);
+    }
+    std::vector<timeDigestPeriod> fetchDigestPeriods(timecode start=-1, timecode end=-1) override{
+      return dbStore.fetchDigestPeriods(start, end);
+    }
+    std::vector<timeDigestEntry> fetchDigestEntries(timeDigestPeriod period) override{
+      return dbStore.fetchDigestEntries(period);
+    }
+    void updateDigestEntry(timeDigestEntry entry) override{
+      dbStore.updateDigestEntry(entry);
+    }
+
+
 };
 
 #endif

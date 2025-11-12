@@ -19,7 +19,7 @@ class databaseStore{
     void enable_foreign_keys(){sqlite3_exec(DB, "PRAGMA foreign_keys = ON", nullptr, nullptr, nullptr);}
     bool check_tables(){
 
-        auto expected_tables = std::vector<std::string>{"projects", "subprojects", "timestamps", "app_data", "oneoffs"};
+        auto expected_tables = std::vector<std::string>{"projects", "subprojects", "timestamps", "app_data", "oneoffs", "digest_periods", "time_digests"};
         // Get list of tables in the database
         std::string cmd = "SELECT name FROM sqlite_master WHERE type='table';";
         sqlite3_stmt *stmt;
@@ -72,6 +72,23 @@ class databaseStore{
             throw std::runtime_error("Failed to create timestamps table");
         }
 
+        cmd = "CREATE TABLE IF NOT EXISTS digest_periods(id INTEGER PRIMARY KEY, start INTEGER, duration INTEGER);";
+        err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
+        if(err != SQLITE_OK){
+            std::cerr << "Error creating digest_periods table: " << errMsg << std::endl;
+            sqlite3_free(errMsg);
+            throw std::runtime_error("Failed to create digest_periods table");
+        }
+
+        //NOTE project id can be a project OR a subproject
+        cmd = "CREATE TABLE IF NOT EXISTS time_digests(id INTEGER PRIMARY KEY, period_id INTEGER, duration INTEGER, project_id CHAR(36), FOREIGN KEY(period_id) REFERENCES digest_periods(id);";
+         err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
+        if(err != SQLITE_OK){
+            std::cerr << "Error creating timedigests table: " << errMsg << std::endl;
+            sqlite3_free(errMsg);
+            throw std::runtime_error("Failed to create timedigests table");
+        }
+
         // Table for logging names/info about oneoff projects - expect SHORT description
         cmd = "CREATE TABLE IF NOT EXISTS oneoffs(id CHAR(36) PRIMARY KEY, name TEXT, descr TEXT);";
         err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
@@ -93,7 +110,7 @@ class databaseStore{
     }
 
     void delete_all_tables(){
-        std::string cmd = "DROP TABLE IF EXISTS subprojects; DROP TABLE IF EXISTS projects; DROP TABLE IF EXISTS oneoffs; DROP TABLE IF EXISTS timestamps; DROP TABLE IF EXISTS app_data;";
+        std::string cmd = "DROP TABLE IF EXISTS subprojects; DROP TABLE IF EXISTS projects; DROP TABLE IF EXISTS oneoffs; DROP TABLE IF EXISTS timestamps; DROP TABLE IF EXISTS digest_periods; DROP TABLE IF EXISTS time_digests; DROP TABLE IF EXISTS app_data;";
         int err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
         if(err != SQLITE_OK){
             std::cerr << "Error deleting tables: " << errMsg << std::endl;
@@ -548,6 +565,107 @@ class databaseStore{
         sqlite3_finalize(prep_cmd);
         return ret;
     }
+
+    void writeDigestEntries(timeDigestPeriod period, std::vector<timeDigestEntry> entries){
+        //Writing a complete block - the period is ALSO created here
+
+        //Creating the Period entry
+        // NOTE - caller to make sure these are a non-overlapping cover of the relevant time
+        std::string cmd;
+        sqlite3_stmt * prep_cmd;
+        int err = 0;
+        cmd = "INSERT INTO digest_periods(start, duration) values(?, ?)";
+        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_int64(prep_cmd, 1, period.start);
+        sqlite3_bind_int64(prep_cmd, 2, period.duration);
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            throw std::runtime_error("Failed to write period");
+        }
+        sqlite3_finalize(prep_cmd);
+        int p_id = sqlite3_last_insert_rowid(DB);
+        for(auto & item : entries){
+            const std::string & tmp = item.projectUid.to_string();
+            cmd = "INSERT INTO time_digests(period_id, duration, project_id) VALUES(?, ?, ?);";
+            err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+            sqlite3_bind_int64(prep_cmd, 1, p_id);
+            sqlite3_bind_int64(prep_cmd, 2, item.duration);
+            sqlite3_bind_text(prep_cmd, 3, tmp.c_str(), tmp.length(), SQLITE_STATIC);
+            err = sqlite3_step(prep_cmd);
+            if(err == SQLITE_DONE) err = SQLITE_OK;
+            if(err != SQLITE_OK){
+                throw std::runtime_error("Failed to write entry");
+            }
+            sqlite3_finalize(prep_cmd);
+        }
+    }
+
+    std::vector<timeDigestPeriod> fetchDigestPeriods(timecode start = -1, timecode end=-1){
+        //Fetching the entries for _period_
+        std::string cmd;
+        sqlite3_stmt * prep_cmd;
+        int err;
+        if(start != -1 && end != -1 && end >= start){
+          cmd = "SELECT id, start, duration FROM digest_periods WHERE start >= ? AND duration <= ?;";
+          long long dur = end-start;
+          err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+          sqlite3_bind_int(prep_cmd, 1, start);
+          sqlite3_bind_int(prep_cmd, 2, dur);
+
+        }else if(start != -1){
+          cmd = "SELECT id, start, duration FROM digest_periods WHERE start >= ?;";
+          err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+          sqlite3_bind_int(prep_cmd, 1, start);
+        }else if(end != -1){
+          throw std::runtime_error("Cannot have end without start");
+        }else{
+          cmd = "SELECT id, start, duration FROM digest_periods;";
+          err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        }
+
+        std::vector<timeDigestPeriod> ret;
+        while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            timeDigestPeriod entry;
+            entry.id = sqlite3_column_int64(prep_cmd, 0);
+            entry.start = sqlite3_column_int64(prep_cmd, 1);
+            entry.duration = sqlite3_column_int64(prep_cmd, 2);
+            ret.push_back(entry);
+        }
+        if(err != SQLITE_DONE){
+            throw std::runtime_error("Failed to fetch digest entries");
+        }
+        sqlite3_finalize(prep_cmd);
+        return ret;
+    }
+
+    std::vector<timeDigestEntry> fetchDigestEntries(timeDigestPeriod period){
+        //Fetching the entries for _period_
+        std::string cmd = "SELECT duration, project_id FROM time_digests WHERE period_id = ?;";
+        sqlite3_stmt * prep_cmd;
+        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_int64(prep_cmd, 1, period.id); 
+
+        std::vector<timeDigestEntry> ret;
+        while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            timeDigestEntry entry;
+            entry.period  = period.id;
+            entry.duration = sqlite3_column_int64(prep_cmd, 0);
+            entry.projectUid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1)));
+            ret.push_back(entry);
+        }
+        if(err != SQLITE_DONE){
+            throw std::runtime_error("Failed to fetch digest entries");
+        }
+        sqlite3_finalize(prep_cmd);
+        return ret;
+    }
+    void updateDigestEntry(timeDigestEntry entry){
+        //Update an entry - the period_id and the Uuid must exist already
+    }
+
+
+
 };
 
 #endif

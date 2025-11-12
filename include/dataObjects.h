@@ -222,4 +222,32 @@ inline std::ostream& operator<< (std::ostream& stream, const timeSummaryItem& ts
   return stream;
 };
 
+// A time Digest Period entry -i.e. daily, monthly etc
+class timeDigestPeriod{
+  public:
+  long id=-1;
+  timecode start=0, duration=0;
+  std::string displayName="";
+};
+inline std::ostream& operator<< (std::ostream& stream, const timeDigestPeriod& ts){
+/** \brief Stream operator for timeStamp
+*/
+  stream << ts.displayName<<" Start: " << ts.start <<", Duration: "<<ts.duration;
+  return stream;
+};
+
+class timeDigestEntry{
+    public:
+    long period=-1; /**< \brief Period identifier, should match the id of a valid period */
+    timecode duration; /** \brief Duration for entity this digest belongs to */
+    proIds::Uuid projectUid; /**< \brief Unique identifier for the entity this digest belongs to */
+};
+inline std::ostream& operator<< (std::ostream& stream, const timeDigestEntry& ts){
+/** \brief Stream operator for timeStamp
+*/
+  stream << "Day: " << ts.period <<", Duration: "<<ts.duration<< ", Project UID: " << ts.projectUid;
+  return stream;
+};
+
+
 #endif

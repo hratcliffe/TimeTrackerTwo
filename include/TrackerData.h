@@ -332,6 +332,10 @@ Q_OBJECT
       dataHandler->writeDigestEntries(period, digest);
 
 
+   void deleteIndividualStamps(TW_timePoint start, TW_timePoint end){
+    // Remove the timestamps once we no longer need them
+    // Start has to be supplied, but pass a 0 and it will effectively be everything before end
+    dataHandler->deleteTrackerInInterval(timeWrapper::toSeconds(start), timeWrapper::toSeconds(end));
    }
 
 

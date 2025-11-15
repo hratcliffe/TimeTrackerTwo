@@ -566,6 +566,22 @@ class databaseStore{
         return ret;
     }
 
+    void deleteTrackerInInterval(timecode start, timecode end){
+        std::string cmd;
+        sqlite3_stmt * prep_cmd;
+        int err = 0;
+        cmd = "DELETE FROM timestamps WHERE time > ? AND time < ?;";
+        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_int64(prep_cmd, 1, start);
+        sqlite3_bind_int64(prep_cmd, 1, end);
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            throw std::runtime_error("Failed to clear timestamps");
+        }
+        sqlite3_finalize(prep_cmd);
+    }
+
     void writeDigestEntries(timeDigestPeriod period, std::vector<timeDigestEntry> entries){
         //Writing a complete block - the period is ALSO created here
 

@@ -34,9 +34,11 @@ class dataIO{
     virtual std::vector<fullOneOffProjectData> fetchOneOffProjectList() = 0;
     virtual std::vector<fullOneOffProjectData> fetchOneOffProjectsInTimeRange(timecode start, timecode end) = 0;
 
-    virtual timeStamp fetchTrackerAt(timecode time) = 0; /**< /brief Fetch the stamp 'active at' given time */
+    virtual timeStamp fetchTrackerAt(timecode time) = 0; /**< \brief Fetch the stamp 'active at' given time */
     virtual std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1) = 0; /**< \brief Fetch ORDERED tracker entries from the data source, optionally within a time range */
     virtual timeStamp fetchLatestTrackerEntry() = 0;/**< \brief Fetch the latest (most recent) tracker entry */
+
+    virtual void deleteTrackerInInterval(timecode start, timecode end) = 0;/**< \brief Delete tracker entries in the given range*/
 
     //Digests
     virtual void writeDigestEntries(timeDigestPeriod period, std::vector<timeDigestEntry> entries) = 0;/**< \brief Write the daily digests of time spent, assuming not previously written */
@@ -130,6 +132,10 @@ class databaseIO : public dataIO{
     }
     timeStamp fetchLatestTrackerEntry() override{
       return dbStore.fetchLatestTrackerEntry();
+    }
+
+    void deleteTrackerInInterval(timecode start, timecode end) override{
+      dbStore.deleteTrackerInInterval(start, end);
     }
 
     void writeDigestEntries(timeDigestPeriod period, std::vector<timeDigestEntry> entries) override{

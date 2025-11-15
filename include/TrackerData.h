@@ -300,6 +300,7 @@ Q_OBJECT
 
     void generateDailyDigest(TW_timePoint start_tp){
       //Generate the 'per-day' version of the timestamps for the GMT day starting at start
+      // ALSO adds a special entry for the TOTAL duration covered under the NULL uuid
       // TODO - timezones?
       // TODO If it exists already, it should be replaced
 
@@ -320,17 +321,19 @@ Q_OBJECT
       }
       std::map<proIds::Uuid, timecode> durations = timestampProcessor::stampsToDurations(timestamps, start, end);
       std::vector<timeDigestEntry> digest;
+      timecode total_dur = 0;
       for(auto & item : durations){
-        std::cout<<item.first<<" "<<item.second<<std::endl;
         //Converting into a list of digest items
         //Skipping any nulls
         // We also need to define a digest period - see below - we can leave the id as -1 for writing
         if(item.first == proIds::NullUid) continue;
+        total_dur += item.second;
         digest.push_back(timeDigestEntry{-1, item.second, item.first});
       }
+      digest.push_back(timeDigestEntry{-1, total_dur, proIds::NullUid});
       timeDigestPeriod period{-1, start_of_day, end};
       dataHandler->writeDigestEntries(period, digest);
-
+   }
 
    void deleteIndividualStamps(TW_timePoint start, TW_timePoint end){
     // Remove the timestamps once we no longer need them

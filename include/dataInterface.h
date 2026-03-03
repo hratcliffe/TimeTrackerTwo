@@ -45,6 +45,7 @@ class dataIO{
     virtual std::vector<timeDigestPeriod> fetchDigestPeriods(timecode start=-1, timecode end=-1) =0;/**<\brief Fetching the periods for time digests */
     virtual std::vector<timeDigestEntry> fetchDigestEntries(timeDigestPeriod period) = 0; /**< \brief Fetch the daily digests of time spent*/
     virtual void updateDigestEntry(timeDigestEntry) = 0;/**< \brief Update an entry (unique on period_id+uid) */
+    virtual std::vector<timeDigestEntry> fetchDigestEntriesForTime(timecode start = -1, timecode end=-1)=0;/**<\brief Fetch all the digests which fall in the given time range */
 };
 
 class flatfileIO : public dataIO{
@@ -149,6 +150,10 @@ class databaseIO : public dataIO{
     }
     void updateDigestEntry(timeDigestEntry entry) override{
       dbStore.updateDigestEntry(entry);
+    }
+
+    std::vector<timeDigestEntry> fetchDigestEntriesForTime(timecode start = -1, timecode end=-1) override{
+      return dbStore.fetchDigestEntries(start, end);
     }
 
 

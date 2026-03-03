@@ -618,6 +618,7 @@ class databaseStore{
     }
 
     std::vector<timeDigestPeriod> fetchDigestPeriods(timecode start = -1, timecode end=-1){
+        // TODO - the meaning of end here is weird. Re-examine that
         //Fetching the entries for _period_
         std::string cmd;
         sqlite3_stmt * prep_cmd;
@@ -695,7 +696,32 @@ class databaseStore{
         sqlite3_finalize(prep_cmd);
     }
 
+    std::vector<timeDigestEntry> fetchDigestEntries(timecode start, timecode end){
+        //Fetching the entries for ALL PERIODS in the range
+        // IMPORTANT : end here means the end of the period - this fetches digests WHOLLY within the interval!
 
+        std::string cmd = "select td.duration, td.period_id, project_id from time_digests as td inner join digest_periods as dp on td.period_id=dp.id where dp.start > ? and dp.start+dp.duration < ?;";
+;
+        sqlite3_stmt * prep_cmd;
+        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_int64(prep_cmd, 1, start);
+        sqlite3_bind_int64(prep_cmd, 2, end);
+
+        std::vector<timeDigestEntry> ret;
+        while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            timeDigestEntry entry;
+            entry.period  = sqlite3_column_int64(prep_cmd, 1);
+            entry.duration = sqlite3_column_int64(prep_cmd, 0);
+            entry.projectUid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 2)));
+            ret.push_back(entry);
+        }
+        if(err != SQLITE_DONE){
+            throw std::runtime_error("Failed to fetch digest entries");
+        }
+        sqlite3_finalize(prep_cmd);
+        return ret;
+
+    }
 
 };
 

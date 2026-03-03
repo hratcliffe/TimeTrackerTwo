@@ -194,19 +194,34 @@ Q_OBJECT
       const float targetThresholdFractionFrac = 0.01; // Ditto for sub fracs
       //Fetching timedata
       // TODO how to select time range for summary - c.f. View - filtering dialog and data struct?
-      std::vector<timeStamp> timestamps = dataHandler->fetchTrackerEntries();
+      // NOTE: cannot filter to more fidelity than the digests offer
 
+      // First fetch the most recent stamps
+      std::vector<timeStamp> timestamps = dataHandler->fetchTrackerEntries();
       if(timestamps.size() == 0){
         summary.push_back({"No time entries found!", timeSummaryStatus::error});
         emit timeSummaryReady(summary);
         return;
       }
-
-      std::cout<<"Fetched "<<timestamps.size()<<std::endl;
-
+      std::cout<<"Fetched "<<timestamps.size()<<" timestamps"<<std::endl;
       //TODO - should this always go until now? C.f. previous - time range selection?
       timecode window = timeWrapper::toSeconds(timeWrapper::now()) - timestamps[0].time; 
       std::map<proIds::Uuid, timecode> durations = timestampProcessor::stampsToDurations(timestamps);
+      // TODO - BUG this does not seem to be giving quite the right answer?
+
+      //Next add in durations from digests
+      //auto digests = dataHandler->fetchDigestEntriesForTime(0, timeWrapper::toSeconds(timeWrapper::now()));
+      auto digests = dataHandler->fetchDigestEntriesForTime(0, 400000000000);
+      std::cout<<"Fetched "<<digests.size()<<" digests"<<std::endl;
+      for(auto & item : digests){
+        if(durations.count(item.projectUid) > 0){
+          durations[item.projectUid] += item.duration;
+        }else{
+          durations[item.projectUid] = item.duration;
+        }
+      }
+
+
 
       std::string unit_str = unitToString(units);
       timecode unit_factor = unitToDivisor(units);
@@ -281,7 +296,7 @@ Q_OBJECT
             }else if(sub->getFrac() - frac > targetThresholdFractionFrac){
               tag = timeSummaryStatus::underTarget;
             }
-            item = {"Fraction on sub " + displayFloat(frac*100, 0) +"% (target" +displayFloat(sub->getFrac()*100,0)+"%)", tag};
+            item = {"Fraction on sub " + displayFloat(frac*100, 0) +"% (target " +displayFloat(sub->getFrac()*100,0)+"%)", tag};
             summary.push_back(item);
           }
         }else if(subs.size() > 0){

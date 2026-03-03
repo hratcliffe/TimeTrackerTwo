@@ -331,7 +331,7 @@ Q_OBJECT
         digest.push_back(timeDigestEntry{-1, item.second, item.first});
       }
       digest.push_back(timeDigestEntry{-1, total_dur, proIds::NullUid});
-      timeDigestPeriod period{-1, start_of_day, end};
+      timeDigestPeriod period{-1, start_of_day, end-start_of_day};
       dataHandler->writeDigestEntries(period, digest);
    }
 

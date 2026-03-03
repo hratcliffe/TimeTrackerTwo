@@ -573,7 +573,7 @@ class databaseStore{
         cmd = "DELETE FROM timestamps WHERE time > ? AND time < ?;";
         err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_int64(prep_cmd, 1, start);
-        sqlite3_bind_int64(prep_cmd, 1, end);
+        sqlite3_bind_int64(prep_cmd, 2, end);
         err = sqlite3_step(prep_cmd);
         if(err == SQLITE_DONE) err = SQLITE_OK;
         if(err != SQLITE_OK){

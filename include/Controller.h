@@ -15,6 +15,10 @@ Q_OBJECT
   TrackerData * currentData;
   appClock * clock;
   QTimer * clockTicker;
+  TW_timePoint lastDigestCheckTime;
+  TW_duration digestCheckPeriod;
+  TW_timePoint lastDigestCreationTime;
+  TW_duration digestCreationDelay;
 
   public:
   Controller(appConfig config){
@@ -28,16 +32,35 @@ Q_OBJECT
 
     currentData->loadProjects(clock->now());
 
-      //TODO consolidate stamps into daily digests and store per entity - easier reporting and better long-term use
-      //TODO be careful of embedding 'day' too deeply - what if something runs past midnight? What about travelling to another time Zone? 
+    //TODO - read from DB. 
+    // TODO -setup defaults in DB on app first run
+    //These are the internal parameters for how often we should check
+    this->lastDigestCheckTime = timeWrapper::now();
+    digestCheckPeriod = TW_duration{10}; // TODO - short for dev purposes
+    //These are the lastDay for which we created a digest
+    lastDigestCreationTime = timeWrapper::addDuration( timeWrapper::now(), 0, 0, -3);
+    // This is how many seconds we keep the stamps before digesting
+    //digestCreationDelay = TW_duration{60*60*24*2};
+    digestCreationDelay = TW_duration{60}; // TODO - dev. value fixup
+    // DIGEST strategy:
+      //Consolidate stamps into a daily (midnight-midnight) time-spent list
+      // Keep full timestamps for duration X (10 days?)
+      // Keep daily digests for duration Y (6 mo?)
+      // After that, keep weekly (Monday to Sunday?) - consider First-Day-of-Week config option
+      // After forming the digest, delete the timestamps (NOTE - keep the last one IF it is an active project as this is then running into the NEXT DAY)
+
+      //Reports will then use the digests plus the timestamps
+
+      // TODO What about traveling to another time Zone? 
 
       //TODO allow editing of projects
       //TODO - allow editing of inactive projects? For those that will start in the future? "Upcoming"
       //TODO ditto subprojects
 
       //TODO allow review of stamps
+      //TODO allow adding time travel on previous days and get this RIGHT
 
-      //TODO - emit signal every midnight to roll over start/end dates
+      //TODO - store to DB on shutdown - digest time info
   }
 
   void connectSignals(){
@@ -97,13 +120,53 @@ Q_OBJECT
     connect(clockTicker, &QTimer::timeout, [this](){this->clock->tick(); emit clockUpdated(this->clock->shortTimeString());});
     connect(this, &Controller::clockUpdated, theView, &View::updateClockDisplay);
 
-    //Time travelling:
+    //Since clock is already updating every second we can use this to trigger timed events with sufficient fidelity
+    //Connecting to 'midnight' rollovers
+    connect(clockTicker, &QTimer::timeout, [this](){checkTimedEvents();});
+
+    //Time traveling:
     //To show a dialog, view needs to know the time now:
     connect(theView, &View::fetchTimeTravelInfo, [this](){theView->showTimeTravelDialog(this->clock->shortTimeString(), QDateTime::currentDateTime());});
     connect(theView, &View::timeTravelRequested, [this](QDateTime time){this->clock->travelTo(fromQDateTime(time));});
 
   }
+
+  void checkTimedEvents(){
+    //This is REAL system time, not app time!
+    auto now = timeWrapper::now();
+
+    // Create Daily Digests for any data which is between lastDigestCreationTime
+    // and now - digestCreationDelay.
+    // IF system clock is being changed, then the days are best tracked in 'user timezone' anyway
+    if( timeWrapper::toSeconds(now) >  timeWrapper::toSeconds(lastDigestCheckTime + digestCheckPeriod)){
+      //Time to check if we need to digest anything
+      std::cout<<"Time to check for digests!"<<std::endl;
+
+      //Double-check - have we managed to have some timestamps that are OLDER than the last creation time?
+      auto inDoubt = currentData->checkForTimeStampsBefore(lastDigestCreationTime);
+      if(inDoubt) std::cerr<<"Found "<<inDoubt<<" stamps we did not expect "<<std::endl;
+      // NOTE: right now we do not go back and digest older stamps - TODO - handle that case, see next comment
+      // TODO - do something about this error! IMPORTANT: there might be ONE stamp because we need the initial project
+
+      // Need to do digests for as many days as required
+      if(timeWrapper::toSeconds(now) > timeWrapper::toSeconds(lastDigestCreationTime + digestCreationDelay)){
+        TW_duration digestPeriod{60*60*24};
+        auto totalStart = lastDigestCreationTime;
+        while(timeWrapper::toSeconds(now) > timeWrapper::toSeconds(lastDigestCreationTime + digestCreationDelay)){
+          auto digestStart = timeWrapper::addDuration(lastDigestCreationTime, 0, 0, 1);
+          auto start = timeWrapper::midnightBefore(digestStart);
+          currentData->generateDailyDigest(start);
+          lastDigestCreationTime = digestStart;
+        }
+        //This will leave ONE active stamp if needed
+        currentData->deleteIndividualStamps(totalStart, timeWrapper::addDuration(lastDigestCreationTime, 0, 0, 1));
+      }
+      lastDigestCheckTime = now;
+    }
+  }
+
   TW_timePoint fromQDateTime(QDateTime time){
+    //TODO move this to support code - has more than one instance - BUT has to be at level where QT is known...
     //Convert from QT time to app time, going via a string
     // Format  "%Y-%m-%d %H:%M:%S"
     std::string time_str;

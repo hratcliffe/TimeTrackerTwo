@@ -15,13 +15,13 @@ Based on previous Time Tracker code, this:
 
 */
 
-// TODO - add project start and end dates and include these
 // TODO - csv and pdf? reporting
 // TODO - alter summary to allow specifying date range
 // TODO - add configuration update options (selected while running)
 // TODO add a 'load projects from file' option ?
 // TODO add an export option ?
 
+// TODO add an 'ooops' button which goes back to the time of last close to add a stop mark ?
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);

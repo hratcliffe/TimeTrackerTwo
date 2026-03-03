@@ -335,12 +335,28 @@ Q_OBJECT
       dataHandler->writeDigestEntries(period, digest);
    }
 
-   void deleteIndividualStamps(TW_timePoint start, TW_timePoint end){
-    // Remove the timestamps once we no longer need them
-    // Start has to be supplied, but pass a 0 and it will effectively be everything before end
-    dataHandler->deleteTrackerInInterval(timeWrapper::toSeconds(start), timeWrapper::toSeconds(end));
-   }
+    int checkForTimeStampsBefore(TW_timePoint end){
+      auto data = dataHandler->fetchTrackerEntries(-1, timeWrapper::toSeconds(end));
+      return data.size();
+    }
 
+    void deleteIndividualStamps(TW_timePoint start, TW_timePoint end){
+      // Remove the timestamps once we no longer need them
+      // Start has to be supplied, but pass a 0 and it will effectively be everything
+      // The LAST stamp before the 'end' value is kept IF it is not for a null project
+
+      timecode end_secs = timeWrapper::toSeconds(end);
+      auto last = dataHandler->fetchTrackerAt(end_secs);
+      if(last.projectUid != proIds::NullUid){
+        end_secs = last.time-1; // Stop just before this stamp
+      }
+      dataHandler->deleteTrackerInInterval(timeWrapper::toSeconds(start), end_secs);
+    }
+
+    void digestDigests(){
+      // TODO - this
+      //Re-process the digests older than blah into longer period
+    }
 
     void handleCloseRequest(bool silent, timecode now){
       if(silent){

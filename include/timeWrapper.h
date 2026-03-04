@@ -28,6 +28,10 @@ class timeWrapper{
     static long long toSeconds(timePoint tp) {
       return std::chrono::duration_cast<std::chrono::seconds>(tp.time_since_epoch()).count(); /**< \brief Convert time point to seconds since epoch */
     }
+    static long long toSeconds(duration d){
+      // Cast makes _sure_ ticks == seconds - may not be needed
+      return std::chrono::duration_cast<std::chrono::seconds>(d).count();/**< \brief Convert duration to seconds */
+    }
 
     static timePoint fromSeconds(long long seconds) {
       return clock::time_point(std::chrono::seconds(seconds)); /**< \brief Create a time point from seconds since epoch */

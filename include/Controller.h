@@ -32,16 +32,35 @@ Q_OBJECT
 
     currentData->loadProjects(clock->now());
 
-    //TODO - read from DB. 
     // TODO -setup defaults in DB on app first run
     //These are the internal parameters for how often we should check
-    this->lastDigestCheckTime = timeWrapper::now();
-    digestCheckPeriod = TW_duration{10}; // TODO - short for dev purposes
-    //These are the lastDay for which we created a digest
-    lastDigestCreationTime = timeWrapper::addDuration( timeWrapper::now(), 0, 0, -3);
+    auto tmp = currentData->readState("lastDigestCheckTime");
+    if(tmp > 0){
+      lastDigestCheckTime = timeWrapper::fromSeconds(tmp);
+    }else{
+      lastDigestCheckTime = timeWrapper::fromSeconds(1); // A very long time ago...
+    }
+    tmp = currentData->readState("digestCheckPeriod");
+    if(tmp > 0){
+      digestCheckPeriod = TW_duration{tmp};
+    }else{
+      digestCheckPeriod = TW_duration{10000};
+    }
+
+    //This is the lastTime for which we created a digest
+    tmp = currentData->readState("lastDigestCreationTime");
+    if(tmp > 0){
+      lastDigestCreationTime = timeWrapper::fromSeconds(tmp);
+    }else{
+      lastDigestCreationTime = timeWrapper::addDuration( timeWrapper::now(), 0, 0, -3);
+    }
     // This is how many seconds we keep the stamps before digesting
-    //digestCreationDelay = TW_duration{60*60*24*2};
-    digestCreationDelay = TW_duration{60}; // TODO - dev. value fixup
+    tmp = currentData->readState("digestCreationDelay");
+    if(tmp > 0){
+      digestCreationDelay = TW_duration{tmp};
+    }else{
+      digestCreationDelay = TW_duration{60*60*24*2};
+    }
     // DIGEST strategy:
       //Consolidate stamps into a daily (midnight-midnight) time-spent list
       // Keep full timestamps for duration X (10 days?)
@@ -63,12 +82,22 @@ Q_OBJECT
       //TODO - store to DB on shutdown - digest time info
   }
 
+  void writeState(){
+    std::cout<<"Wrting state before closing"<<std::endl;
+    // Digest parameters
+    currentData->writeState("lastDigestCheckTime", timeWrapper::toSeconds(lastDigestCheckTime));
+    currentData->writeState("digestCheckPeriod", timeWrapper::toSeconds(digestCheckPeriod));
+    currentData->writeState("lastDigestCreationTime", timeWrapper::toSeconds(lastDigestCreationTime));
+    currentData->writeState("digestCreationDelay", timeWrapper::toSeconds(digestCreationDelay));
+
+  }
+
   void connectSignals(){
     // Collect all the connections from View to Model (TrackerData)
 
     // Close, and silent close. Close will mark current project as stopped. Silent close will not...
-    connect(theView, &View::closeRequested, [this](bool silent){currentData->handleCloseRequest(silent, this->clock->now());});
- 
+    connect(theView, &View::closeRequested, [this](bool silent){this->writeState(); currentData->handleCloseRequest(silent, this->clock->now());}); // TODO - is there a tiny race where a digest could trigger during this process?
+
     connect(currentData, &TrackerData::readyToClose, theView, &View::exitApp);
 
     // Update the view when the project list changes

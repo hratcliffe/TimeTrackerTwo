@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string>
+#include <type_traits>
 
 #include <sqlite3.h>
 
@@ -19,7 +20,7 @@ class databaseStore{
     void enable_foreign_keys(){sqlite3_exec(DB, "PRAGMA foreign_keys = ON", nullptr, nullptr, nullptr);}
     bool check_tables(){
 
-        auto expected_tables = std::vector<std::string>{"projects", "subprojects", "timestamps", "app_data", "oneoffs", "digest_periods", "time_digests"};
+        auto expected_tables = std::vector<std::string>{"projects", "subprojects", "timestamps", "app_data", "app_state", "oneoffs", "digest_periods", "time_digests"};
         // Get list of tables in the database
         std::string cmd = "SELECT name FROM sqlite_master WHERE type='table';";
         sqlite3_stmt *stmt;
@@ -106,11 +107,19 @@ class databaseStore{
             throw std::runtime_error("Failed to create app_data table");
         }
 
+        cmd = "CREATE TABLE IF NOT EXISTS app_state(key TEXT PRIMARY KEY, value INTEGER);";
+        err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
+        if(err != SQLITE_OK){
+            std::cerr << "Error creating app_state table: " << errMsg << std::endl;
+            sqlite3_free(errMsg);
+            throw std::runtime_error("Failed to create app_state table");
+        }
+
         // TODO - extended descriptions table - could add all sorts of extra info
     }
 
     void delete_all_tables(){
-        std::string cmd = "DROP TABLE IF EXISTS subprojects; DROP TABLE IF EXISTS projects; DROP TABLE IF EXISTS oneoffs; DROP TABLE IF EXISTS timestamps; DROP TABLE IF EXISTS digest_periods; DROP TABLE IF EXISTS time_digests; DROP TABLE IF EXISTS app_data;";
+        std::string cmd = "DROP TABLE IF EXISTS subprojects; DROP TABLE IF EXISTS projects; DROP TABLE IF EXISTS oneoffs; DROP TABLE IF EXISTS timestamps; DROP TABLE IF EXISTS digest_periods; DROP TABLE IF EXISTS time_digests; DROP TABLE IF EXISTS app_data; DROP TABLE IF EXISTS app_state;";
         int err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
         if(err != SQLITE_OK){
             std::cerr << "Error deleting tables: " << errMsg << std::endl;
@@ -140,7 +149,64 @@ class databaseStore{
     }
     ~databaseStore(){
         if(DB) sqlite3_close(DB);
+        // TODO - isn't this wrong? DB may be already destroyed...
     } 
+
+    template <typename T>
+    void writeItem(std::string key, T value){
+        std::string cmd;
+        sqlite3_stmt * prep_cmd;
+        int err = 0;
+        if constexpr(std::is_same<T, long long>::value){
+            cmd = "insert into app_state values(?,?) ON CONFLICT DO UPDATE SET value=excluded.value;";
+            err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+            sqlite3_bind_int(prep_cmd, 2, value);
+        }else if constexpr(std::is_same<T, std::string>::value){
+            cmd = "insert into app_data values(?,?) ON CONFLICT DO UPDATE SET value=excluded.value;";
+            err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+            sqlite3_bind_text(prep_cmd, 2, value.c_str(), value.length(), SQLITE_STATIC);
+        }else{
+            assert(false);
+        }
+        sqlite3_bind_text(prep_cmd, 1, key.c_str(), key.length(), SQLITE_STATIC);
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            std::cerr<< sqlite3_errmsg(DB) << std::endl;
+            throw std::runtime_error("Failed to write item");
+        }
+        sqlite3_finalize(prep_cmd);
+
+    }
+    template <typename T>
+    T readItem(std::string key){
+      T item;
+      if constexpr(std::is_same<T, long long>::value){
+        std::string cmd = "SELECT value FROM app_state WHERE key = ?;";
+        sqlite3_stmt * prep_cmd;
+        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, key.c_str(), key.length(), SQLITE_STATIC);
+        if((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+           item = sqlite3_column_int64(prep_cmd, 0);
+        }else{
+            item = 0; // TODO - what to do for bad key?
+        }
+      }else if constexpr(std::is_same<T, std::string>::value){
+        std::string cmd = "SELECT value FROM app_config WHERE key = ?;";
+        sqlite3_stmt * prep_cmd;
+        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, key.c_str(), key.length(), SQLITE_STATIC);
+        if((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+          item = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0));
+        }else{
+            item = ""; // TODO - what to do for bad key?
+        }
+      }else{
+        assert(false);
+      }
+
+      return item;
+    }
 
     void writeProject(const fullProjectData & dat){
 

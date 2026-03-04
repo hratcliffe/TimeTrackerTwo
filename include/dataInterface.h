@@ -18,6 +18,11 @@ class dataIO{
 
     virtual void writeReferenceTime(timecode time) = 0; /**< \brief Write a reference time for verification later*/
 
+    virtual void writeAppState(std::string key, long long value) = 0;/**< \brief Write a state value */
+    virtual long long readAppState(std::string key) = 0;/**< \brief Read a state value */
+    virtual void writeAppConfig(std::string key, std::string value) = 0;/**< \brief Write a config value */
+    virtual std::string readAppConfig(std::string key) = 0;/**< \brief Read a config value */
+
     virtual void writeProject(fullProjectData const& dat) = 0;
     virtual fullProjectData readProject(proIds::Uuid const & id) = 0;
     virtual void writeSubproject(fullSubProjectData const & dat) = 0;
@@ -72,6 +77,20 @@ class databaseIO : public dataIO{
       // Implementation for writing reference time to database
       std::cerr<<"Writing reference time not implemented yet."<<std::endl;
     }
+
+    void writeAppState(std::string key, long long value) override{
+      dbStore.writeItem(key, value);
+    }
+    long long readAppState(std::string key) override{
+      return dbStore.readItem<long long>(key);
+    }
+    void writeAppConfig(std::string key, std::string value) override{
+      dbStore.writeItem(key, value);
+    }
+    std::string readAppConfig(std::string key) override{
+      return dbStore.readItem<std::string>(key);
+    }
+
     void writeProject(fullProjectData const &dat) override {
       // Implementation for writing project data to database
         dbStore.writeProject(dat);

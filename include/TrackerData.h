@@ -46,6 +46,20 @@ Q_OBJECT
 
     ~TrackerData(){if(dataHandler) delete dataHandler;};
 
+    // Write and read config and state
+    void writeState(std::string key, long long value){
+      dataHandler->writeAppState(key, value);
+    }
+    void writeConfig(std::string key, std::string value){
+      dataHandler->writeAppConfig(key, value);
+    }
+    long long readState(std::string key){
+      return dataHandler->readAppState(key);
+    }
+    std::string readConfig(std::string key){
+      return dataHandler->readAppConfig(key);
+    }
+
     //Creating new projects - e.g from UI command
     void createProject(const projectData & dat){
       //Create a new project from data - adds it to the manager and writes to the backend

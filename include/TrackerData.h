@@ -224,8 +224,7 @@ Q_OBJECT
       // TODO - BUG this does not seem to be giving quite the right answer?
 
       //Next add in durations from digests
-      //auto digests = dataHandler->fetchDigestEntriesForTime(0, timeWrapper::toSeconds(timeWrapper::now()));
-      auto digests = dataHandler->fetchDigestEntriesForTime(0, 400000000000);
+      auto digests = dataHandler->fetchDigestEntriesForTime(0, timeWrapper::toSeconds(timeWrapper::now()));
       std::cout<<"Fetched "<<digests.size()<<" digests"<<std::endl;
       for(auto & item : digests){
         if(durations.count(item.projectUid) > 0){
@@ -235,6 +234,9 @@ Q_OBJECT
         }
       }
 
+      for(auto & item: durations){
+        std::cout<<item.first<<" "<<item.second<<std::endl;
+      }
 
 
       std::string unit_str = unitToString(units);

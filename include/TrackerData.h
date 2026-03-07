@@ -417,14 +417,16 @@ Q_OBJECT
         targetData.FTE += thePM.getFTE(current);
         thePM.setFTE(target, targetData.FTE);
 
+        dataHandler->updateProject(targetData);
         // Delete the details in DB
         dataHandler->deleteProject(current);
         // Delete from map
         thePM.deleteProjectById(current);
-       }else{
-        throw std::runtime_error("Not implemented merge for this case");
-       }
-    }
+        }else{
+          throw std::runtime_error("Not implemented merge for this case");
+        }
+        generateProjectSummary(target); // Effectively, a refresh
+      }
 
     signals:
       void projectListUpdateEvent(std::vector<selectableEntity> const & newList);

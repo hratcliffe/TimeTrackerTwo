@@ -397,7 +397,7 @@ Q_OBJECT
     }
 
     //Editing and Manipulation
-    void mergeProject(proIds::Uuid current, proIds::Uuid target){
+    void mergeProject(proIds::Uuid current, proIds::Uuid sub,  proIds::Uuid target, proIds::Uuid sub_target){
       // Merge a project into another
       // Delete project with ID current, and rewrite all of its timestamps to target
       /* CASES:
@@ -408,8 +408,8 @@ Q_OBJECT
         Current is sub, target is another project, NOT parent
         NOTE: do we also want to support idea of promoting sub to parent?
       */
-      if(current == target) return; // Nothing to do
-      if(thePM.isProject(current) && thePM.isProject(target)){
+      if(current == target && sub == sub_target) return; // Nothing to do
+      if( (current && !sub) && (target && !sub_target)){
         //Rewrite the timestamps
         dataHandler->rewriteTrackerProjectId(current, target);
         //Fetch the FTE for current and add it to target
@@ -422,6 +422,28 @@ Q_OBJECT
         dataHandler->deleteProject(current);
         // Delete from map
         thePM.deleteProjectById(current);
+      }else if(current && sub && target && sub_target){
+        auto firstParent = thePM.getParentId(current);
+        if(firstParent == thePM.getParentId(target)){
+          //Rewrite the timestamps
+          dataHandler->rewriteTrackerProjectId(sub, sub_target);
+          // Combine the fractions
+          //Fetch the FTE for current and add it to target
+          auto targetData = dataHandler->readSubproject(sub_target);
+          targetData.frac += thePM.getFrac(sub);
+          thePM.setFrac(sub_target, targetData.frac);
+          dataHandler->updateSubproject(targetData);
+
+          // Delete the details in DB
+          dataHandler->deleteSubproject(sub);
+          // Delete sub
+          thePM.deleteSubprojectById(sub);
+
+          }else{
+            throw std::runtime_error("Not implemented merge for this case (non shared parent)");
+          }
+        }else if(!current || !target){
+          throw std::runtime_error("Missing project for merge");
         }else{
           throw std::runtime_error("Not implemented merge for this case");
         }

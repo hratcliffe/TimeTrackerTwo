@@ -174,6 +174,7 @@ Q_OBJECT
 
       }
       std::cout<<result<<std::endl;
+      // TODO - refresh and for similar functions
   }
 
   void showMergeDialogImpl(std::map<proIds::Uuid, projectDetails> details){
@@ -182,27 +183,33 @@ Q_OBJECT
       Ui::mergeProjectDialog mergeUi;
       mergeUi.setupUi(mergeDialog);
 
-      //Adding projects to drop-down
-      for(auto & proj: details){
-        QVariant data = QVariant(proj.first.to_string().c_str());
-        mergeUi.TargetDropdown->addItem(proj.second.name.c_str(), data);
-        mergeUi.SelectionDropdown->addItem(proj.second.name.c_str(), data);
-        if(this->selected != proIds::NullUid){
-          //Set selected
-          if(proj.first == this->selected){
-            mergeUi.SelectionDropdown->setCurrentIndex(mergeUi.SelectionDropdown->count() - 1);
-          }
-        }
-      }
-
       //Disable OK button and require selection to enable it
       mergeUi.buttonBox->button(QDialogButtonBox::Ok)->setDisabled(true);
       connect(mergeUi.SelectionDropdown, &QComboBox::currentIndexChanged, [this, &mergeUi](int index){this->enableOnRequiredFields(mergeUi.buttonBox->button(QDialogButtonBox::Ok), &mergeUi);});
       connect(mergeUi.TargetDropdown, &QComboBox::currentIndexChanged, [this, &mergeUi](int index){this->enableOnRequiredFields(mergeUi.buttonBox->button(QDialogButtonBox::Ok), &mergeUi);});
 
+      // When PROJECT selected, offer the subprojects list
+      auto fillSubs = [&details](decltype(mergeUi.SelectionDropdown) & lst, decltype(mergeUi.SelectionDropdownSub) & subs){
+        if(lst->currentIndex() > 0){
+          proIds::Uuid current = proIds::Uuid(lst->currentData().toString().toStdString());
+          // Fill the subs in that list
+          subs->clear();
+          auto & subList = details[current].subs;
+          QVariant data = QVariant(proIds::NullUid.to_string().c_str());
+          subs->addItem(QString{"N/A"}, data);
+          for(auto & item : subList){
+            data = QVariant(item.uid.to_string().c_str());
+            subs->addItem(QString::fromStdString(item.name), data);
+          }
+        }
+      };
+      connect(mergeUi.SelectionDropdown, &QComboBox::currentIndexChanged, [&mergeUi, &fillSubs]{fillSubs(mergeUi.SelectionDropdown, mergeUi.SelectionDropdownSub);});
+      connect(mergeUi.TargetDropdown, &QComboBox::currentIndexChanged, [&mergeUi, &fillSubs]{fillSubs(mergeUi.TargetDropdown, mergeUi.TargetDropdownSub);});
+
+      //TODO - figure out how to display FTE OR frac as relevant
       //When anything is selected, update the prospective combined FTE from the details list
       //NOTE: ID must be present in details because we filled them in from it above
-      auto updateFTE = [&mergeUi, &details](int index){
+      auto updateFTE = [&mergeUi, &details](){
         float FTE = 0.0;
         if(mergeUi.SelectionDropdown->currentIndex() > 0){
           proIds::Uuid current = proIds::Uuid(mergeUi.SelectionDropdown->currentData().toString().toStdString());
@@ -220,13 +227,31 @@ Q_OBJECT
       connect(mergeUi.SelectionDropdown, &QComboBox::currentIndexChanged, updateFTE);
       connect(mergeUi.TargetDropdown, &QComboBox::currentIndexChanged, updateFTE);
 
+      // TODO - disable target being the same as current in UI
+
+      // Do this step last to trigger the above code on the selection set
+      //Adding projects to drop-down
+      for(auto & proj: details){
+        QVariant data = QVariant(proj.first.to_string().c_str());
+        mergeUi.TargetDropdown->addItem(proj.second.name.c_str(), data);
+        mergeUi.SelectionDropdown->addItem(proj.second.name.c_str(), data);
+        if(this->selected != proIds::NullUid){
+          //Set selected
+          if(proj.first == this->selected){
+            mergeUi.SelectionDropdown->setCurrentIndex(mergeUi.SelectionDropdown->count() - 1);
+          }
+        }
+      }
+
       bool result = mergeDialog->exec();
 
       //If OK was clicked, signal to add a project
       if(result){
-        proIds::Uuid selection = proIds::Uuid(mergeUi.SelectionDropdown->currentData().toString().toStdString());
-        proIds::Uuid target = proIds::Uuid(mergeUi.TargetDropdown->currentData().toString().toStdString());
-        emit mergeRequested(selection, target);
+        auto selection = proIds::Uuid(mergeUi.SelectionDropdown->currentData().toString().toStdString());
+        auto sub_selection = proIds::Uuid(mergeUi.SelectionDropdownSub->currentData().toString().toStdString());
+        auto target = proIds::Uuid(mergeUi.TargetDropdown->currentData().toString().toStdString());
+        auto sub_target = proIds::Uuid(mergeUi.TargetDropdownSub->currentData().toString().toStdString());
+        emit mergeRequested(selection, sub_selection, target, sub_target);
       }
   }
 
@@ -445,7 +470,7 @@ Q_OBJECT
 
     void projectAddRequested(const projectData & data);
     void subprojectAddRequested(const subProjectData & data, const proIds::Uuid & parent);
-    void mergeRequested(const proIds::Uuid & selection, const proIds::Uuid & target);
+    void mergeRequested(const proIds::Uuid & selection, const proIds::Uuid & sub_selection, const proIds::Uuid & target, const proIds::Uuid & sub_target);
     void oneOffIdRequired();
     void projectDetailsRequiredAll(projectDetailsArgCallbackType);
     void projectDetailsRequired(const proIds::Uuid & proj);

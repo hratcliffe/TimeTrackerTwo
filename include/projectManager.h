@@ -76,6 +76,11 @@ class projectManager{
       projects[parentUid].addSubproject(tmp.getUid());
       return tmp.getUid();
     }
+    void removeSubproject(const proIds::Uuid & p_id, const proIds::Uuid & s_id){
+      // Assume sub IS valid and parent exists
+      auto & parent = projects[p_id];
+      parent.subprojects.erase(std::find(parent.subprojects.begin(), parent.subprojects.end(), s_id));
+    }
 
     bool isProject(proIds::Uuid id ){return projects.count(id) > 0;};
     bool isSubProject(proIds::Uuid id ){return subprojects.count(id) > 0;};
@@ -174,6 +179,15 @@ class projectManager{
     }
 
     void deleteProjectById(proIds::Uuid uid){projects.erase(uid);};
+    void deleteSubprojectById(proIds::Uuid uid){
+      auto p_id = getParentId(uid);
+      if(projects.count(p_id) > 0){
+        removeSubproject(p_id, uid);
+      }else{
+        throw std::runtime_error("This subproject has no parent");
+      }
+      subprojects.erase(uid);
+    };
 
     proIds::Uuid getNullUid(){return gen->getNullId();};
     proIds::Uuid getNewUid(){return gen->getNextId();};
@@ -200,6 +214,13 @@ class projectManager{
         return "Not a subproject";
       }
     }
+    proIds::Uuid getParentId(proIds::Uuid uid){
+      if(subprojects.count(uid) > 0){
+        return subprojects[uid].getParentUid();
+      }else{
+        return proIds::NullUid;
+      }
+    }
 
     float getFTE(proIds::Uuid uid){
       if(projects.count(uid) > 0){
@@ -213,6 +234,31 @@ class projectManager{
         projects[uid].FTE = FTE;
       }
     }
+    float getFrac(proIds::Uuid uid){
+      if(subprojects.count(uid) > 0){
+        return subprojects[uid].frac;
+      }else{
+        return 0.0;
+      }
+    }
+    void setFrac(proIds::Uuid uid, float frac){
+      if(subprojects.count(uid) > 0){
+        subprojects[uid].frac = frac;
+      }
+    }
+
+    subprojectDetails getSubDetails(proIds::Uuid uid){
+      subprojectDetails details;
+      if(subprojects.count(uid) > 0){
+        auto & sub = subprojects[uid];
+        details.uid = uid;
+        details.name = sub.name;
+        details.frac = sub.frac;
+        details.active = true;
+
+      }
+      return details;
+    }
     projectDetails getDetails(proIds::Uuid uid){
       projectDetails details; 
       details.uid = uid;
@@ -223,6 +269,11 @@ class projectManager{
         details.subprojectCount = proj.subprojects.size();
         details.assignedSubprojFraction = 1.0 - availableSubFrac(proj);
         details.active = true;
+        if(proj.subprojects.size()> 0){
+          for(auto & sub_id: proj.subprojects){
+            details.subs.push_back(getSubDetails(sub_id));
+          }
+        }
       }
       return details;
     }

@@ -129,6 +129,22 @@ inline std::ostream& operator<< (std::ostream& stream, const fullOneOffProjectDa
 
 
 // All the stuff needed to assess/invite user actions on a project
+struct subprojectDetails{
+
+    proIds::Uuid uid=proIds::NullUid; /**< \brief Unique identifier for the project */
+    std::string name=""; /**< \brief Name of the project */
+    float frac=0.0; /**< \brief Fraction of parent */
+    bool active = true;
+};
+inline std::ostream& operator<< (std::ostream& stream, const subprojectDetails& data){
+/** \brief Stream operator for subprojectDetails
+*/
+  stream << data.name<<" "<<data.uid<<" "<<": frac " <<data.frac*100 <<"%";
+  if(!data.active){
+    stream<<"(inactive)";
+  }
+  return stream;
+};
 struct projectDetails{
 
     proIds::Uuid uid=proIds::NullUid; /**< \brief Unique identifier for the project */
@@ -136,10 +152,11 @@ struct projectDetails{
     float FTE=0.0; /**< \brief Fraction of Full-Time Equivalent this project uses */
     int subprojectCount=0; /**< Number of subprojects */
     float assignedSubprojFraction=0.0; /**< Total fraction allocated to subprojects */
+    std::vector<subprojectDetails> subs;/**< OPTIONAL - list of subs */
     bool active = true;
 };
 inline std::ostream& operator<< (std::ostream& stream, const projectDetails& data){
-/** \brief Stream operator for fullProjectData
+/** \brief Stream operator for projectDetails
 */
   stream << data.name<<" "<<data.uid<<" "<<": FTE " <<data.FTE*100 <<" % with "<<data.subprojectCount;
   stream << " subprojects totalling "<<data.assignedSubprojFraction*100 <<" % ";

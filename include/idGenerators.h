@@ -84,6 +84,10 @@ namespace proIds{
       bool isExactEq(const uidWrapper &other)const{return qID == other.qID && Itag == other.Itag;};
       friend std::ostream& operator<<(std::ostream& stream, const uidWrapper& uid);
 
+      operator bool(){
+        return Itag == uidTag::none;
+      }
+
       bool operator<(const uidWrapper &other)const{
         /** \brief Less than operator
         *

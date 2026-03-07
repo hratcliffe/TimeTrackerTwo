@@ -42,18 +42,59 @@
     <item row="0" column="0">
      <widget class="QLabel" name="label">
       <property name="text">
-       <string>Selected Project</string>
+       <string>Selected Project:</string>
       </property>
      </widget>
     </item>
-    <item row="1" column="1">
+    <item row="3" column="0">
+     <widget class="QLabel" name="Subproject">
+      <property name="text">
+       <string>Subproject:</string>
+      </property>
+      <property name="indent">
+       <number>20</number>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="0">
+     <widget class="QLabel" name="label_3">
+      <property name="text">
+       <string>Subproject:</string>
+      </property>
+      <property name="indent">
+       <number>20</number>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="1">
      <widget class="QComboBox" name="TargetDropdown">
       <property name="placeholderText">
        <string>&lt;Select a Target&gt;</string>
       </property>
      </widget>
     </item>
-    <item row="2" column="1">
+    <item row="3" column="1">
+     <widget class="QComboBox" name="TargetDropdownSub">
+      <property name="placeholderText">
+       <string>N/A</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="1">
+     <widget class="QComboBox" name="SelectionDropdown">
+      <property name="placeholderText">
+       <string>&lt;Select&gt;</string>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="1">
+     <widget class="QComboBox" name="SelectionDropdownSub">
+      <property name="placeholderText">
+       <string>N/A</string>
+      </property>
+     </widget>
+    </item>
+    <item row="4" column="1">
      <widget class="QLabel" name="FTEField">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
@@ -75,24 +116,17 @@
       </property>
      </widget>
     </item>
-    <item row="2" column="0">
+    <item row="4" column="0">
      <widget class="QLabel" name="label_4">
       <property name="text">
-       <string>Combined FTE:</string>
+       <string>Combined:</string>
       </property>
      </widget>
     </item>
-    <item row="1" column="0">
+    <item row="2" column="0">
      <widget class="QLabel" name="label_2">
       <property name="text">
        <string>Merge Into:</string>
-      </property>
-     </widget>
-    </item>
-    <item row="0" column="1">
-     <widget class="QComboBox" name="SelectionDropdown">
-      <property name="placeholderText">
-       <string>&lt;Select&gt;</string>
       </property>
      </widget>
     </item>

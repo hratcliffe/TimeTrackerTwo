@@ -39,6 +39,8 @@ class timestampProcessor{
         // I.E. this expects start and end to be within the period covered by _data_
         //TODO - check this for all the edge cases
 
+        //TODO - does this work if there is a currently running project?
+
         std::map<proIds::Uuid, timecode> durations;
         if(data.size() == 0) return durations; // No stamps to process
 
@@ -83,7 +85,7 @@ class timestampProcessor{
             if(durations.count(current->projectUid) > 0){
                 if((current+1)->time < end){
                    durations[current->projectUid] += ((current+1)->time - last);
-                   last = current->time;
+                   last = (current+1)->time;
                 }else{
                     durations[current->projectUid] += (end - last);
                     break;// Exceeding end after this
@@ -91,7 +93,7 @@ class timestampProcessor{
             }else{
                if((current+1)->time < end){
                     durations[current->projectUid] = ((current+1)->time - last);
-                    last = current->time;
+                    last = (current+1)->time;
                 }else{
                     durations[current->projectUid] = (end - last);
                     break;// Exceeding end after this 

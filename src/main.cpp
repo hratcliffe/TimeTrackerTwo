@@ -13,6 +13,8 @@ Based on previous Time Tracker code, this:
 - Adds features like project addition and deletion
 - Handles tracking that runs past midnight....
 
+NOTE: after a period (default 100 days), only summary info is available
+
 */
 
 // TODO - csv and pdf? reporting
@@ -20,6 +22,7 @@ Based on previous Time Tracker code, this:
 // TODO - add configuration update options (selected while running)
 // TODO add a 'load projects from file' option ?
 // TODO add an export option ?
+// TODO add a disable digests option?
 
 // TODO add an 'ooops' button which goes back to the time of last close to add a stop mark ?
 

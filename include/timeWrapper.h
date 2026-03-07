@@ -102,6 +102,14 @@ class timeWrapper{
       offset += std::chrono::hours(days*24);
       return pt + offset;
     }
+    static duration makeDuration(long minutes, long hours, long days){
+      duration offset{0};
+      offset += std::chrono::minutes(minutes);
+      offset += std::chrono::hours(hours);
+      offset += std::chrono::hours(days*24);
+      return offset;
+    }
+
 
   };
 

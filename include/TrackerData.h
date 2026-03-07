@@ -221,7 +221,6 @@ Q_OBJECT
       //TODO - should this always go until now? C.f. previous - time range selection?
       timecode window = timeWrapper::toSeconds(timeWrapper::now()) - timestamps[0].time; 
       std::map<proIds::Uuid, timecode> durations = timestampProcessor::stampsToDurations(timestamps);
-      // TODO - BUG this does not seem to be giving quite the right answer?
 
       //Next add in durations from digests
       auto digests = dataHandler->fetchDigestEntriesForTime(0, timeWrapper::toSeconds(timeWrapper::now()));
@@ -335,8 +334,6 @@ Q_OBJECT
       // TODO - timezones?
       // TODO If it exists already, it should be replaced
 
-      //TODO - what if somebody goes back to a previous day and adds a stamp? need to regenerate the day then
-
       //Start and end of day timestamps
       timecode start, end, start_of_day;
       auto next_midnight = timeWrapper::addDuration(start_tp, 0, 0, 1);
@@ -382,11 +379,6 @@ Q_OBJECT
         end_secs = last.time-1; // Stop just before this stamp
       }
       dataHandler->deleteTrackerInInterval(timeWrapper::toSeconds(start), end_secs);
-    }
-
-    void digestDigests(){
-      // TODO - this
-      //Re-process the digests older than blah into longer period
     }
 
     void handleCloseRequest(bool silent, timecode now){

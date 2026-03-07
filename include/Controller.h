@@ -44,7 +44,8 @@ Q_OBJECT
     if(tmp > 0){
       digestCheckPeriod = TW_duration{tmp};
     }else{
-      digestCheckPeriod = TW_duration{10000};
+      digestCheckPeriod = TW_duration{60*60}; // ~One hour
+      currentData->writeState("digestCheckPeriod", timeWrapper::toSeconds(digestCheckPeriod));
     }
 
     //This is the lastTime for which we created a digest
@@ -52,20 +53,20 @@ Q_OBJECT
     if(tmp > 0){
       lastDigestCreationTime = timeWrapper::fromSeconds(tmp);
     }else{
-      lastDigestCreationTime = timeWrapper::addDuration( timeWrapper::now(), 0, 0, -3);
+      lastDigestCreationTime = timeWrapper::fromSeconds(1); // A very long time ago...
     }
     // This is how many seconds we keep the stamps before digesting
     tmp = currentData->readState("digestCreationDelay");
     if(tmp > 0){
       digestCreationDelay = TW_duration{tmp};
     }else{
-      digestCreationDelay = TW_duration{60*60*24*2};
+      digestCreationDelay =  timeWrapper::makeDuration(0, 0, -100); // 100 days
+      currentData->writeState("digestCreationDelay", timeWrapper::toSeconds(digestCreationDelay));
     }
     // DIGEST strategy:
       //Consolidate stamps into a daily (midnight-midnight) time-spent list
-      // Keep full timestamps for duration X (10 days?)
-      // Keep daily digests for duration Y (6 mo?)
-      // After that, keep weekly (Monday to Sunday?) - consider First-Day-of-Week config option
+      // Keep full timestamps for duration X (100 days default)
+      // Keep daily digests after that
       // After forming the digest, delete the timestamps (NOTE - keep the last one IF it is an active project as this is then running into the NEXT DAY)
 
       //Reports will then use the digests plus the timestamps
@@ -78,12 +79,10 @@ Q_OBJECT
 
       //TODO allow review of stamps
       //TODO allow adding time travel on previous days and get this RIGHT
-
-      //TODO - store to DB on shutdown - digest time info
   }
 
   void writeState(){
-    std::cout<<"Wrting state before closing"<<std::endl;
+    std::cout<<"Writing state before closing"<<std::endl;
     // Digest parameters
     currentData->writeState("lastDigestCheckTime", timeWrapper::toSeconds(lastDigestCheckTime));
     currentData->writeState("digestCheckPeriod", timeWrapper::toSeconds(digestCheckPeriod));
@@ -179,7 +178,6 @@ Q_OBJECT
 
       // Need to do digests for as many days as required
       if(timeWrapper::toSeconds(now) > timeWrapper::toSeconds(lastDigestCreationTime + digestCreationDelay)){
-        TW_duration digestPeriod{60*60*24};
         auto totalStart = lastDigestCreationTime;
         while(timeWrapper::toSeconds(now) > timeWrapper::toSeconds(lastDigestCreationTime + digestCreationDelay)){
           auto digestStart = timeWrapper::addDuration(lastDigestCreationTime, 0, 0, 1);
@@ -191,6 +189,8 @@ Q_OBJECT
         currentData->deleteIndividualStamps(totalStart, timeWrapper::addDuration(lastDigestCreationTime, 0, 0, 1));
       }
       lastDigestCheckTime = now;
+      currentData->writeState("lastDigestCheckTime", timeWrapper::toSeconds(lastDigestCheckTime));
+      currentData->writeState("lastDigestCreationTime", timeWrapper::toSeconds(lastDigestCreationTime));
     }
   }
 

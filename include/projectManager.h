@@ -201,6 +201,18 @@ class projectManager{
       }
     }
 
+    float getFTE(proIds::Uuid uid){
+      if(projects.count(uid) > 0){
+        return projects[uid].FTE;
+      }else{
+        return 0.0;
+      }
+    }
+    void setFTE(proIds::Uuid uid, float FTE){
+       if(projects.count(uid) > 0){
+        projects[uid].FTE = FTE;
+      }
+    }
     projectDetails getDetails(proIds::Uuid uid){
       projectDetails details; 
       details.uid = uid;

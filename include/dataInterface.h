@@ -26,9 +26,12 @@ class dataIO{
     virtual void writeProject(fullProjectData const& dat) = 0;
     virtual fullProjectData readProject(proIds::Uuid const & id) = 0;
     virtual void deleteProject(proIds::Uuid const & id) = 0;
+    // For update, take fullProjectData so can read, update and pass back
+    virtual void updateProject(fullProjectData const & dat) = 0;
     virtual void writeSubproject(fullSubProjectData const & dat) = 0;
     virtual fullSubProjectData readSubproject(proIds::Uuid const & id) = 0;
     virtual void deleteSubproject(proIds::Uuid const & id) = 0;
+    virtual void updateSubproject(fullSubProjectData const & dat) = 0;
     virtual void writeOneOffProject(fullOneOffProjectData const &dat) = 0;
     virtual fullOneOffProjectData readOneOffProject(proIds::Uuid const &id) = 0;
 
@@ -108,6 +111,10 @@ class databaseIO : public dataIO{
     void deleteProject(proIds::Uuid const & id) override{
       dbStore.deleteProject(id);
     }
+    void updateProject(fullProjectData const & dat) override{
+      // For Database, we already have the uniqueness and on-conflict
+      dbStore.writeProject(dat);
+    }
     void writeSubproject(fullSubProjectData const &dat) override {
       // Implementation for writing subproject data to database
         dbStore.writeSubProject(dat);
@@ -118,6 +125,9 @@ class databaseIO : public dataIO{
     }
     void deleteSubproject(proIds::Uuid const & id) override{
       dbStore.deleteSubproject(id);
+    }
+    void updateSubproject(fullSubProjectData const & dat) override{
+      dbStore.writeSubProject(dat);
     }
 
     void writeOneOffProject(fullOneOffProjectData const & dat) override{

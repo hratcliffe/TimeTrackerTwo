@@ -412,6 +412,11 @@ Q_OBJECT
       if(thePM.isProject(current) && thePM.isProject(target)){
         //Rewrite the timestamps
         dataHandler->rewriteTrackerProjectId(current, target);
+        //Fetch the FTE for current and add it to target
+        auto targetData = dataHandler->readProject(target);
+        targetData.FTE += thePM.getFTE(current);
+        thePM.setFTE(target, targetData.FTE);
+
         // Delete the details in DB
         dataHandler->deleteProject(current);
         // Delete from map

@@ -94,6 +94,7 @@ Q_OBJECT
     }
 
     //Load existing projects from the data backend
+    // TODO - use start and end dates
     void loadProjects(timecode now){
       if(! dataHandler) throw std::runtime_error("No Data Backend Found");
 

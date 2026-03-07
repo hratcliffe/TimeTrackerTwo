@@ -32,7 +32,6 @@ Q_OBJECT
 
     currentData->loadProjects(clock->now());
 
-    // TODO -setup defaults in DB on app first run
     //These are the internal parameters for how often we should check
     auto tmp = currentData->readState("lastDigestCheckTime");
     if(tmp > 0){

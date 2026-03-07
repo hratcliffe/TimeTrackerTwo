@@ -26,6 +26,12 @@ NOTE: after a period (default 100 days), only summary info is available
 
 // TODO add an 'ooops' button which goes back to the time of last close to add a stop mark ?
 
+// TODO - replace 'delete' project button with 'merge', implement
+// TODO Put in start/end dates in : summary view, project fetch/display, implement deactivate, refresh projects periodically
+
+
+
+
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     appConfig config;

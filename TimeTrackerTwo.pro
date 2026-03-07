@@ -20,7 +20,8 @@ FORMS += GUI/Main.ui \
          GUI/AddProjectDialog.ui \
          GUI/AddSubprojectDialog.ui \
          GUI/AddOneOffDialog.ui \
-         GUI/TimeTravelDialog.ui
+         GUI/TimeTravelDialog.ui \
+         GUI/MergeProjectDialog.ui
 SOURCES += src/main.cpp
 
 HEADERS += include/Controller.h \

@@ -136,6 +136,9 @@ Q_OBJECT
     connect(theView, &View::subprojectAddRequested, currentData, &TrackerData::createSubproject);
     connect(theView, &View::projectOneOffAdd, currentData, &TrackerData::createOneOff);
 
+    //Making changes to projects etc
+    connect(theView, &View::mergeRequested, currentData, &TrackerData::mergeProject);
+
     //Time summary view
     connect(theView, &View::timeSummaryRequested, currentData, &TrackerData::generateTimeSummary);
     connect(currentData, &TrackerData::timeSummaryReady, theView, &View::timeSummaryUpdated);

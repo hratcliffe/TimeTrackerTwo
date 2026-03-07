@@ -311,6 +311,35 @@ class databaseStore{
         sqlite3_finalize(prep_cmd);
     }
 
+    void deleteProject(proIds::Uuid const & id){
+        std::string cmd;
+        sqlite3_stmt * prep_cmd;
+        int err = 0;
+        cmd = "DELETE FROM projects WHERE id = ?;";
+        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, id.to_string().c_str(), id.to_string().length(), SQLITE_STATIC);
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            throw std::runtime_error("Failed to delete project");
+        }
+        sqlite3_finalize(prep_cmd);
+    }
+    void deleteSubproject(proIds::Uuid const & id){
+        std::string cmd;
+        sqlite3_stmt * prep_cmd;
+        int err = 0;
+        cmd = "DELETE FROM subprojects WHERE id = ?;";
+        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, id.to_string().c_str(), id.to_string().length(), SQLITE_STATIC);
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            throw std::runtime_error("Failed to delete subproject");
+        }
+        sqlite3_finalize(prep_cmd);
+    }
+
     fullProjectData readProject(proIds::Uuid const & id){
         const std::string id_str = id.to_string();
         std::string cmd = "SELECT name, FTE, start_date, end_date FROM projects WHERE id = ?;";
@@ -769,7 +798,7 @@ class databaseStore{
         // IMPORTANT : end here means the end of the period - this fetches digests WHOLLY within the interval!
 
         std::string cmd = "select td.duration, td.period_id, project_id from time_digests as td inner join digest_periods as dp on td.period_id=dp.id where dp.start > ? and dp.start+dp.duration < ?;";
-;
+
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_int64(prep_cmd, 1, start);
@@ -790,6 +819,44 @@ class databaseStore{
         return ret;
 
     }
+
+    void updateTimestampEntriesId(proIds::Uuid current, proIds::Uuid target){
+        const std::string & p_old = current.to_string();
+        const std::string & p_new = target.to_string();
+
+        std::string cmd = "UPDATE timestamps SET project_id = ? WHERE project_id = ?;";
+        sqlite3_stmt * prep_cmd;
+        int err = 0;
+        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, p_new.c_str(), p_new.length(), SQLITE_STATIC); // First param - value to SET
+        sqlite3_bind_text(prep_cmd, 2, p_old.c_str(), p_old.length(), SQLITE_STATIC);
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            throw std::runtime_error("Failed modify project ID in timestamps");
+        }
+        sqlite3_finalize(prep_cmd);
+
+    }
+    void updateDigestEntriesId(proIds::Uuid current, proIds::Uuid target){
+        const std::string & p_old = current.to_string();
+        const std::string & p_new = target.to_string();
+
+        std::string cmd = "UPDATE time_digests SET project_id = ? WHERE project_id = ?;";
+        sqlite3_stmt * prep_cmd;
+        int err = 0;
+        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, p_new.c_str(), p_new.length(), SQLITE_STATIC); // First param - value to SET
+        sqlite3_bind_text(prep_cmd, 2, p_old.c_str(), p_old.length(), SQLITE_STATIC);
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            throw std::runtime_error("Failed modify project ID in time digests");
+        }
+        sqlite3_finalize(prep_cmd);
+
+    }
+
 
 };
 

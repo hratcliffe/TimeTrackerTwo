@@ -15,10 +15,12 @@
 #include "ui_Main.h"
 #include "ui_AddProjectDialog.h"
 #include "ui_AddSubprojectDialog.h"
+#include "ui_MergeProjectDialog.h"
 #include "ui_AddOneOffDialog.h"
 #include "ui_TimeTravelDialog.h"
 
 #include "support.h"
+#include "idGenerators.h"
 #include "project.h"
 #include "projectbutton.h"
 #include "timeWrapper.h"
@@ -62,6 +64,7 @@ Q_OBJECT
     float usedFTE = 0.0, freeFTE=0.0; //Tracks FTE fractions
     viewProperties prop; //TODO - should there be any way to alter this? - maybe settings and some presets?
     projectButton * oneOffTrackerButton = nullptr; // Tracker button for special entries
+    proIds::Uuid selected = proIds::NullUid;
 
   View(){
 
@@ -123,6 +126,7 @@ Q_OBJECT
 
   void viewProjectClicked(projectButton * button){
     //Re-raise signal with the uid. We could raise it directly, but this gives us a chance to do something else with the button
+    this->selected = button->projectId; // Save what is selected
     emit projectSelectedView(button->projectId, button->fullName);
   }
 
@@ -170,6 +174,60 @@ Q_OBJECT
 
       }
       std::cout<<result<<std::endl;
+  }
+
+  void showMergeDialogImpl(std::map<proIds::Uuid, projectDetails> details){
+
+      auto mergeDialog = new QDialog(this);
+      Ui::mergeProjectDialog mergeUi;
+      mergeUi.setupUi(mergeDialog);
+
+      //Adding projects to drop-down
+      for(auto & proj: details){
+        QVariant data = QVariant(proj.first.to_string().c_str());
+        mergeUi.TargetDropdown->addItem(proj.second.name.c_str(), data);
+        mergeUi.SelectionDropdown->addItem(proj.second.name.c_str(), data);
+        if(this->selected != proIds::NullUid){
+          //Set selected
+          if(proj.first == this->selected){
+            mergeUi.SelectionDropdown->setCurrentIndex(mergeUi.SelectionDropdown->count() - 1);
+          }
+        }
+      }
+
+      //Disable OK button and require selection to enable it
+      mergeUi.buttonBox->button(QDialogButtonBox::Ok)->setDisabled(true);
+      connect(mergeUi.SelectionDropdown, &QComboBox::currentIndexChanged, [this, &mergeUi](int index){this->enableOnRequiredFields(mergeUi.buttonBox->button(QDialogButtonBox::Ok), &mergeUi);});
+      connect(mergeUi.TargetDropdown, &QComboBox::currentIndexChanged, [this, &mergeUi](int index){this->enableOnRequiredFields(mergeUi.buttonBox->button(QDialogButtonBox::Ok), &mergeUi);});
+
+      //When anything is selected, update the prospective combined FTE from the details list
+      //NOTE: ID must be present in details because we filled them in from it above
+      auto updateFTE = [&mergeUi, &details](int index){
+        float FTE = 0.0;
+        if(mergeUi.SelectionDropdown->currentIndex() > 0){
+          proIds::Uuid current = proIds::Uuid(mergeUi.SelectionDropdown->currentData().toString().toStdString());
+          auto pdetails = details[current];
+          FTE += pdetails.FTE;
+        }
+        if(mergeUi.TargetDropdown->currentIndex() > 0){
+          proIds::Uuid target = proIds::Uuid(mergeUi.TargetDropdown->currentData().toString().toStdString());
+          auto pdetails = details[target];
+          FTE += pdetails.FTE;
+        }
+        std::string FTEStr = displayFloatHalves(FTE*100) + "%";
+        mergeUi.FTEField->setText(FTEStr.c_str());
+      };
+      connect(mergeUi.SelectionDropdown, &QComboBox::currentIndexChanged, updateFTE);
+      connect(mergeUi.TargetDropdown, &QComboBox::currentIndexChanged, updateFTE);
+
+      bool result = mergeDialog->exec();
+
+      //If OK was clicked, signal to add a project
+      if(result){
+        proIds::Uuid selection = proIds::Uuid(mergeUi.SelectionDropdown->currentData().toString().toStdString());
+        proIds::Uuid target = proIds::Uuid(mergeUi.TargetDropdown->currentData().toString().toStdString());
+        emit mergeRequested(selection, target);
+      }
   }
 
   using projectDetailsArgCallbackType = decltype(makeCallback(&View::showAddSubDialogImpl));
@@ -298,6 +356,11 @@ Q_OBJECT
       emit projectDetailsRequiredAll(makeCallback(&View::showAddSubDialogImpl));
     }
 
+    void showMergeDialog(){
+      //Can't show dialog yet - need the details
+      emit projectDetailsRequiredAll(makeCallback(&View::showMergeDialogImpl));
+    }
+
     void showOneOffDialog(proIds::Uuid id){
       
       auto addDialog = new QDialog(this);
@@ -382,6 +445,7 @@ Q_OBJECT
 
     void projectAddRequested(const projectData & data);
     void subprojectAddRequested(const subProjectData & data, const proIds::Uuid & parent);
+    void mergeRequested(const proIds::Uuid & selection, const proIds::Uuid & target);
     void oneOffIdRequired();
     void projectDetailsRequiredAll(projectDetailsArgCallbackType);
     void projectDetailsRequired(const proIds::Uuid & proj);
@@ -496,10 +560,10 @@ Q_OBJECT
         ui->p_project_layout->layout()->addWidget(addButton);
 
         addButton = new QPushButton();
-        addButton->setText("Delete"); //Completely remove along with all timestamps
+        addButton->setText("Merge"); //Merge into another - to remove choose to merge with 'inactive'
+        addButton->setToolTip("Merge this project with another, or remove it altogether");
         addButton->setFixedWidth(100);
-        //connect(addButton, &QPushButton::clicked, this, &View::???);
-        addButton->setDisabled(1); //TODO - implement....
+        connect(addButton, &QPushButton::clicked, this, &View::showMergeDialog);
         ui->p_project_layout->layout()->addWidget(addButton);
 
         addButton = new QPushButton();
@@ -551,6 +615,15 @@ Q_OBJECT
       state_bad |= (dialog->ParentDropdown->currentIndex() < 0 ); //Index of -1 for the placeholder
       theButton->setDisabled(state_bad);
     }
+    void enableOnRequiredFields(QPushButton * theButton, Ui::mergeProjectDialog * dialog){
+      //Enforce the required fields for an mergeProjectDialog - theButton is disabled unless the following are met
+      // SelectionDropdown is set to a valid project (index > 0)
+      // TargetDropdown is set to a valid project (index > 0)
+      bool state_bad = (dialog->TargetDropdown->currentIndex() < 0 ); //Index of -1 for the placeholder
+      state_bad |= (dialog->SelectionDropdown->currentIndex() < 0);
+      theButton->setDisabled(state_bad);
+    }
+
 
   };
 

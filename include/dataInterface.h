@@ -25,8 +25,10 @@ class dataIO{
 
     virtual void writeProject(fullProjectData const& dat) = 0;
     virtual fullProjectData readProject(proIds::Uuid const & id) = 0;
+    virtual void deleteProject(proIds::Uuid const & id) = 0;
     virtual void writeSubproject(fullSubProjectData const & dat) = 0;
     virtual fullSubProjectData readSubproject(proIds::Uuid const & id) = 0;
+    virtual void deleteSubproject(proIds::Uuid const & id) = 0;
     virtual void writeOneOffProject(fullOneOffProjectData const &dat) = 0;
     virtual fullOneOffProjectData readOneOffProject(proIds::Uuid const &id) = 0;
 
@@ -51,6 +53,10 @@ class dataIO{
     virtual std::vector<timeDigestEntry> fetchDigestEntries(timeDigestPeriod period) = 0; /**< \brief Fetch the daily digests of time spent*/
     virtual void updateDigestEntry(timeDigestEntry) = 0;/**< \brief Update an entry (unique on period_id+uid) */
     virtual std::vector<timeDigestEntry> fetchDigestEntriesForTime(timecode start = -1, timecode end=-1)=0;/**<\brief Fetch all the digests which fall in the given time range */
+
+    // Manipulation and editing
+    virtual void rewriteTrackerProjectId(proIds::Uuid current, proIds::Uuid target) = 0;
+
 };
 
 class flatfileIO : public dataIO{
@@ -99,6 +105,9 @@ class databaseIO : public dataIO{
       // Implementation for reading project data from database
       return dbStore.readProject(id);
     }
+    void deleteProject(proIds::Uuid const & id) override{
+      dbStore.deleteProject(id);
+    }
     void writeSubproject(fullSubProjectData const &dat) override {
       // Implementation for writing subproject data to database
         dbStore.writeSubProject(dat);
@@ -106,6 +115,9 @@ class databaseIO : public dataIO{
     fullSubProjectData readSubproject(proIds::Uuid const & id) override {
       // Implementation for reading subproject data from database
         return dbStore.readSubproject(id);
+    }
+    void deleteSubproject(proIds::Uuid const & id) override{
+      dbStore.deleteSubproject(id);
     }
 
     void writeOneOffProject(fullOneOffProjectData const & dat) override{
@@ -175,6 +187,12 @@ class databaseIO : public dataIO{
       return dbStore.fetchDigestEntries(start, end);
     }
 
+    // Editing and manipulation
+    void rewriteTrackerProjectId(proIds::Uuid current, proIds::Uuid target) override{
+      // Rewrite the Uid for timestamp and digest entries from current to target
+      dbStore.updateTimestampEntriesId(current, target);
+      dbStore.updateDigestEntriesId(current, target);
+    }
 
 };
 

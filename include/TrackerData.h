@@ -396,6 +396,31 @@ Q_OBJECT
       emit readyToClose(); // Done, ready to shutdown now
     }
 
+    //Editing and Manipulation
+    void mergeProject(proIds::Uuid current, proIds::Uuid target){
+      // Merge a project into another
+      // Delete project with ID current, and rewrite all of its timestamps to target
+      /* CASES:
+        Current is Project, Target is Project
+        Current is Subproject, Target is another sub of same parent
+        current is sub, target is its parent
+        Current is sub, target is sub of another
+        Current is sub, target is another project, NOT parent
+        NOTE: do we also want to support idea of promoting sub to parent?
+      */
+      if(current == target) return; // Nothing to do
+      if(thePM.isProject(current) && thePM.isProject(target)){
+        //Rewrite the timestamps
+        dataHandler->rewriteTrackerProjectId(current, target);
+        // Delete the details in DB
+        dataHandler->deleteProject(current);
+        // Delete from map
+        thePM.deleteProjectById(current);
+       }else{
+        throw std::runtime_error("Not implemented merge for this case");
+       }
+    }
+
     signals:
       void projectListUpdateEvent(std::vector<selectableEntity> const & newList);
       void projectTotalUpdateEvent(float usedFTE, float freeFTE);

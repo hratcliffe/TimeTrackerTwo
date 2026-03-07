@@ -312,10 +312,11 @@ class databaseStore{
     }
 
     fullProjectData readProject(proIds::Uuid const & id){
+        const std::string id_str = id.to_string();
         std::string cmd = "SELECT name, FTE, start_date, end_date FROM projects WHERE id = ?;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
-        sqlite3_bind_text(prep_cmd, 1, id.to_string().c_str(), id.to_string().length(), SQLITE_STATIC);
+        sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
         
         fullProjectData ret;
         timecode tmp;
@@ -427,10 +428,11 @@ class databaseStore{
     }
 
     fullSubProjectData readSubproject(proIds::Uuid const & id){
+        const std::string id_str = id.to_string();
         std::string cmd = "SELECT name, frac, parent_id FROM subprojects WHERE id = ?;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
-        sqlite3_bind_text(prep_cmd, 1, id.to_string().c_str(), id.to_string().length(), SQLITE_STATIC);
+        sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
         
         fullSubProjectData ret;
         if((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
@@ -505,11 +507,11 @@ class databaseStore{
     }
 
     fullOneOffProjectData readOneOff(proIds::Uuid const & id){
-        
+        const std::string id_str = id.to_string();
         std::string cmd = "SELECT name, descr FROM oneoffs WHERE id = ?;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
-        sqlite3_bind_text(prep_cmd, 1, id.to_string().c_str(), id.to_string().length(), SQLITE_STATIC);
+        sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
         
         fullOneOffProjectData ret;
         if((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){

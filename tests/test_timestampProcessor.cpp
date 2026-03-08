@@ -217,3 +217,55 @@ TEST_CASE("Single Entry Both Contraints", "[Edge]"){
     auto durs = proc::stampsToDurations(data, 980, 1001);
     REQUIRE(durs[a] == 21);
 }
+
+TEST_CASE("Window 1", "[Basic]"){
+    uniqueIdGenerator theGen;
+    std::vector<timeStamp> data;
+    timeStamp t;
+    t.projectUid = theGen.getNextId();
+    t.time = 974;
+    data.push_back(t);
+    t.projectUid = theGen.getNextId();
+    t.time += 113;
+    data.push_back(t);
+    t.projectUid = theGen.getNextId();
+    t.time += 984;
+    data.push_back(t);
+
+    auto window = proc::stampsToWindow(data);
+    REQUIRE(window == 1097);
+}
+TEST_CASE("Window 2", "[Basic]"){
+    uniqueIdGenerator theGen;
+    std::vector<timeStamp> data;
+    timeStamp t;
+    t.projectUid = theGen.getNextId();
+    t.time = 972;
+    data.push_back(t);
+    t.projectUid = theGen.getNextId();
+    t.time += 204;
+    data.push_back(t);
+    t.projectUid = theGen.getNextId();
+    t.time += 843;
+    data.push_back(t);
+
+    auto window = proc::stampsToWindow(data, 999);
+    REQUIRE(window == 1020);
+}
+TEST_CASE("Window 3", "[Basic]"){
+    uniqueIdGenerator theGen;
+    std::vector<timeStamp> data;
+    timeStamp t;
+    t.projectUid = theGen.getNextId();
+    t.time = 932;
+    data.push_back(t);
+    t.projectUid = theGen.getNextId();
+    t.time += 905;
+    data.push_back(t);
+    t.projectUid = theGen.getNextId();
+    t.time += 12;
+    data.push_back(t);
+
+    auto window = proc::stampsToWindow(data, -1, 1800);
+    REQUIRE(window == 868);
+}

@@ -21,5 +21,6 @@ SOURCES += \
     all.cpp \
     test_timeWrapper.cpp \
     test_timestampProcessor.cpp \
+    test_supportCode.cpp \
     test_idGenerators.cpp
 

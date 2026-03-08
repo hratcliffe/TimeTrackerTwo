@@ -207,25 +207,39 @@ Q_OBJECT
       connect(mergeUi.TargetDropdown, &QComboBox::currentIndexChanged, [&mergeUi, &fillSubs]{fillSubs(mergeUi.TargetDropdown, mergeUi.TargetDropdownSub);});
 
       //TODO - figure out how to display FTE OR frac as relevant
+      // Perhaps best to always display total FTE using FTE*frac
       //When anything is selected, update the prospective combined FTE from the details list
       //NOTE: ID must be present in details because we filled them in from it above
       auto updateFTE = [&mergeUi, &details](){
         float FTE = 0.0;
+        float t_FTE = 0.0;
         if(mergeUi.SelectionDropdown->currentIndex() > 0){
           proIds::Uuid current = proIds::Uuid(mergeUi.SelectionDropdown->currentData().toString().toStdString());
           auto pdetails = details[current];
-          FTE += pdetails.FTE;
+          t_FTE = pdetails.FTE;
+          if(mergeUi.SelectionDropdownSub->currentIndex() > 0){
+            proIds::Uuid sub = proIds::Uuid(mergeUi.SelectionDropdownSub->currentData().toString().toStdString());
+            t_FTE  *= (*std::find_if(pdetails.subs.begin(), pdetails.subs.end(), [&sub](const subprojectDetails& s){return s.uid == sub;})).frac;
+          }
+          FTE += t_FTE;
         }
         if(mergeUi.TargetDropdown->currentIndex() > 0){
           proIds::Uuid target = proIds::Uuid(mergeUi.TargetDropdown->currentData().toString().toStdString());
           auto pdetails = details[target];
-          FTE += pdetails.FTE;
+          t_FTE = pdetails.FTE;
+          if(mergeUi.TargetDropdownSub->currentIndex() > 0){
+            proIds::Uuid sub = proIds::Uuid(mergeUi.TargetDropdownSub->currentData().toString().toStdString());
+            t_FTE *= (*std::find_if(pdetails.subs.begin(), pdetails.subs.end(), [&sub](const subprojectDetails& s){return s.uid == sub;})).frac;
+          }
+          FTE += t_FTE;
         }
         std::string FTEStr = displayFloatHalves(FTE*100) + "%";
         mergeUi.FTEField->setText(FTEStr.c_str());
       };
       connect(mergeUi.SelectionDropdown, &QComboBox::currentIndexChanged, updateFTE);
       connect(mergeUi.TargetDropdown, &QComboBox::currentIndexChanged, updateFTE);
+      connect(mergeUi.SelectionDropdownSub, &QComboBox::currentIndexChanged, updateFTE);
+      connect(mergeUi.TargetDropdownSub, &QComboBox::currentIndexChanged, updateFTE);
 
       // TODO - disable target being the same as current in UI
 

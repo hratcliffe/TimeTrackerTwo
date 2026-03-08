@@ -29,7 +29,7 @@ NOTE: after a period (default 100 days), only summary info is available
 // TODO - replace 'delete' project button with 'merge', implement
 // TODO Put in start/end dates in : summary view, project fetch/display, implement deactivate, refresh projects periodically
 
-
+// TODO both FTE and frac seem to cut off 1 tick too early at 99
 
 
 int main(int argc, char *argv[]) {

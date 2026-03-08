@@ -63,23 +63,29 @@ class timestampProcessor{
 
         auto current = data.begin();
         //Setup last value for previous entry
-        if(start_in != -1){
+        if(start_in != -1 && start_in > data[0].time ){
             last = start_in;
             // Spin through the list until we exceed the start time, then process the part between start and this
             while((current++)->time < start_in && current !=data.end()) ;
             if(current != data.begin()) current --;
+            if(current != data.begin()) durations[(current-1)->projectUid] = (current)->time - last; // The time from start to the first included stamp
+            last = current->time;
        }else{
             //Start from smallest timecode
             last = data[0].time;
         }
         durations[current->projectUid] = (current+1)->time - last;
         current++;
+        last = current->time;
         if(end_in != -1){
             end = end_in;
         }else{
             end = data[data.size()-1].time;
         }
-
+        //We have possibly handled several now, so check we're not at the end
+        if(current == --data.end()){
+            return durations;
+        }
         //Current is at least ONE element in, and we stop one before the end so there is a next one to check
         for(; current != (--data.end()); current++){
             if(durations.count(current->projectUid) > 0){

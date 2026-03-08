@@ -11,6 +11,7 @@
 
 
 #include <stdio.h>
+#include <iostream>
 #include <cstdlib>
 #include <vector>
 #include <string>
@@ -58,9 +59,9 @@ inline std::string displayFloatHalves(float value){
   return displayFloat(std::floor(value * 2 + 0.5)/2.0, 1);
 }
 inline std::string displayFloatQuarters(float value){
-  //Create string for given float to nearest 0.5
+  //Create string for given float to nearest 0.25
   float flt = std::floor(value * 4 + 0.5);
-  float rem = std::remainder(flt, 4);
+  float rem = std::abs(std::remainder(flt, 4));
   return displayFloat(flt/4.0, (rem == 1 or rem == 3) ? 2: 1);
 }
 

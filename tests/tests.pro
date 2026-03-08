@@ -7,6 +7,9 @@ TARGET = ttt_tests        # name of the test executable
 CONFIG += console         # don't pull in Qt widgets by default
 CONFIG += c++11           # match the main project
 
+QMAKE_CXXFLAGS += -g -fprofile-instr-generate -fcoverage-mapping
+QMAKE_LFLAGS += -g -fprofile-instr-generate -fcoverage-mapping
+
 INCLUDEPATH += $$PWD/../include
 
 CATCHDIR = /Users/heather/Documents/Personal/Code/Code/Tools/Catch2/lib

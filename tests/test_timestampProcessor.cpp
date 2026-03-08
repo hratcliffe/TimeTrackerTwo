@@ -167,6 +167,75 @@ TEST_CASE("Long Set", "[Basic]"){
     REQUIRE(durs[f] == 40);
 }
 
+TEST_CASE("Duplicates", "[Basic]"){
+
+    uniqueIdGenerator theGen;
+    std::vector<timeStamp> data;
+    timeStamp t;
+    auto a = theGen.getNextId();
+    t.projectUid = a;
+    t.time = 974;
+    data.push_back(t);
+    auto b = theGen.getNextId();
+    t.projectUid = b;
+    t.time += 113;
+    data.push_back(t);
+    auto c = theGen.getNextId();
+    t.projectUid = c;
+    t.time += 984;
+    data.push_back(t);
+    //More on a
+    t.projectUid = a;
+    t.time += 71;
+    data.push_back(t);
+    auto e = theGen.getNextId();
+    t.projectUid = e;
+    t.time += 9005;
+    data.push_back(t);
+    //More on b
+    t.projectUid = b;
+    t.time += 773;
+    data.push_back(t);
+
+    auto durs = proc::stampsToDurations(data, -1, t.time+40);
+    REQUIRE(durs[a] == 113+9005);
+    REQUIRE(durs[b] == 984+40);
+    REQUIRE(durs[c] == 71);
+    REQUIRE(durs[e] == 773);
+}
+
+TEST_CASE("Duplicates with End", "[Basic]"){
+
+    uniqueIdGenerator theGen;
+    std::vector<timeStamp> data;
+    timeStamp t;
+    auto a = theGen.getNextId();
+    t.projectUid = a;
+    t.time = 125;
+    data.push_back(t);
+    auto b = theGen.getNextId();
+    t.projectUid = b;
+    t.time += 72;
+    data.push_back(t);
+    auto c = theGen.getNextId();
+    t.projectUid = c;
+    t.time += 11;
+    data.push_back(t);
+    //More on a
+    t.projectUid = a;
+    t.time += 29;
+    data.push_back(t);
+    //More on b
+    t.projectUid = b;
+    t.time += 37;
+    data.push_back(t);
+
+    auto durs = proc::stampsToDurations(data, -1, -1);
+    REQUIRE(durs[a] == 72+37);
+    REQUIRE(durs[b] == 11);
+    REQUIRE(durs[c] == 29);
+}
+
 TEST_CASE("No Stamps", "[Edge]"){
     std::vector<timeStamp> data;
     auto durs = proc::stampsToDurations(data);

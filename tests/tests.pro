@@ -16,4 +16,7 @@ LIBS += $$CATCHDIR/lib/libCatch2Main.a $$CATCHDIR/lib/libCatch2.a
 
 SOURCES += \
     all.cpp \
-    test_timeWrapper.cpp
+    test_timeWrapper.cpp \
+    test_timestampProcessor.cpp \
+    test_idGenerators.cpp
+

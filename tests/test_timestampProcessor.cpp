@@ -167,16 +167,53 @@ TEST_CASE("Long Set", "[Basic]"){
     REQUIRE(durs[f] == 40);
 }
 
+TEST_CASE("No Stamps", "[Edge]"){
+    std::vector<timeStamp> data;
+    auto durs = proc::stampsToDurations(data);
+    REQUIRE(durs.size() == 0);
+}
 
 TEST_CASE("Single Entry No Constraints", "[Edge]"){
-
+    uniqueIdGenerator theGen;
+    std::vector<timeStamp> data;
+    timeStamp t;
+    auto a = theGen.getNextId();
+    t.projectUid = a;
+    t.time = 974;
+    data.push_back(t);
+    auto durs = proc::stampsToDurations(data);
+    REQUIRE(durs[a] == 0);
 }
 TEST_CASE("Single Entry Start Only", "[Edge]"){
-
+    uniqueIdGenerator theGen;
+    std::vector<timeStamp> data;
+    timeStamp t;
+    auto a = theGen.getNextId();
+    t.projectUid = a;
+    t.time = 974;
+    data.push_back(t);
+    auto durs = proc::stampsToDurations(data, 100);
+    REQUIRE(durs[a] == 0);
 }
 TEST_CASE("Single Entry End Only", "[Edge]"){
-
+    uniqueIdGenerator theGen;
+    std::vector<timeStamp> data;
+    timeStamp t;
+    auto a = theGen.getNextId();
+    t.projectUid = a;
+    t.time = 974;
+    data.push_back(t);
+    auto durs = proc::stampsToDurations(data, -1, 1001);
+    REQUIRE(durs[a] == 27);
 }
 TEST_CASE("Single Entry Both Contraints", "[Edge]"){
-
+    uniqueIdGenerator theGen;
+    std::vector<timeStamp> data;
+    timeStamp t;
+    auto a = theGen.getNextId();
+    t.projectUid = a;
+    t.time = 974;
+    data.push_back(t);
+    auto durs = proc::stampsToDurations(data, 980, 1001);
+    REQUIRE(durs[a] == 21);
 }

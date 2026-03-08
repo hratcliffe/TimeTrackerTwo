@@ -18,6 +18,7 @@ NOTE: after a period (default 100 days), only summary info is available
 */
 
 // TODO - csv and pdf? reporting
+// TODO - add a 'recent events' Tab and show recent start, stop etc
 // TODO - alter summary to allow specifying date range
 // TODO - add configuration update options (selected while running)
 // TODO add a 'load projects from file' option ?
@@ -31,6 +32,9 @@ NOTE: after a period (default 100 days), only summary info is available
 
 // TODO both FTE and frac seem to cut off 1 tick too early at 99
 
+// TODO - some of the classes are HUGE. Cut them down
+
+// TODO - add testing
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);

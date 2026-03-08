@@ -213,13 +213,19 @@ Q_OBJECT
       auto updateFTE = [&mergeUi, &details](){
         float FTE = 0.0;
         float t_FTE = 0.0;
+        std::string hint_tmp;
         if(mergeUi.SelectionDropdown->currentIndex() > 0){
           proIds::Uuid current = proIds::Uuid(mergeUi.SelectionDropdown->currentData().toString().toStdString());
           auto pdetails = details[current];
           t_FTE = pdetails.FTE;
+          hint_tmp = displayFloatHalves(t_FTE*100)+ "% FTE";
+          mergeUi.SelectionHint->setText(hint_tmp.c_str());
           if(mergeUi.SelectionDropdownSub->currentIndex() > 0){
             proIds::Uuid sub = proIds::Uuid(mergeUi.SelectionDropdownSub->currentData().toString().toStdString());
-            t_FTE  *= (*std::find_if(pdetails.subs.begin(), pdetails.subs.end(), [&sub](const subprojectDetails& s){return s.uid == sub;})).frac;
+            float frac = (*std::find_if(pdetails.subs.begin(), pdetails.subs.end(), [&sub](const subprojectDetails& s){return s.uid == sub;})).frac;
+            t_FTE *= frac;
+            hint_tmp = displayFloatHalves(frac*100)+ "% of parent";
+            mergeUi.SelectionSubHint->setText(hint_tmp.c_str());
           }
           FTE += t_FTE;
         }
@@ -227,9 +233,14 @@ Q_OBJECT
           proIds::Uuid target = proIds::Uuid(mergeUi.TargetDropdown->currentData().toString().toStdString());
           auto pdetails = details[target];
           t_FTE = pdetails.FTE;
+          hint_tmp = displayFloatHalves(t_FTE*100)+ "% FTE";
+          mergeUi.TargetHint->setText(hint_tmp.c_str());
           if(mergeUi.TargetDropdownSub->currentIndex() > 0){
             proIds::Uuid sub = proIds::Uuid(mergeUi.TargetDropdownSub->currentData().toString().toStdString());
-            t_FTE *= (*std::find_if(pdetails.subs.begin(), pdetails.subs.end(), [&sub](const subprojectDetails& s){return s.uid == sub;})).frac;
+            float frac = (*std::find_if(pdetails.subs.begin(), pdetails.subs.end(), [&sub](const subprojectDetails& s){return s.uid == sub;})).frac;
+            t_FTE *= frac;
+            hint_tmp = displayFloatHalves(frac*100)+ "% of parent";
+            mergeUi.TargetSubHint->setText(hint_tmp.c_str());
           }
           FTE += t_FTE;
         }

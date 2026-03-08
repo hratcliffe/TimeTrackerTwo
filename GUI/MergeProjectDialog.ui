@@ -40,14 +40,14 @@
    </property>
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="0">
-     <widget class="QLabel" name="label">
+     <widget class="QLabel" name="SelectionLabel">
       <property name="text">
        <string>Selected Project:</string>
       </property>
      </widget>
     </item>
     <item row="3" column="0">
-     <widget class="QLabel" name="Subproject">
+     <widget class="QLabel" name="TargetSubLabel">
       <property name="text">
        <string>Subproject:</string>
       </property>
@@ -57,7 +57,7 @@
      </widget>
     </item>
     <item row="1" column="0">
-     <widget class="QLabel" name="label_3">
+     <widget class="QLabel" name="SelectionSubLabel">
       <property name="text">
        <string>Subproject:</string>
       </property>
@@ -117,16 +117,44 @@
      </widget>
     </item>
     <item row="4" column="0">
-     <widget class="QLabel" name="label_4">
+     <widget class="QLabel" name="Hint">
       <property name="text">
        <string>Combined:</string>
       </property>
      </widget>
     </item>
     <item row="2" column="0">
-     <widget class="QLabel" name="label_2">
+     <widget class="QLabel" name="TargetLabel">
       <property name="text">
        <string>Merge Into:</string>
+      </property>
+     </widget>
+    </item>
+    <item row="0" column="2">
+     <widget class="QLabel" name="SelectionHint">
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+    </item>
+    <item row="1" column="2">
+     <widget class="QLabel" name="SelectionSubHint">
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+    </item>
+    <item row="2" column="2">
+     <widget class="QLabel" name="TargetHint">
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+    </item>
+    <item row="3" column="2">
+     <widget class="QLabel" name="TargetSubHint">
+      <property name="text">
+       <string/>
       </property>
      </widget>
     </item>

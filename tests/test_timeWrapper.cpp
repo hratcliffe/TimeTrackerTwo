@@ -3,6 +3,14 @@
 #include "timeWrapper.h"
 
 using tw = timeWrapper;
+
+TEST_CASE("Check clock goes forward", "[BasicTime]"){
+    // Pretty clumsy...
+    auto tp = tw::now();
+    auto epoch = tw::referenceTime();
+    REQUIRE(tp > epoch);
+}
+
 TEST_CASE( "Round trip Seconds", "[BasicTime]" ) {
     long long secs = 1234519;
     REQUIRE(tw::toSeconds(tw::fromSeconds(secs)) == secs);
@@ -20,11 +28,33 @@ TEST_CASE( "Epoch check", "[BasicTime]"){
     REQUIRE( (str == "1970-01-01 01:00:00" || str == "1970-01-01 00:00:00"));
 }
 
-TEST_CASE( "String format round trip", "[BasicTime]" ) {
+// Strings
+
+TEST_CASE( "String format round trip zoned", "[BasicTime]" ) {
     std::string str = "2020-05-03 11:45:13";
     REQUIRE(tw::formatTime(tw::parseTimeZoned(str)) == str);
-    // TODO - check the non-zoned version matches
 }
+TEST_CASE( "String format round trip", "[BasicTime]" ) {
+    std::string str = "2020-05-03 11:45:13";
+    // Forming the two possibles because we are too lazy to do timezones
+    auto roundtrip = tw::formatTime(tw::parseTime(str));
+    bool OK = roundtrip == str;
+    if(! OK){
+        //try an hour offset
+        OK |= roundtrip == "2020-05-03 12:45:13";
+    }
+    REQUIRE(OK);
+}
+
+TEST_CASE("String Format bad case", "[BasicTime]"){
+    REQUIRE_THROWS(tw::parseTime("not a time string"));
+    REQUIRE_THROWS(tw::parseTimeZoned("not a time string"));
+}
+TEST_CASE( "Clock format round trip", "[BasicTime]" ) {
+    std::string str = "2020-05-03 11:45:13";
+    REQUIRE(tw::formatTimeAsClock(tw::parseTimeZoned(str)) == "11:45");
+}
+
 
 // Time adjustments
 

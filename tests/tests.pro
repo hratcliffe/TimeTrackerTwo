@@ -6,6 +6,7 @@ TEMPLATE = app
 TARGET = ttt_tests        # name of the test executable
 CONFIG += console         # don't pull in Qt widgets by default
 CONFIG += c++11           # match the main project
+QT += widgets # Need signal/slot even here 
 
 QMAKE_CXXFLAGS += -g -fprofile-instr-generate -fcoverage-mapping
 QMAKE_LFLAGS += -g -fprofile-instr-generate -fcoverage-mapping
@@ -22,5 +23,10 @@ SOURCES += \
     test_timeWrapper.cpp \
     test_timestampProcessor.cpp \
     test_supportCode.cpp \
-    test_idGenerators.cpp
+    test_idGenerators.cpp \
+    test_project.cpp \
+    test_appClock.cpp \
+    test_databaseStore.cpp \
+    test_projectManager.cpp \
+    test_TrackerData.cpp
 

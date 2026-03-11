@@ -28,5 +28,6 @@ SOURCES += \
     test_appClock.cpp \
     test_databaseStore.cpp \
     test_projectManager.cpp \
+    test_dataObjects.cpp \
     test_TrackerData.cpp
 

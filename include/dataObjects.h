@@ -139,7 +139,7 @@ struct subprojectDetails{
 inline std::ostream& operator<< (std::ostream& stream, const subprojectDetails& data){
 /** \brief Stream operator for subprojectDetails
 */
-  stream << data.name<<" "<<data.uid<<" "<<": frac " <<data.frac*100 <<"%";
+  stream << data.name<<" "<<data.uid<<" "<<": frac " <<data.frac*100 <<" %";
   if(!data.active){
     stream<<"(inactive)";
   }

@@ -7,6 +7,8 @@
 #include "dataObjects.h"
 
 //Stateful class to allow 'time travel' gimmick - go to a specific time and use the app
+
+//TODO - consider removing flag and branch, just set target and zero to 0
 class appClock{
   TW_timePoint appTime;
   bool t_travelling = false;
@@ -38,6 +40,7 @@ class appClock{
 
     bool travelling(){return t_travelling;}
     void travelTo(TW_timePoint time){
+        //TODO - this doesn't actually set the time until the next tick
         if(time != appTime){
             travelTimeTarget = time;
             travelTimeZero = timeWrapper::now(); // Baseline is always against current time

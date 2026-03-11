@@ -63,7 +63,7 @@ struct oneOffProjectData{
 };
 
 inline std::ostream& operator<< (std::ostream& stream, const oneOffProjectData& data){
-/** \brief Stream op for projectData
+/** \brief Stream op for oneOffProjectData
 */
   stream << data.name <<" "<<data.description;
   return stream;
@@ -210,7 +210,7 @@ inline bool operator>=(const timeStamp &lhs, const timecode &rhs){
   return lhs.time >= rhs;
 };
 inline bool operator==(const timeStamp &lhs, const timecode &rhs){
-  return lhs.time == rhs;;
+  return lhs.time == rhs;
 };
 inline bool operator!=(const timeStamp &lhs, const timecode &rhs){
   return !(lhs == rhs);
@@ -247,7 +247,7 @@ class timeDigestPeriod{
   std::string displayName="";
 };
 inline std::ostream& operator<< (std::ostream& stream, const timeDigestPeriod& ts){
-/** \brief Stream operator for timeStamp
+/** \brief Stream operator for timeDigestPeriod
 */
   stream << ts.displayName<<" Start: " << ts.start <<", Duration: "<<ts.duration;
   return stream;
@@ -260,7 +260,7 @@ class timeDigestEntry{
     proIds::Uuid projectUid; /**< \brief Unique identifier for the entity this digest belongs to */
 };
 inline std::ostream& operator<< (std::ostream& stream, const timeDigestEntry& ts){
-/** \brief Stream operator for timeStamp
+/** \brief Stream operator for timeDigestEntry
 */
   stream << "Day: " << ts.period <<", Duration: "<<ts.duration<< ", Project UID: " << ts.projectUid;
   return stream;

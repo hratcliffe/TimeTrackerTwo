@@ -143,7 +143,7 @@ class IdGenerator{
     /** \brief Get null unique id*/
     virtual proIds::Uuid getNextId() = 0;
     /** \brief Get null id*/
-    virtual proIds::Uuid getNullId(){return proIds::NullUid;};
+    virtual proIds::Uuid getNullId() = 0; //{return proIds::NullUid;};
 
     virtual proIds::Uuid getOnesId() = 0;
 

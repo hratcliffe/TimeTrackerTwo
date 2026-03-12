@@ -50,71 +50,32 @@ class databaseStore{
 
     void create_tables(){
         int err = 0;
-        std::string cmd = "CREATE TABLE IF NOT EXISTS projects(id CHAR(36) PRIMARY KEY, name TEXT, FTE REAL, start_date INTEGER, end_date INTEGER);";
-        err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
-        if(err != SQLITE_OK){
-            std::cerr << "Error creating projects table: " << errMsg << std::endl;
-            sqlite3_free(errMsg);
-            throw std::runtime_error("Failed to create projects table");
-        }
-        cmd = "CREATE TABLE IF NOT EXISTS subprojects(id CHAR(36) PRIMARY KEY, name TEXT, frac REAL, parent_id CHAR(36), FOREIGN KEY(parent_id) REFERENCES projects(id));";
-        err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
-        if(err != SQLITE_OK){
-            std::cerr << "Error creating subprojects table: " << errMsg << std::endl;
-            sqlite3_free(errMsg);
-            throw std::runtime_error("Failed to create subprojects table");
-        }
 
-        cmd = "CREATE TABLE IF NOT EXISTS timestamps(id INTEGER PRIMARY KEY, time INTEGER, project_id CHAR(36));";
-        err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
-        if(err != SQLITE_OK){
-            std::cerr << "Error creating timestamps table: " << errMsg << std::endl;
-            sqlite3_free(errMsg);
-            throw std::runtime_error("Failed to create timestamps table");
-        }
+        std::map<std::string, std::string> cmds;
 
-        cmd = "CREATE TABLE IF NOT EXISTS digest_periods(id INTEGER PRIMARY KEY, start INTEGER, duration INTEGER);";
-        err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
-        if(err != SQLITE_OK){
-            std::cerr << "Error creating digest_periods table: " << errMsg << std::endl;
-            sqlite3_free(errMsg);
-            throw std::runtime_error("Failed to create digest_periods table");
-        }
+        cmds["projects"] = "CREATE TABLE IF NOT EXISTS projects(id CHAR(36) PRIMARY KEY, name TEXT, FTE REAL, start_date INTEGER, end_date INTEGER);";
+        cmds["subprojects"] = "CREATE TABLE IF NOT EXISTS subprojects(id CHAR(36) PRIMARY KEY, name TEXT, frac REAL, parent_id CHAR(36), FOREIGN KEY(parent_id) REFERENCES projects(id));";
 
+        cmds["timestamps"] = "CREATE TABLE IF NOT EXISTS timestamps(id INTEGER PRIMARY KEY, time INTEGER, project_id CHAR(36));";
+        cmds["digest_periods"] = "CREATE TABLE IF NOT EXISTS digest_periods(id INTEGER PRIMARY KEY, start INTEGER, duration INTEGER);";
         //NOTE project id can be a project OR a subproject
-        cmd = "CREATE TABLE IF NOT EXISTS time_digests(id INTEGER PRIMARY KEY, period_id INTEGER, duration INTEGER, project_id CHAR(36), FOREIGN KEY(period_id) REFERENCES digest_periods(id) UNIQUE(period_id, project_id));";
-         err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
-        if(err != SQLITE_OK){
-            std::cerr << "Error creating timedigests table: " << errMsg << std::endl;
-            sqlite3_free(errMsg);
-            throw std::runtime_error("Failed to create timedigests table");
-        }
+        cmds["time_digests"] = "CREATE TABLE IF NOT EXISTS time_digests(id INTEGER PRIMARY KEY, period_id INTEGER, duration INTEGER, project_id CHAR(36), FOREIGN KEY(period_id) REFERENCES digest_periods(id) UNIQUE(period_id, project_id));";
 
         // Table for logging names/info about oneoff projects - expect SHORT description
-        cmd = "CREATE TABLE IF NOT EXISTS oneoffs(id CHAR(36) PRIMARY KEY, name TEXT, descr TEXT);";
-        err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
-        if(err != SQLITE_OK){
-            std::cerr << "Error creating oneoffs table: " << errMsg << std::endl;
-            sqlite3_free(errMsg);
-            throw std::runtime_error("Failed to create oneoffs table");
-        }
+        cmds["oneoffs"] = "CREATE TABLE IF NOT EXISTS oneoffs(id CHAR(36) PRIMARY KEY, name TEXT, descr TEXT);";
 
-        cmd = "CREATE TABLE IF NOT EXISTS app_data(key TEXT PRIMARY KEY, value TEXT);";
-        err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
-        if(err != SQLITE_OK){
-            std::cerr << "Error creating app_data table: " << errMsg << std::endl;
+        cmds["app_data"] = "CREATE TABLE IF NOT EXISTS app_data(key TEXT PRIMARY KEY, value TEXT);";
+        cmds["app_state"] = "CREATE TABLE IF NOT EXISTS app_state(key TEXT PRIMARY KEY, value INTEGER);";
+        for(const auto & item: cmds ){
+          const std::string tbl = item.first;
+          const std::string cmd = item.second;
+          err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
+          if(err != SQLITE_OK){
+            std::cerr << "Error creating "<< tbl<<" table: " << errMsg << std::endl;
             sqlite3_free(errMsg);
-            throw std::runtime_error("Failed to create app_data table");
+            throw std::runtime_error("Failed to create "+tbl+" table");
+          }
         }
-
-        cmd = "CREATE TABLE IF NOT EXISTS app_state(key TEXT PRIMARY KEY, value INTEGER);";
-        err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
-        if(err != SQLITE_OK){
-            std::cerr << "Error creating app_state table: " << errMsg << std::endl;
-            sqlite3_free(errMsg);
-            throw std::runtime_error("Failed to create app_state table");
-        }
-
         // TODO - extended descriptions table - could add all sorts of extra info
     }
 

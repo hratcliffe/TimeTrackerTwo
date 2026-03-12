@@ -18,7 +18,7 @@ class databaseStore{
     char *errMsg = nullptr; /**< \brief Error message from SQLite operations */
 
     void enable_foreign_keys(){sqlite3_exec(DB, "PRAGMA foreign_keys = ON", nullptr, nullptr, nullptr);}
-    bool check_tables(){
+    bool check_tables(bool verbose){
 
         auto expected_tables = std::vector<std::string>{"projects", "subprojects", "timestamps", "app_data", "app_state", "oneoffs", "digest_periods", "time_digests"};
         // Get list of tables in the database
@@ -28,7 +28,7 @@ class databaseStore{
         int count = 0;
         while((ret = sqlite3_step(stmt)) == SQLITE_ROW){
             std::string name_in_db = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
-            std::cout << "Table in DB: " << name_in_db << std::endl;
+            if(verbose) std::cout << "Table in DB: " << name_in_db << std::endl;
             if(std::find(expected_tables.begin(), expected_tables.end(), name_in_db) == expected_tables.end()){
                 std::cerr << "Unexpected table found: " << name_in_db << std::endl;
                 throw std::runtime_error("Unexpected table in database");
@@ -130,21 +130,21 @@ class databaseStore{
 
     }
     public:
-    databaseStore(std::string fileName) : dbFileName(fileName) {
-        std::cout<<"Opening Database"<<std::endl; 
+    databaseStore(std::string fileName, bool verbose=false) : dbFileName(fileName) {
+        if(verbose) std::cout<<"Opening Database"<<std::endl; 
         sqlite3_config(SQLITE_CONFIG_SERIALIZED);
         int exit = sqlite3_open((dbFileName).c_str(), &DB); 
         if(exit != SQLITE_OK){
             std::cerr << "Error opening database: " << sqlite3_errmsg(DB) << std::endl;
             throw std::runtime_error("Failed to open database");
         }
-        std::cout<<"Opened Database"<<std::endl;
+        if(verbose) std::cout<<"Opened Database"<<std::endl;
 
         // Enable foreign keys
         enable_foreign_keys();
         // Check if tables exist, create if not
 
-        bool tables_ready = check_tables(); // Check if tables exist - throws if bad, false if not all present
+        bool tables_ready = check_tables(verbose); // Check if tables exist - throws if bad, false if not all present
         if(!tables_ready) create_tables(); // Create the tables if they don't exist but we had no errors
     }
     ~databaseStore(){

@@ -170,7 +170,7 @@ class databaseStore{
             item = 0; // TODO - what to do for bad key?
         }
       }else if constexpr(std::is_same<T, std::string>::value){
-        std::string cmd = "SELECT value FROM app_config WHERE key = ?;";
+        std::string cmd = "SELECT value FROM app_data WHERE key = ?;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_text(prep_cmd, 1, key.c_str(), key.length(), SQLITE_STATIC);

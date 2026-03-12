@@ -11,10 +11,10 @@
 class dataIO{
 
   public:
-    dataIO(){;};
-    dataIO(std::string fileName){;}; /**< \brief Constructor with file name */
+    dataIO()=default;
+    dataIO(std::string fileName); /**< \brief Constructor with file name */
     dataIO(const dataIO &other) = delete;
-    virtual ~dataIO(){;};
+    virtual ~dataIO()=0;
 
     virtual void writeReferenceTime(timecode time) = 0; /**< \brief Write a reference time for verification later*/
 
@@ -60,12 +60,6 @@ class dataIO{
     // Manipulation and editing
     virtual void rewriteTrackerProjectId(proIds::Uuid current, proIds::Uuid target) = 0;
 
-};
-
-class flatfileIO : public dataIO{
-  public:
-    flatfileIO(){;};
-    ~flatfileIO(){;};
 };
 
 /**

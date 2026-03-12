@@ -112,6 +112,23 @@ class databaseStore{
         if(DB) sqlite3_close(DB);
         // TODO - isn't this wrong? DB may be already destroyed...
     } 
+    void closeDB(){
+        if(DB) sqlite3_close(DB);
+        throw std::runtime_error("Database was closed by user, cannot continue");
+    }
+    bool isConnected(){return DB != nullptr;}
+    void clearDB(){
+        // Accident-protected but possible:
+        static bool force = false;
+        if(force){
+            force = false;
+            delete_all_tables();
+        }else{
+            force = true;
+            throw std::runtime_error("You asked to delete tables - calling this a second time will actually do it!!!");
+        }
+    }
+    bool tablesReady(bool verbose=true){return check_tables(verbose);}
 
     template <typename T>
     void writeItem(std::string key, T value){

@@ -167,9 +167,85 @@ TEST_CASE("Writing One Off", "[Database]"){
   REQUIRE(oo.description== oo_in.description);
 }
 
+TEST_CASE("Writing Tracker" "[Database]"){
+  databaseStore theDB{"TestDatabase2.db"};
 
+  uniqueIdGenerator theGen;
+  auto pid = theGen.getNextId();
+  timeStamp stamp{854, pid};
+  theDB.writeTrackerEntry(stamp);
+
+  auto stamp_in = theDB.fetchLatestTrackerEntry();
+
+  REQUIRE(stamp.time == stamp_in.time);
+  REQUIRE(stamp.projectUid == stamp_in.projectUid);
+}
 
 //Delete
+
+TEST_CASE("Deleting Project", "[Database]"){
+  databaseStore theDB{"TestDatabase2.db"};
+
+  uniqueIdGenerator theGen;
+  auto pid = theGen.getNextId();
+  auto pd = writeProj(theDB, pid);
+  // Delete it
+  theDB.deleteProject(pid);
+  // Can't Read it back:
+  REQUIRE_THROWS(theDB.readProject(pid));
+  //TODO - perhaps should write several and confirm only the correct one is deleted?
+}
+
+TEST_CASE("Deleting Sub Project", "[Database]"){
+  databaseStore theDB{"TestDatabase2.db"};
+
+  uniqueIdGenerator theGen;
+  auto id = theGen.getNextId();
+  auto pid = theGen.getNextId();
+  auto pd = writeProj(theDB, pid);
+
+  fullSubProjectData sd;
+  sd.name = "Written SubProject";
+  sd.frac = 0.3;
+  sd.uid = id;
+  sd.parentUid = pid;
+
+  theDB.writeSubProject(sd);
+  theDB.deleteSubproject(id);
+
+  // Read it back:
+  REQUIRE_THROWS(theDB.readSubproject(id));
+
+}
+TEST_CASE("Deleting One Off", "[Database]"){
+  databaseStore theDB{"TestDatabase2.db"};
+
+  uniqueIdGenerator theGen;
+  auto pid = theGen.getNextId();
+  fullOneOffProjectData oo;
+  oo.name = "Written One Off";
+  oo.description = "Description Here";
+  oo.uid = pid;
+  theDB.writeOneOff(oo);
+  theDB.deleteOneOff(pid);
+  // Read it back:
+  REQUIRE_THROWS(theDB.readOneOff(pid));
+}
+/*
+TEST_CASE("Writing Tracker" "[Database]"){
+  databaseStore theDB{"TestDatabase2.db"};
+
+  uniqueIdGenerator theGen;
+  auto pid = theGen.getNextId();
+  timeStamp stamp{854, pid};
+  theDB.writeTrackerEntry(stamp);
+
+  auto stamp_in = theDB.fetchLatestTrackerEntry();
+
+  REQUIRE(stamp.time == stamp_in.time);
+  REQUIRE(stamp.projectUid == stamp_in.projectUid);
+}
+*/
 
 //Edit (uses write)
 

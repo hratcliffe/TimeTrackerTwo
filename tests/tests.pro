@@ -17,6 +17,7 @@ CATCHDIR = /Users/heather/Documents/Personal/Code/Code/Tools/Catch2/lib
 INCLUDEPATH += $$CATCHDIR/include
 
 LIBS += $$CATCHDIR/lib/libCatch2Main.a $$CATCHDIR/lib/libCatch2.a
+LIBS += -lsqlite3
 
 SOURCES += \
     all.cpp \

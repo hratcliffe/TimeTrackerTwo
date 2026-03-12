@@ -71,10 +71,105 @@ TEST_CASE("Reading Known Data - Oneoff", "[Database]"){
 }
 
 // Fetch lists
+TEST_CASE("List fetch - projects", "[Database]"){
+  databaseStore theDB{"KnownDatabase.db"};
+  auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+  auto id2 = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
 
-//Delete
+  auto projList = theDB.fetchProjectList();
+
+  REQUIRE(projList.size() == 2);
+  {
+  auto pd = projList[0];
+  REQUIRE(pd.name == "Project Alpha");
+  REQUIRE(pd.FTE == Catch::Approx(0.5));
+  REQUIRE(pd.uid == id);
+  //TODO - start and end
+  }
+  {
+  auto pd = projList[1];
+  REQUIRE(pd.name == "Project Beta");
+  REQUIRE(pd.FTE == Catch::Approx(0.25));
+  REQUIRE(pd.uid == id2);
+  //TODO - start and end
+  }
+}
 
 // Write
+fullProjectData writeProj(databaseStore & theDB, proIds::Uuid & pid){
+
+  fullProjectData pd;
+  pd.name = "Written Project";
+  pd.FTE = 0.4;
+  pd.useStart = false;
+  pd.useEnd = false;
+  pd.start = -1;
+  pd.end = -1;
+  pd.uid = pid;
+  theDB.writeProject(pd);
+  return pd;
+}
+TEST_CASE("Writing Project", "[Database]"){
+  databaseStore theDB{"TestDatabase2.db"};
+
+  uniqueIdGenerator theGen;
+  auto pid = theGen.getNextId();
+  auto pd = writeProj(theDB, pid);
+  // Read it back:
+  auto pd_in = theDB.readProject(pid);
+
+  REQUIRE(pd.name == pd_in.name);
+  REQUIRE(pd.FTE == pd_in.FTE);
+  REQUIRE(pd.uid == pd_in.uid);
+  REQUIRE(pd.start == pd_in.start);
+  REQUIRE(pd.end == pd_in.end);
+}
+
+TEST_CASE("Writing Sub Project", "[Database]"){
+  databaseStore theDB{"TestDatabase2.db"};
+
+  uniqueIdGenerator theGen;
+  auto id = theGen.getNextId();
+  auto pid = theGen.getNextId();
+  auto pd = writeProj(theDB, pid);
+
+  fullSubProjectData sd;
+  sd.name = "Written SubProject";
+  sd.frac = 0.3;
+  sd.uid = id;
+  sd.parentUid = pid;
+
+  theDB.writeSubProject(sd);
+
+  // Read it back:
+  auto sd_in = theDB.readSubproject(id);
+
+  REQUIRE(sd.name == sd_in.name);
+  REQUIRE(sd.frac == sd_in.frac);
+  REQUIRE(sd.uid == sd_in.uid);
+  REQUIRE(sd.parentUid == sd_in.parentUid);
+}
+TEST_CASE("Writing One Off", "[Database]"){
+  databaseStore theDB{"TestDatabase2.db"};
+
+  uniqueIdGenerator theGen;
+  auto pid = theGen.getNextId();
+  fullOneOffProjectData oo;
+  oo.name = "Written One Off";
+  oo.description = "Description Here";
+  oo.uid = pid;
+  theDB.writeOneOff(oo);
+  // Read it back:
+  auto oo_in = theDB.readOneOff(pid);
+
+  REQUIRE(oo.name == oo_in.name);
+  REQUIRE(oo.uid == oo_in.uid);
+  REQUIRE(oo.description== oo_in.description);
+}
+
+
+
+//Delete
 
 //Edit (uses write)
 
@@ -115,6 +210,23 @@ TEST_CASE("Reading Known Data - Latest Tracker", "[Database]"){
 //Digests
 
 // Read and write state
+
+TEST_CASE("Round trip State", "[Database]"){
+  databaseStore theDB{"TestDatabase2.db"};
+
+  theDB.writeItem<long long>("conf", 123);
+  auto item = theDB.readItem<long long>("conf");
+  REQUIRE(item == 123);
+
+  theDB.writeItem<std::string>("conf2", "XYZ");
+  auto item2 = theDB.readItem<std::string>("conf2");
+  REQUIRE(item2 == "XYZ");
+
+  // Shouldn't this next not compile?
+  //theDB.writeItem<double>("zbc", 2.0);
+
+}
+
 
 //Update ID in tracker or digest
 

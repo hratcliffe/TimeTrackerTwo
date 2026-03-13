@@ -306,6 +306,53 @@ TEST_CASE("Delete Tracker By ID" "[Database]"){
 
 
 //Digests
+// Read Known data
+TEST_CASE("Reading Known Data - Digest Periods", "[Database]"){
+  databaseStore theDB{"KnownDatabase.db"};
+  auto dp = theDB.fetchDigestPeriods();
+
+  REQUIRE(dp[0].duration == 100);
+  REQUIRE(dp[1].duration == 100);
+  REQUIRE(dp[0].start == 100);
+  REQUIRE(dp[1].start == 200);
+
+  //TODO start and end
+}
+TEST_CASE("Reading Known Data - Digest By Period", "[Database]"){
+  databaseStore theDB{"KnownDatabase.db"};
+  auto dp = theDB.fetchDigestPeriods();
+
+  auto dig = theDB.fetchDigestEntries(dp[0]);
+  {
+  auto check = [](timeDigestEntry t){return t.period == 1 && t.projectUid ==proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}") && t.duration == 23;};
+  REQUIRE( std::find_if(dig.begin(), dig.end(), check) != dig.end());
+  }
+  {
+  auto check = [](timeDigestEntry t){return t.period == 1 && t.projectUid ==proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}") && t.duration == 31;};
+  REQUIRE( std::find_if(dig.begin(), dig.end(), check) != dig.end());
+  }
+  {
+  auto check = [](timeDigestEntry t){return t.period != 1;};
+  REQUIRE( std::find_if(dig.begin(), dig.end(), check) == dig.end()); // Should not find any with a period_id not of 1
+  }
+}
+TEST_CASE("Reading Known Data - Digest By Time", "[Database]"){
+  databaseStore theDB{"KnownDatabase.db"};
+  auto dig = theDB.fetchDigestEntries(100, 301);
+
+ {
+  auto check = [](timeDigestEntry t){return t.period == 1 && t.projectUid ==proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}") && t.duration == 23;};
+  REQUIRE( std::find_if(dig.begin(), dig.end(), check) != dig.end());
+  }
+  {
+  auto check = [](timeDigestEntry t){return t.period == 1 && t.projectUid ==proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}") && t.duration == 31;};
+  REQUIRE( std::find_if(dig.begin(), dig.end(), check) != dig.end());
+  }
+  {
+  auto check = [](timeDigestEntry t){return t.period == 2 && t.projectUid == proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}") && t.duration == 71;};
+  REQUIRE( std::find_if(dig.begin(), dig.end(), check) != dig.end());
+  }
+}
 
 // Read and write state
 

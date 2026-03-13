@@ -324,9 +324,26 @@ TEST_CASE("Deleting One Off", "[Database]"){
   REQUIRE_THROWS(theDB.readOneOff(pid));
 }
 
-
 //Edit (uses write)
+TEST_CASE("Edit project", "[Database]"){
+  databaseStore theDB{"./Scratch/TestDatabase2.db"};
 
+  uniqueIdGenerator theGen;
+  auto pid = theGen.getNextId();
+  auto pd = writeProj(theDB, pid);
+  // Read it back:
+
+  pd.name += "_modified";
+  theDB.writeProject(pd);
+
+  auto pd_in = theDB.readProject(pid);
+
+  REQUIRE(pd.name == pd_in.name);
+  REQUIRE(pd.FTE == pd_in.FTE);
+  REQUIRE(pd.uid == pd_in.uid);
+  REQUIRE(pd.start == pd_in.start);
+  REQUIRE(pd.end == pd_in.end);
+}
 
 // Tracker (timestamps) -----------------------------------------------------------------------
 // Fetch tracker

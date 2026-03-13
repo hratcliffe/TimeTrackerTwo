@@ -319,6 +319,21 @@ class databaseStore{
         }
         sqlite3_finalize(prep_cmd);
     }
+    void deleteOneOff(proIds::Uuid const & id){
+        const std::string id_str = id.to_string();
+        std::string cmd;
+        sqlite3_stmt * prep_cmd;
+        int err = 0;
+        cmd = "DELETE FROM oneoffs WHERE id = ?;";
+        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            throw std::runtime_error("Failed to delete one off");
+        }
+        sqlite3_finalize(prep_cmd);
+    }
 
     fullProjectData readProject(proIds::Uuid const & id){
         const std::string id_str = id.to_string();
@@ -641,6 +656,23 @@ class databaseStore{
         }
         sqlite3_finalize(prep_cmd);
         return ret;
+    }
+
+    void deleteTrackerEntry(proIds::Uuid const & id){
+        const std::string id_str = id.to_string();
+        std::string cmd;
+        sqlite3_stmt * prep_cmd;
+        int err = 0;
+        cmd = "DELETE FROM timestamps WHERE project_id = ?;";
+        std::cout<< cmd<<" "<<id_str<<std::endl;
+        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            throw std::runtime_error("Failed to delete timestamp");
+        }
+        sqlite3_finalize(prep_cmd);
     }
 
     void deleteTrackerInInterval(timecode start, timecode end){

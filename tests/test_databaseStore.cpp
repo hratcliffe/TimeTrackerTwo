@@ -160,6 +160,47 @@ TEST_CASE("List fetch - subprojects by parent", "[Database]"){
   }
 
 }
+
+TEST_CASE("List fetch - oneoff", "[Database]"){
+  databaseStore theDB{"./InputData/KnownDatabase.db"};
+  auto id1 = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+  auto id2 = proIds::Uuid("{d74a08d4-35b4-4b7a-b525-b5da00af6269}");
+  auto id3 = proIds::Uuid("{07e453ad-b698-47b8-aa52-c7ef2306731d}");
+
+  auto lst = theDB.fetchOneOffList();
+  REQUIRE(lst.size() == 3);
+  {
+    auto cmp = [id1](fullOneOffProjectData & oo){return oo.uid == id1 && oo.name == "Tuesday Coffee" && oo.description == "Special Coffee Meeting";};
+    REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
+  }
+  {
+    auto cmp = [id2](fullOneOffProjectData & oo){return oo.uid == id2 && oo.name == "Urgent Bugs" && oo.description == "Fixing some urgent Bugs";};
+    REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
+  }
+  {
+    auto cmp = [id3](fullOneOffProjectData & oo){return oo.uid == id3 && oo.name == "Consulting" && oo.description == "One off consulting for NASA";};
+    REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
+  }
+
+}
+
+TEST_CASE("List fetch - oneoff range", "[Database]"){
+  databaseStore theDB{"./InputData/KnownDatabaseO.db"};
+  auto id1 = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+  auto id2 = proIds::Uuid("{d74a08d4-35b4-4b7a-b525-b5da00af6269}");
+  auto id3 = proIds::Uuid("{07e453ad-b698-47b8-aa52-c7ef2306731d}");
+
+  // NOTE: time-order guaranteed
+  auto lst = theDB.fetchOneOffsInRange(8999, 9050);
+  REQUIRE(lst.size() == 2);
+  REQUIRE(lst[0].uid == id1);
+  REQUIRE(lst[1].uid == id3);
+
+  auto lst2 = theDB.fetchOneOffsInRange(9001, 9050);
+  REQUIRE(lst2.size() == 1);
+  REQUIRE(lst2[0].uid == id3);
+
+}
 // Write
 fullProjectData writeProj(databaseStore & theDB, proIds::Uuid & pid){
 

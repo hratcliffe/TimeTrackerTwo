@@ -2,6 +2,8 @@
 
 #include "databaseStore.h"
 
+// Connecting and setup -----------------------------------------------------------------
+
 TEST_CASE("Connect", "[Database]"){
   databaseStore theDB{"TestDatabase.db"};
 
@@ -39,6 +41,8 @@ TEST_CASE("Bad File 2", "[Database]"){
 
   REQUIRE_THROWS(theDB.tablesReady());
 }
+
+// Projects -----------------------------------------------------------------------------
 
 TEST_CASE("Reading Known Data - Project", "[Database]"){
   databaseStore theDB{"KnownDatabase.db"};
@@ -167,20 +171,6 @@ TEST_CASE("Writing One Off", "[Database]"){
   REQUIRE(oo.description== oo_in.description);
 }
 
-TEST_CASE("Writing Tracker" "[Database]"){
-  databaseStore theDB{"TestDatabase2.db"};
-
-  uniqueIdGenerator theGen;
-  auto pid = theGen.getNextId();
-  timeStamp stamp{854, pid};
-  theDB.writeTrackerEntry(stamp);
-
-  auto stamp_in = theDB.fetchLatestTrackerEntry();
-
-  REQUIRE(stamp.time == stamp_in.time);
-  REQUIRE(stamp.projectUid == stamp_in.projectUid);
-}
-
 //Delete
 
 TEST_CASE("Deleting Project", "[Database]"){
@@ -231,32 +221,19 @@ TEST_CASE("Deleting One Off", "[Database]"){
   // Read it back:
   REQUIRE_THROWS(theDB.readOneOff(pid));
 }
-/*
-TEST_CASE("Writing Tracker" "[Database]"){
-  databaseStore theDB{"TestDatabase2.db"};
 
-  uniqueIdGenerator theGen;
-  auto pid = theGen.getNextId();
-  timeStamp stamp{854, pid};
-  theDB.writeTrackerEntry(stamp);
-
-  auto stamp_in = theDB.fetchLatestTrackerEntry();
-
-  REQUIRE(stamp.time == stamp_in.time);
-  REQUIRE(stamp.projectUid == stamp_in.projectUid);
-}
-*/
 
 //Edit (uses write)
 
+
+// Tracker (timestamps) -----------------------------------------------------------------------
 // Fetch tracker
-TEST_CASE("Reading Known Data - Timestamps", "[Database]"){
+TEST_CASE("Reading Known Data - Tracker", "[Database]"){
   databaseStore theDB{"KnownDatabase.db"};
   auto pid = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
   auto sid1 = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
   auto sid2 = proIds::Uuid("{de58a6f8-d0bb-46c8-af18-aed15e92060c}");
   auto stamps = theDB.fetchTrackerEntries();
-  //TODO test start and end...
 
   REQUIRE(stamps.size() == 4);
   REQUIRE(stamps[0] == timeStamp{73, pid});
@@ -265,6 +242,17 @@ TEST_CASE("Reading Known Data - Timestamps", "[Database]"){
   REQUIRE(stamps[3] == timeStamp{8001, proIds::NullUid});
 }
 
+TEST_CASE("Reading Known Data - Tracker with Range", "[Database]"){
+  databaseStore theDB{"KnownDatabase.db"};
+  auto pid = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+  auto sid1 = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
+  auto sid2 = proIds::Uuid("{de58a6f8-d0bb-46c8-af18-aed15e92060c}");
+  auto stamps = theDB.fetchTrackerEntries(80, 4000);
+
+  REQUIRE(stamps.size() == 2);
+  REQUIRE(stamps[0] == timeStamp{689, sid1});
+  REQUIRE(stamps[1] == timeStamp{3609, sid2});
+}
 //Fetch at
 TEST_CASE("Reading Known Data - Tracker At", "[Database]"){
   databaseStore theDB{"KnownDatabase.db"};
@@ -279,9 +267,43 @@ TEST_CASE("Reading Known Data - Latest Tracker", "[Database]"){
   REQUIRE(stamp == timeStamp{8001, proIds::NullUid});
 }
 
-
 //Write tracker
+TEST_CASE("Writing Tracker" "[Database]"){
+  databaseStore theDB{"TestDatabase2.db"};
+
+  uniqueIdGenerator theGen;
+  auto pid = theGen.getNextId();
+  timeStamp stamp{854, pid};
+  theDB.writeTrackerEntry(stamp);
+
+  auto stamp_in = theDB.fetchLatestTrackerEntry();
+
+  REQUIRE(stamp.time == stamp_in.time);
+  REQUIRE(stamp.projectUid == stamp_in.projectUid);
+}
+
 //Delete tracker
+TEST_CASE("Delete Tracker By ID" "[Database]"){
+  databaseStore theDB{"TestDatabase2.db"};
+
+  uniqueIdGenerator theGen;
+  auto pid = theGen.getNextId();
+  auto pid2 = theGen.getNextId();
+  timeStamp stamp{879, pid}; // Note may have one at 854 from previous test
+  theDB.writeTrackerEntry(stamp);
+  timeStamp stamp2{100023, pid2};
+  theDB.writeTrackerEntry(stamp2);
+
+  theDB.deleteTrackerEntry(pid2);
+
+  auto stamps_in = theDB.fetchTrackerEntries();
+  auto check = [pid](timeStamp t){return t.projectUid == pid;};
+  auto check2 = [pid2](timeStamp t){return t.projectUid == pid2;};
+  REQUIRE( std::find_if(stamps_in.begin(), stamps_in.end(), check) != stamps_in.end()); // First IS present
+  REQUIRE( std::find_if(stamps_in.begin(), stamps_in.end(), check2) == stamps_in.end()); // Second is NOT
+
+}
+
 
 //Digests
 

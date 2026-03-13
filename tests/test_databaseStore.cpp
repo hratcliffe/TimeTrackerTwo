@@ -2,6 +2,11 @@
 
 #include "databaseStore.h"
 
+// NOTE: two of the test files need to have permissions set for those
+// tests to fail:
+// ReadOnlyFile.db - permission u-w
+// UnreadableFile.db - permission u-rw
+
 // Connecting and setup -----------------------------------------------------------------
 
 TEST_CASE("Connect", "[Database]"){
@@ -29,9 +34,15 @@ TEST_CASE("Bad File", "[Database]"){
   };
   REQUIRE_THROWS(init());
 }
+TEST_CASE("Unreadable File", "[Database]"){
+  auto init = [](){
+    databaseStore theDB{"UnreadableFile.db"};
+  };
+  REQUIRE_THROWS(init());
+}
 TEST_CASE("Read Only File", "[Database]"){
   auto init = [](){
-    databaseStore theDB{"BadFile.db"};
+    databaseStore theDB{"ReadOnlyFile.db"};
   };
   REQUIRE_THROWS(init());
 }

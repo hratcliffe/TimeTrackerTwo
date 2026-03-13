@@ -475,6 +475,92 @@ TEST_CASE("Round trip State", "[Database]"){
 
 }
 
+// Write digest period + entry (i.e. first touch)
+TEST_CASE("Write Digest", "[Database]"){
+  databaseStore theDB{"./Scratch/DigestDatabase.db"};
+
+  // Create a project
+  uniqueIdGenerator theGen;
+  auto pid = theGen.getNextId();
+  auto pd = writeProj(theDB, pid);
+
+  auto pid2 = theGen.getNextId();
+  auto pd2 = writeProj(theDB, pid2);
+
+  timeDigestPeriod tp;
+  tp.start = 1268;
+  tp.duration = 600;
+  tp.displayName = "Ten Mins";
+  tp.id = 1; // This gets constructed on insert but is 1 for fresh DB
+
+  std::vector<timeDigestEntry> entries;
+  timeDigestEntry te;
+  te.duration = 273;
+  te.projectUid = pd.uid;
+  te.period = 1;
+  entries.push_back(te);
+
+  timeDigestEntry te2;
+  te2.duration = 181;
+  te2.projectUid = pd2.uid;
+  te2.period = 1;
+  entries.push_back(te2);
+
+  theDB.writeDigestEntries(tp, entries);
+  // Written
+  auto entries_in = theDB.fetchDigestEntries(tp);
+
+  {
+    auto check = [te](timeDigestEntry & td){return td == te;};
+    REQUIRE(std::find_if(entries_in.begin(), entries_in.end(), check) != entries_in.end());
+  }
+  {
+    auto check = [te2](timeDigestEntry & td){return td == te2;};
+    REQUIRE(std::find_if(entries_in.begin(), entries_in.end(), check) != entries_in.end());
+  }
+
+}
+
+//Update digest for id
+TEST_CASE("Specific digest update", "[Database]"){
+  databaseStore theDB{"./Scratch/DigestDatabase2.db"};
+
+  // Create a project
+  uniqueIdGenerator theGen;
+  auto pid = theGen.getNextId();
+  auto pd = writeProj(theDB, pid);
+
+  timeDigestPeriod tp;
+  tp.start = 331;
+  tp.duration = 1200;
+  tp.displayName = "Twenty Mins";
+  tp.id = 1; // This gets constructed on insert but is 1 for fresh DB
+
+  std::vector<timeDigestEntry> entries;
+  timeDigestEntry te;
+  te.duration = 111;
+  te.projectUid = pd.uid;
+  te.period = 1;
+  entries.push_back(te);
+
+  theDB.writeDigestEntries(tp, entries);
+
+  //Update it
+  te.duration = 181;
+  theDB.updateDigestEntry(te);
+  // Read back
+  auto entries_in = theDB.fetchDigestEntries(tp);
+{
+    auto check = [te](timeDigestEntry & td){return td == te;};
+    REQUIRE(std::find_if(entries_in.begin(), entries_in.end(), check) != entries_in.end());
+  }
+{ // Explicit checkt
+    auto check = [](timeDigestEntry & td){return td.duration == 181;};
+    REQUIRE(std::find_if(entries_in.begin(), entries_in.end(), check) != entries_in.end());
+  }
+}
 
 //Update ID in tracker or digest
+
+// Write some entries, run the update, check the result
 

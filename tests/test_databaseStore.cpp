@@ -86,6 +86,8 @@ TEST_CASE("Reading Known Data - Oneoff", "[Database]"){
 }
 
 // Fetch lists
+//NOTE: projects list order is NOT guaranteed per contract
+
 TEST_CASE("List fetch - projects", "[Database]"){
   databaseStore theDB{"./InputData/KnownDatabase.db"};
   auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
@@ -110,6 +112,54 @@ TEST_CASE("List fetch - projects", "[Database]"){
   }
 }
 
+TEST_CASE("List fetch - subprojects", "[Database]"){
+  databaseStore theDB{"./InputData/KnownDatabase.db"};
+  auto pid  = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+  auto id   = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
+  auto id2  = proIds::Uuid("{de58a6f8-d0bb-46c8-af18-aed15e92060c}");
+  auto id3  = proIds::Uuid("{07e453ad-b698-47b8-aa52-c7ef2306731d}");
+  auto pid2 = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+
+  auto lst = theDB.fetchSubprojectList();
+  REQUIRE(lst.size() == 3);
+  {
+    auto cmp = [id, pid](fullSubProjectData & sd){ return sd.uid == id && sd.parentUid == pid && sd.name =="Documentation" && sd.frac == Catch::Approx(0.3);};
+    REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
+  }
+  {
+    auto cmp = [id2, pid](fullSubProjectData & sd){ return sd.uid == id2 && sd.parentUid == pid && sd.name =="Testing" && sd.frac == Catch::Approx(0.7);};
+    REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
+  }
+  {
+    auto cmp = [id3, pid2](fullSubProjectData & sd){ return sd.uid == id3 && sd.parentUid == pid2 && sd.name == "Important Title" && sd.frac == Catch::Approx(0.23);};
+    REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
+  }
+
+}
+TEST_CASE("List fetch - subprojects by parent", "[Database]"){
+  databaseStore theDB{"./InputData/KnownDatabase.db"};
+  auto pid = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+  auto id  = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
+  auto id2 = proIds::Uuid("{de58a6f8-d0bb-46c8-af18-aed15e92060c}");
+  auto bad_pid = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+
+  auto lst = theDB.fetchSubprojectListForParents({pid});// Takes a vector, pass single-el-vec
+  REQUIRE(lst.size() == 2);
+  {
+    auto cmp = [id, pid](fullSubProjectData & sd){ return sd.uid == id && sd.parentUid == pid && sd.name =="Documentation" && sd.frac == Catch::Approx(0.3);};
+    REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
+  }
+  {
+    auto cmp = [id2, pid](fullSubProjectData & sd){ return sd.uid == id2 && sd.parentUid == pid && sd.name =="Testing" && sd.frac == Catch::Approx(0.7);};
+    REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
+  }
+  //Nothing assoc with the other parent
+  {
+    auto cmp = [bad_pid](fullSubProjectData & sd){ return sd.parentUid == bad_pid;};
+    REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) == lst.end());
+  }
+
+}
 // Write
 fullProjectData writeProj(databaseStore & theDB, proIds::Uuid & pid){
 
@@ -239,6 +289,7 @@ TEST_CASE("Deleting One Off", "[Database]"){
 
 // Tracker (timestamps) -----------------------------------------------------------------------
 // Fetch tracker
+// NOTE: tracker entries _are_ guaranteed to be in time order
 TEST_CASE("Reading Known Data - Tracker", "[Database]"){
   databaseStore theDB{"./InputData/KnownDatabase.db"};
   auto pid = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");

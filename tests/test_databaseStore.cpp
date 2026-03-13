@@ -10,13 +10,13 @@
 // Connecting and setup -----------------------------------------------------------------
 
 TEST_CASE("Connect", "[Database]"){
-  databaseStore theDB{"TestDatabase.db"};
+  databaseStore theDB{"./Scratch/TestDatabase.db"};
 
   REQUIRE(theDB.isConnected());
   REQUIRE(theDB.tablesReady(false));
 }
 TEST_CASE("Clear", "[Database]"){
-  databaseStore theDB{"TestDatabase.db"};
+  databaseStore theDB{"./Scratch/TestDatabase.db"};
   REQUIRE_THROWS(theDB.clearDB());
   theDB.clearDB();
   REQUIRE_FALSE(theDB.tablesReady(false));
@@ -24,30 +24,30 @@ TEST_CASE("Clear", "[Database]"){
 
 TEST_CASE("Bad Table", "[Database]"){
   auto init = [](){
-    databaseStore theDB{"BadTestDatabase.db"};
+    databaseStore theDB{"./InputData/BadTestDatabase.db"};
   };
   REQUIRE_THROWS(init());
 }
 TEST_CASE("Bad File", "[Database]"){
   auto init = [](){
-    databaseStore theDB{"BadFileName.db"};
+    databaseStore theDB{"./InputData/BadFileName.db"};
   };
   REQUIRE_THROWS(init());
 }
 TEST_CASE("Unreadable File", "[Database]"){
   auto init = [](){
-    databaseStore theDB{"UnreadableFile.db"};
+    databaseStore theDB{"InputData/UnreadableFile.db"};
   };
   REQUIRE_THROWS(init());
 }
 TEST_CASE("Read Only File", "[Database]"){
   auto init = [](){
-    databaseStore theDB{"ReadOnlyFile.db"};
+    databaseStore theDB{"InputData/ReadOnlyFile.db"};
   };
   REQUIRE_THROWS(init());
 }
 TEST_CASE("Bad File 2", "[Database]"){
-  databaseStore theDB{"TestDatabase2.db"};
+  databaseStore theDB{"./Scratch/TestDatabase2.db"};
   REQUIRE_THROWS(theDB.closeDB());
 
   REQUIRE_THROWS(theDB.tablesReady());
@@ -56,7 +56,7 @@ TEST_CASE("Bad File 2", "[Database]"){
 // Projects -----------------------------------------------------------------------------
 
 TEST_CASE("Reading Known Data - Project", "[Database]"){
-  databaseStore theDB{"KnownDatabase.db"};
+  databaseStore theDB{"./InputData/KnownDatabase.db"};
   auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
   auto pd = theDB.readProject(id);
 
@@ -66,7 +66,7 @@ TEST_CASE("Reading Known Data - Project", "[Database]"){
   //TODO - start and end
 }
 TEST_CASE("Reading Known Data - Sub", "[Database]"){
-  databaseStore theDB{"KnownDatabase.db"};
+  databaseStore theDB{"./InputData/KnownDatabase.db"};
   auto id = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
   auto sd = theDB.readSubproject(id);
 
@@ -76,7 +76,7 @@ TEST_CASE("Reading Known Data - Sub", "[Database]"){
   REQUIRE(sd.parentUid == proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}"));
 }
 TEST_CASE("Reading Known Data - Oneoff", "[Database]"){
-  databaseStore theDB{"KnownDatabase.db"};
+  databaseStore theDB{"./InputData/KnownDatabase.db"};
   auto id = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
   auto oo = theDB.readOneOff(id);
 
@@ -87,7 +87,7 @@ TEST_CASE("Reading Known Data - Oneoff", "[Database]"){
 
 // Fetch lists
 TEST_CASE("List fetch - projects", "[Database]"){
-  databaseStore theDB{"KnownDatabase.db"};
+  databaseStore theDB{"./InputData/KnownDatabase.db"};
   auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
   auto id2 = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
 
@@ -125,7 +125,7 @@ fullProjectData writeProj(databaseStore & theDB, proIds::Uuid & pid){
   return pd;
 }
 TEST_CASE("Writing Project", "[Database]"){
-  databaseStore theDB{"TestDatabase2.db"};
+  databaseStore theDB{"./Scratch/TestDatabase2.db"};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -141,7 +141,7 @@ TEST_CASE("Writing Project", "[Database]"){
 }
 
 TEST_CASE("Writing Sub Project", "[Database]"){
-  databaseStore theDB{"TestDatabase2.db"};
+  databaseStore theDB{"./Scratch/TestDatabase2.db"};
 
   uniqueIdGenerator theGen;
   auto id = theGen.getNextId();
@@ -165,7 +165,7 @@ TEST_CASE("Writing Sub Project", "[Database]"){
   REQUIRE(sd.parentUid == sd_in.parentUid);
 }
 TEST_CASE("Writing One Off", "[Database]"){
-  databaseStore theDB{"TestDatabase2.db"};
+  databaseStore theDB{"./Scratch/TestDatabase2.db"};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -185,7 +185,7 @@ TEST_CASE("Writing One Off", "[Database]"){
 //Delete
 
 TEST_CASE("Deleting Project", "[Database]"){
-  databaseStore theDB{"TestDatabase2.db"};
+  databaseStore theDB{"./Scratch/TestDatabase2.db"};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -198,7 +198,7 @@ TEST_CASE("Deleting Project", "[Database]"){
 }
 
 TEST_CASE("Deleting Sub Project", "[Database]"){
-  databaseStore theDB{"TestDatabase2.db"};
+  databaseStore theDB{"./Scratch/TestDatabase2.db"};
 
   uniqueIdGenerator theGen;
   auto id = theGen.getNextId();
@@ -219,7 +219,7 @@ TEST_CASE("Deleting Sub Project", "[Database]"){
 
 }
 TEST_CASE("Deleting One Off", "[Database]"){
-  databaseStore theDB{"TestDatabase2.db"};
+  databaseStore theDB{"./Scratch/TestDatabase2.db"};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -240,7 +240,7 @@ TEST_CASE("Deleting One Off", "[Database]"){
 // Tracker (timestamps) -----------------------------------------------------------------------
 // Fetch tracker
 TEST_CASE("Reading Known Data - Tracker", "[Database]"){
-  databaseStore theDB{"KnownDatabase.db"};
+  databaseStore theDB{"./InputData/KnownDatabase.db"};
   auto pid = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
   auto sid1 = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
   auto sid2 = proIds::Uuid("{de58a6f8-d0bb-46c8-af18-aed15e92060c}");
@@ -254,7 +254,7 @@ TEST_CASE("Reading Known Data - Tracker", "[Database]"){
 }
 
 TEST_CASE("Reading Known Data - Tracker with Range", "[Database]"){
-  databaseStore theDB{"KnownDatabase.db"};
+  databaseStore theDB{"./InputData/KnownDatabase.db"};
   auto pid = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
   auto sid1 = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
   auto sid2 = proIds::Uuid("{de58a6f8-d0bb-46c8-af18-aed15e92060c}");
@@ -266,21 +266,21 @@ TEST_CASE("Reading Known Data - Tracker with Range", "[Database]"){
 }
 //Fetch at
 TEST_CASE("Reading Known Data - Tracker At", "[Database]"){
-  databaseStore theDB{"KnownDatabase.db"};
+  databaseStore theDB{"./InputData/KnownDatabase.db"};
   auto sid1 = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
   auto stamp = theDB.fetchTrackerAt(3000);
   REQUIRE(stamp == timeStamp{689, sid1});
 }
 //Fetch latest
 TEST_CASE("Reading Known Data - Latest Tracker", "[Database]"){
-  databaseStore theDB{"KnownDatabase.db"};
+  databaseStore theDB{"./InputData/KnownDatabase.db"};
   auto stamp = theDB.fetchLatestTrackerEntry();
   REQUIRE(stamp == timeStamp{8001, proIds::NullUid});
 }
 
 //Write tracker
 TEST_CASE("Writing Tracker" "[Database]"){
-  databaseStore theDB{"TestDatabase2.db"};
+  databaseStore theDB{"./Scratch/TestDatabase2.db"};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -295,7 +295,7 @@ TEST_CASE("Writing Tracker" "[Database]"){
 
 //Delete tracker
 TEST_CASE("Delete Tracker By ID" "[Database]"){
-  databaseStore theDB{"TestDatabase2.db"};
+  databaseStore theDB{"./Scratch/TestDatabase2.db"};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -319,7 +319,7 @@ TEST_CASE("Delete Tracker By ID" "[Database]"){
 //Digests
 // Read Known data
 TEST_CASE("Reading Known Data - Digest Periods", "[Database]"){
-  databaseStore theDB{"KnownDatabase.db"};
+  databaseStore theDB{"./InputData/KnownDatabase.db"};
   auto dp = theDB.fetchDigestPeriods();
 
   REQUIRE(dp[0].duration == 100);
@@ -330,7 +330,7 @@ TEST_CASE("Reading Known Data - Digest Periods", "[Database]"){
   //TODO start and end
 }
 TEST_CASE("Reading Known Data - Digest By Period", "[Database]"){
-  databaseStore theDB{"KnownDatabase.db"};
+  databaseStore theDB{"./InputData/KnownDatabase.db"};
   auto dp = theDB.fetchDigestPeriods();
 
   auto dig = theDB.fetchDigestEntries(dp[0]);
@@ -348,7 +348,7 @@ TEST_CASE("Reading Known Data - Digest By Period", "[Database]"){
   }
 }
 TEST_CASE("Reading Known Data - Digest By Time", "[Database]"){
-  databaseStore theDB{"KnownDatabase.db"};
+  databaseStore theDB{"./InputData/KnownDatabase.db"};
   auto dig = theDB.fetchDigestEntries(100, 301);
 
  {
@@ -368,7 +368,7 @@ TEST_CASE("Reading Known Data - Digest By Time", "[Database]"){
 // Read and write state
 
 TEST_CASE("Round trip State", "[Database]"){
-  databaseStore theDB{"TestDatabase2.db"};
+  databaseStore theDB{"./Scratch/TestDatabase2.db"};
 
   theDB.writeItem<long long>("conf", 123);
   auto item = theDB.readItem<long long>("conf");

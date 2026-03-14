@@ -85,7 +85,7 @@ namespace proIds{
       friend std::ostream& operator<<(std::ostream& stream, const uidWrapper& uid);
 
       bool isProj(){
-        return Itag == uidTag::none;
+        return !isNull() && Itag == uidTag::none;
       }
       bool isNull(){
         return this->qID == QUuid();

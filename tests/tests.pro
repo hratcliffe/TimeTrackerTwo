@@ -13,6 +13,9 @@ QMAKE_LFLAGS += -g -fprofile-instr-generate -fcoverage-mapping
 
 INCLUDEPATH += $$PWD/../include
 
+MOC_DIR = ./moc
+OBJECTS_DIR = ./obj
+
 CATCHDIR = /Users/heather/Documents/Personal/Code/Code/Tools/Catch2/lib
 INCLUDEPATH += $$CATCHDIR/include
 
@@ -32,4 +35,15 @@ SOURCES += \
     test_dataObjects.cpp \
     test_dataInterface.cpp \
     test_TrackerData.cpp
+
+HEADERS += ../include/dataObjects.h \
+           ../include/idGenerators.h \
+           ../include/project.h \
+           ../include/projectbutton.h \
+           ../include/projectManager.h \
+           ../include/TrackerData.h \
+           ../include/dataInterface.h \
+           ../include/timeWrapper.h \
+           ../include/timestampProcessor.h \
+           ../include/appClock.h
 

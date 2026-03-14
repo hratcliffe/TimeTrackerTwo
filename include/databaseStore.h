@@ -9,7 +9,7 @@
 
 #include "dataObjects.h"
 #include "idGenerators.h"
-
+//TODO - configurable error logging!
 
 class databaseStore{
 
@@ -413,7 +413,7 @@ class databaseStore{
         // date should NOT be null- it will be used
 
         // Assuming for now that '0' is the null date
-        std::string cmd = "SELECT id, name, FTE, start_date, end_date FROM projects WHERE (start_date <= {} or start_date == {}) AND (end_date >= {} OR end_date == {}) ORDER by name;";
+        std::string cmd = "SELECT id, name, FTE, start_date, end_date FROM projects WHERE (start_date <= ? or start_date == ?) AND (end_date >= ? OR end_date == ?) ORDER by name;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_int64(prep_cmd, 1, date);

@@ -40,14 +40,18 @@ TEST_CASE("Int -Read Only File", "[Database]"){
   };
   REQUIRE_THROWS(init());
 }
-/*
+
 TEST_CASE("Int -Bad File 2", "[Database]"){
   databaseIO theDB{"./Scratch/TestDatabase2I.db"};
   REQUIRE_THROWS(theDB.closeDB());
-
-  REQUIRE_THROWS(theDB.tablesReady());
 }
-*/
+
+TEST_CASE("Int- Reference Time", "[Database]"){
+  databaseIO theDB{"./Scratch/TestDatabase2I.db"};
+  theDB.writeReferenceTime(0);
+  REQUIRE((false)); // Not implemented function, test cannot be performed
+}
+
 // Projects -----------------------------------------------------------------------------
 
 TEST_CASE("Int -Reading Known Data - Project", "[Database]"){
@@ -383,7 +387,7 @@ TEST_CASE("Int -Edit subproject", "[Database]"){
   //Write with a modification
   sd.name = "Modified Subproject";
   sd.frac = 0.21;
-  theDB.writeSubproject(sd);
+  theDB.updateSubproject(sd);
 
   // Read it back:
   auto sd_in = theDB.readSubproject(id);

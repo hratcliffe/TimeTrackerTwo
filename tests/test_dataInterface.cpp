@@ -9,13 +9,6 @@
 
 // Connecting and setup -----------------------------------------------------------------
 
-TEST_CASE("Int -Connect", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase.db"};
-//TODO - something
-//  REQUIRE(theDB.isConnected());
- // REQUIRE(theDB.tablesReady(false));
-}
-
 TEST_CASE("Int -Bad Table", "[Database]"){
   auto init = [](){
     databaseIO theDB{"./InputData/BadTestDatabase.db"};

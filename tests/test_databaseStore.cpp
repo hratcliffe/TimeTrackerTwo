@@ -717,3 +717,90 @@ TEST_CASE("Update Tracker", "[Database]"){
   REQUIRE(lst[2].time == 1900);
 
 }
+
+TEST_CASE("Update Digests", "[Database]"){
+
+  databaseStore theDB{"./Scratch/TestDatabase5.db"};
+
+  // Write for TWO digest periods
+  timeDigestPeriod tp;
+  tp.start = 100;
+  tp.duration = 600;
+  tp.displayName = "Ten Mins";
+  tp.id = 1;
+
+  uniqueIdGenerator theGen;
+  std::vector<long> times{15, 201, 73};
+  std::vector<proIds::Uuid> pids {theGen.getNextId(), theGen.getNextId(), theGen.getNextId()};
+  std::vector<timeDigestEntry> entries;
+  for(int i=0; i< times.size(); i++){
+    timeDigestEntry te;
+    te.projectUid = pids[i];
+    te.duration = times[i];
+    te.period = 1; // Fresh database, sequential ids
+    entries.push_back(te);
+  }
+  theDB.writeDigestEntries(tp, entries);
+
+  timeDigestPeriod tp2;
+  tp2.start = 700;
+  tp2.duration = 600;
+  tp2.displayName = "Ten Mins";
+  tp2.id = 2;
+  std::vector<long> times2{11, 34, 91};
+  std::vector<timeDigestEntry> entries2;
+  for(int i=0; i< times.size(); i++){
+    timeDigestEntry te;
+    te.projectUid = pids[i];
+    te.duration = times2[i];
+    te.period = 2; // Fresh database, sequential ids
+    entries2.push_back(te);
+  }
+  theDB.writeDigestEntries(tp2, entries2);
+
+  //Double check
+  auto entries_in = theDB.fetchDigestEntries(tp);
+  REQUIRE(entries_in.size() == 3);
+  for(int i=0; i< 3; i++){
+    // Check all 3 ids present
+    auto check = [pids, i](timeDigestEntry te){return te.projectUid == pids[i];};
+    REQUIRE(std::find_if(entries_in.begin(), entries_in.end(), check) != entries_in.end());
+  }
+
+  //Rewrite everything for pid@1 to a new pid
+  auto pid = theGen.getNextId();
+  theDB.updateDigestEntriesId(pids[1], pid);
+
+  // pid@1 must NOT be present, new pid  should be, and @0 and @2 should be as before
+  // Now check both periods
+  entries_in = theDB.fetchDigestEntries(tp);
+  REQUIRE(entries_in.size() == 3);
+  for(int i=0; i< 3; i++){
+    // Check all 3 ids present
+    auto tpid = pids[i];
+    auto time = times[i];
+    if(i == 1) tpid = pid;
+    auto check = [tpid, time](timeDigestEntry te){return te.projectUid == tpid && te.duration == time;};
+    REQUIRE(std::find_if(entries_in.begin(), entries_in.end(), check) != entries_in.end());
+  }
+  auto tpid = pids[1];
+  auto time = times[1];
+  auto check = [tpid, time](timeDigestEntry te){return te.projectUid == tpid && te.duration == time;};
+  REQUIRE(std::find_if(entries_in.begin(), entries_in.end(), check) == entries_in.end());
+
+  entries_in = theDB.fetchDigestEntries(tp2);
+  REQUIRE(entries_in.size() == 3);
+  for(int i=0; i< 3; i++){
+    // Check all 3 ids present
+    auto tpid = pids[i];
+    auto time = times2[i];
+    if(i == 1) tpid = pid;
+    auto check = [tpid, time](timeDigestEntry te){return te.projectUid == tpid && te.duration == time;};
+    REQUIRE(std::find_if(entries_in.begin(), entries_in.end(), check) != entries_in.end());
+  }
+  tpid = pids[1];
+  time = times2[1];
+  auto check2 = [tpid, time](timeDigestEntry te){return te.projectUid == tpid && te.duration == time;};
+  REQUIRE(std::find_if(entries_in.begin(), entries_in.end(), check2) == entries_in.end());
+
+}

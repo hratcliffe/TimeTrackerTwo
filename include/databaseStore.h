@@ -570,7 +570,7 @@ class databaseStore{
         return ret;
     }
     std::vector<fullOneOffProjectData> fetchOneOffsInRange(timecode start, timecode end){
-        std::string cmd =  "SELECT ts.time, oo.id, oo.name, oo.descr FROM timestamps AS ts INNER JOIN oneoffs AS oo ON ts.project_id = oo.id WHERE ts.time > ? and ts.time < ?;";
+        std::string cmd =  "SELECT ts.time, oo.id, oo.name, oo.descr FROM timestamps AS ts INNER JOIN oneoffs AS oo ON ts.project_id = oo.id WHERE ts.time > ? and ts.time < ? ORDER BY ts.time;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_int64(prep_cmd, 1, start);

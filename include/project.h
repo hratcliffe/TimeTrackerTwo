@@ -83,6 +83,7 @@ class subproject: public projectLike{
     subproject(const fullSubProjectData & data){
       name = data.name;
       frac = data.frac;
+      // TODO - Check is not done on sub tag on id here
       uid = data.uid;
       parentUid = data.parentUid;
     }
@@ -114,8 +115,6 @@ class project : public projectLike{
 
     bool active; /**< \brief Flag to allow project to be deactivated for any reason*/
     float FTE;/**< \brief Fraction of FTE for this project */
-    bool hasStart=false, hasEnd=false; /**< Whether or not there is a start or end */
-    timecode start=timecodeNull, end=timecodeNull; /**< Time for the start and end */
     std::vector<proIds::Uuid> subprojects;/**< \brief Subprojects belonging to this project */
   public:
     project() = default;

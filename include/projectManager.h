@@ -21,9 +21,23 @@ class projectManager{
 
     std::map<proIds::Uuid, project> projects; /**< \brief Project store. Contains projects only*/
     std::map<proIds::Uuid, subproject> subprojects; /**< \brief Subproject store. Contains subprojects only*/
-    float activeFTE = 0.0;
     float maxFTE = 1.0;
     void setupGenerator(){this->gen = new uniqueIdGenerator();}; 
+    float availableSubFracImpl(const project & proj){
+      float total = 0.0;
+      for(auto & sub : proj.subprojects){
+        total += subprojects[sub].getFrac();
+      }
+      return 1.0 - total;
+    }
+    float allocatedFTEImpl(){
+      float fte = 0.0;
+      for(auto & proj: projects){
+        if(proj.second.active) fte += proj.second.FTE;
+      }
+      return fte;
+    }
+
   public:
 
     projectManager(){setupGenerator();};
@@ -32,23 +46,24 @@ class projectManager{
     projectManager& operator=(const projectManager&)=delete;
 
     int projectCount(){return projects.size();}
-    float allocatedFTE(){return activeFTE;}
-    float availableFTE(){return maxFTE - activeFTE;}
-    bool checkFTE(float requested){return (activeFTE + requested) <= maxFTE + 1e-5;} //Tiny rounding error allowance
+    int subprojectCount(){return subprojects.size();}
+    int subprojectCount(proIds::Uuid const & parent){
+      if(projects.count(parent) > 0){
+        return projects[parent].subprojects.size();
+      }else{
+        return 0;
+      }
+    }
+    float allocatedFTE(){return allocatedFTEImpl();}
+    float availableFTE(){return maxFTE - allocatedFTE();}
+    bool checkFTE(float requested){return (allocatedFTE() + requested) <= maxFTE + 1e-5;} //Tiny rounding error allowance
 
     float availableSubFrac(const proIds::Uuid & proj){
       if(projects.count(proj) > 0){
-        return availableSubFrac(projects[proj]);
+        return availableSubFracImpl(projects[proj]);
       }else{
         return 0.0;
       }
-    }
-    float availableSubFrac(const project & proj){
-      float total = 0.0;
-      for(auto & sub : proj.subprojects){
-        total += subprojects[sub].getFrac();
-      }
-      return 1.0 - total;
     }
     bool checkFrac(const proIds::Uuid & proj){
       return availableSubFrac(proj) > 0.0;
@@ -64,7 +79,6 @@ class projectManager{
       if(!checkFTE(dat.FTE)) throw std::runtime_error("Not enough FTE to add project");
       project tmp = createProject(dat); 
       projects[tmp.getUid()] = tmp;
-      activeFTE += tmp.FTE;
       return tmp.getUid();
     }
 
@@ -80,10 +94,18 @@ class projectManager{
       // Assume sub IS valid and parent exists
       auto & parent = projects[p_id];
       parent.subprojects.erase(std::find(parent.subprojects.begin(), parent.subprojects.end(), s_id));
+      //TODO - should also reset the sub to parent NUll
     }
 
     bool isProject(proIds::Uuid id ){return projects.count(id) > 0;};
     bool isSubProject(proIds::Uuid id ){return subprojects.count(id) > 0;};
+    bool isActiveProject(proIds::Uuid id){
+      if(isProject(id)){
+        return projects[id].active;
+      }else{
+        return false;
+      }
+    }
 
     proIds::Uuid getNextOneOffId(){
       return gen->getNextId(proIds::uidTag::oneoff);
@@ -99,7 +121,6 @@ class projectManager{
       if(tmp.hasEnd && tmp.end < now) active = false;
       tmp.active = active;
       projects[id] = tmp;
-      activeFTE += dat.FTE;
     }
 
     void restoreSubproject(const fullSubProjectData & dat){
@@ -184,6 +205,7 @@ class projectManager{
       if(projects.count(p_id) > 0){
         removeSubproject(p_id, uid);
       }else{
+        //TODO - should have a way to delete it even in this case!
         throw std::runtime_error("This subproject has no parent");
       }
       subprojects.erase(uid);
@@ -255,19 +277,18 @@ class projectManager{
         details.name = sub.name;
         details.frac = sub.frac;
         details.active = true;
-
       }
       return details;
     }
     projectDetails getDetails(proIds::Uuid uid){
       projectDetails details; 
-      details.uid = uid;
       if(projects.count(uid) > 0){
         auto & proj = projects[uid];
+        details.uid = uid;
         details.name = proj.name;
         details.FTE = proj.FTE;
         details.subprojectCount = proj.subprojects.size();
-        details.assignedSubprojFraction = 1.0 - availableSubFrac(proj);
+        details.assignedSubprojFraction = 1.0 - availableSubFracImpl(proj);
         details.active = true;
         if(proj.subprojects.size()> 0){
           for(auto & sub_id: proj.subprojects){

@@ -36,6 +36,9 @@ NOTE: after a period (default 100 days), only summary info is available
 
 // TODO - add testing
 
+//TODO - available frac does not seem to get displayed? Nothing even calls availableSubFrac
+// TODO - fix the case of subProject -> subproject
+
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     appConfig config;

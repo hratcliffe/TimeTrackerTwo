@@ -660,15 +660,16 @@ class databaseStore{
         return ret;
     }
 
-    void deleteTrackerEntry(proIds::Uuid const & id){
-        const std::string id_str = id.to_string();
+    void deleteTrackerEntry(const timeStamp & stamp){
+        const std::string id_str = stamp.projectUid.to_string();
+        const long long time = stamp.time;
         std::string cmd;
         sqlite3_stmt * prep_cmd;
         int err = 0;
-        cmd = "DELETE FROM timestamps WHERE project_id = ?;";
-        std::cout<< cmd<<" "<<id_str<<std::endl;
+        cmd = "DELETE FROM timestamps WHERE time = ? and project_id = ?;";
         err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
-        sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
+        sqlite3_bind_int64(prep_cmd, 1, time);
+        sqlite3_bind_text(prep_cmd, 2, id_str.c_str(), id_str.length(), SQLITE_STATIC);
         err = sqlite3_step(prep_cmd);
         if(err == SQLITE_DONE) err = SQLITE_OK;
         if(err != SQLITE_OK){

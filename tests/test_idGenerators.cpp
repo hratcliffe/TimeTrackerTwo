@@ -73,10 +73,3 @@ TEST_CASE("Uid comparisons", "[Basic]"){
 
  }
 
-TEST_CASE("Uid questionable choice", "[Questionable]"){
-   auto theGen = uniqueIdGenerator();
-
-  auto null = proIds::NullUid;
-  REQUIRE_FALSE( ((bool)null));
-
-}

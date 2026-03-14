@@ -94,7 +94,7 @@ class projectManager{
       // Assume sub IS valid and parent exists
       auto & parent = projects[p_id];
       parent.subprojects.erase(std::find(parent.subprojects.begin(), parent.subprojects.end(), s_id));
-      //TODO - should also reset the sub to parent NUll
+      subprojects[s_id].parentUid = proIds::NullUid;
     }
 
     bool isProject(proIds::Uuid id ){return projects.count(id) > 0;};

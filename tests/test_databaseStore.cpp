@@ -489,6 +489,9 @@ TEST_CASE("Round trip State", "[Database]"){
   theDB.writeItem<long long>("conf", 123);
   auto item = theDB.readItem<long long>("conf");
   REQUIRE(item == 123);
+}
+TEST_CASE("Round trip Config", "[Database]"){
+   databaseStore theDB{"./Scratch/TestDatabase2.db"};
 
   theDB.writeItem<std::string>("conf2", "XYZ");
   auto item2 = theDB.readItem<std::string>("conf2");

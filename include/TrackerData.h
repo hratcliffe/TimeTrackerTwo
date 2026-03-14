@@ -409,7 +409,11 @@ Q_OBJECT
         NOTE: do we also want to support idea of promoting sub to parent?
       */
       if(current == target && sub == sub_target) return; // Nothing to do
-      if( (current && !sub) && (target && !sub_target)){
+      bool current_has_subs = false;
+      if(current.isProj()){
+        current_has_subs = (thePM.subprojectCount(current) > 0);
+      }
+      if((current.isProj() && sub.isNull()) && (target.isProj() && sub_target.isNull()) && !current_has_subs){
         //Rewrite the timestamps
         dataHandler->rewriteTrackerProjectId(current, target);
         //Fetch the FTE for current and add it to target
@@ -422,7 +426,7 @@ Q_OBJECT
         dataHandler->deleteProject(current);
         // Delete from map
         thePM.deleteProjectById(current);
-      }else if(current && sub && target && sub_target){
+      }else if(current.isProj() && !sub.isNull() && target.isProj() && !sub_target.isNull()){
         auto firstParent = thePM.getParentId(current);
         if(firstParent == thePM.getParentId(target)){
           //Rewrite the timestamps
@@ -442,7 +446,7 @@ Q_OBJECT
           }else{
             throw std::runtime_error("Not implemented merge for this case (non shared parent)");
           }
-        }else if(!current || !target){
+        }else if(current.isNull() || target.isNull()){
           throw std::runtime_error("Missing project for merge");
         }else{
           throw std::runtime_error("Not implemented merge for this case");

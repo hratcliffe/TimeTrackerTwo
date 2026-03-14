@@ -414,15 +414,22 @@ TEST_CASE("Delete Tracker By ID" "[Database]"){
   timeStamp stamp2{100023, pid2};
   theDB.writeTrackerEntry(stamp2);
 
-  theDB.deleteTrackerEntry(pid2);
-
+  //Both present:
   auto stamps_in = theDB.fetchTrackerEntries();
   auto check = [pid](timeStamp t){return t.projectUid == pid;};
   auto check2 = [pid2](timeStamp t){return t.projectUid == pid2;};
+  REQUIRE( std::find_if(stamps_in.begin(), stamps_in.end(), check) != stamps_in.end());
+  REQUIRE( std::find_if(stamps_in.begin(), stamps_in.end(), check2) != stamps_in.end());
+
+  theDB.deleteTrackerEntry(stamp2);
+
+  stamps_in = theDB.fetchTrackerEntries();
   REQUIRE( std::find_if(stamps_in.begin(), stamps_in.end(), check) != stamps_in.end()); // First IS present
   REQUIRE( std::find_if(stamps_in.begin(), stamps_in.end(), check2) == stamps_in.end()); // Second is NOT
 
 }
+
+//Delete tracker in interval
 
 
 //Digests

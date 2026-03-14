@@ -891,7 +891,7 @@ class databaseStore{
         err = sqlite3_step(prep_cmd);
         if(err == SQLITE_DONE) err = SQLITE_OK;
         if(err != SQLITE_OK){
-            throw std::runtime_error("Failed modify project ID in time digests");
+          throw std::runtime_error("Failed to modify project ID in time digests");
         }
         sqlite3_finalize(prep_cmd);
 

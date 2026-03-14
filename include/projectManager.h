@@ -21,9 +21,16 @@ class projectManager{
 
     std::map<proIds::Uuid, project> projects; /**< \brief Project store. Contains projects only*/
     std::map<proIds::Uuid, subproject> subprojects; /**< \brief Subproject store. Contains subprojects only*/
-    float activeFTE = 0.0;
     float maxFTE = 1.0;
     void setupGenerator(){this->gen = new uniqueIdGenerator();}; 
+    float allocatedFTEImpl(){
+      float fte = 0.0;
+      for(auto & proj: projects){
+        if(proj.second.active) fte += proj.second.FTE;
+      }
+      return fte;
+    }
+
   public:
 
     projectManager(){setupGenerator();};
@@ -32,9 +39,9 @@ class projectManager{
     projectManager& operator=(const projectManager&)=delete;
 
     int projectCount(){return projects.size();}
-    float allocatedFTE(){return activeFTE;}
-    float availableFTE(){return maxFTE - activeFTE;}
-    bool checkFTE(float requested){return (activeFTE + requested) <= maxFTE + 1e-5;} //Tiny rounding error allowance
+    float allocatedFTE(){return allocatedFTEImpl();}
+    float availableFTE(){return maxFTE - allocatedFTE();}
+    bool checkFTE(float requested){return (allocatedFTE() + requested) <= maxFTE + 1e-5;} //Tiny rounding error allowance
 
     float availableSubFrac(const proIds::Uuid & proj){
       if(projects.count(proj) > 0){
@@ -64,7 +71,6 @@ class projectManager{
       if(!checkFTE(dat.FTE)) throw std::runtime_error("Not enough FTE to add project");
       project tmp = createProject(dat); 
       projects[tmp.getUid()] = tmp;
-      activeFTE += tmp.FTE;
       return tmp.getUid();
     }
 
@@ -107,7 +113,6 @@ class projectManager{
       if(tmp.hasEnd && tmp.end < now) active = false;
       tmp.active = active;
       projects[id] = tmp;
-      activeFTE += dat.FTE;
     }
 
     void restoreSubproject(const fullSubProjectData & dat){

@@ -96,6 +96,7 @@ TEST_CASE("Subproject Creation", "[Basic]"){
   sd.name = "Subproj alpha";
   sd.frac = 0.21;
   sd.uid = theGen.getNextId();
+  sd.uid.tag(proIds::uidTag::sub);
   sd.parentUid = theGen.getNextId();
 
   subproject s{sd};
@@ -199,6 +200,7 @@ TEST_CASE("Subproject to Selectable", "[Basic]"){
   sd.name = "Test SubProj";
   sd.frac = 0.3;
   sd.uid = theGen.getNextId();
+  sd.uid.tag(proIds::uidTag::sub);
   subproject sp{sd};
   
   selectableEntity s = sp;

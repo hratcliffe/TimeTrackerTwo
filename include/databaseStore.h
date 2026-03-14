@@ -56,6 +56,8 @@ class databaseStore{
         cmds["projects"] = "CREATE TABLE IF NOT EXISTS projects(id CHAR(36) PRIMARY KEY, name TEXT, FTE REAL, start_date INTEGER, end_date INTEGER);";
         cmds["subprojects"] = "CREATE TABLE IF NOT EXISTS subprojects(id CHAR(36) PRIMARY KEY, name TEXT, frac REAL, parent_id CHAR(36), FOREIGN KEY(parent_id) REFERENCES projects(id));";
 
+        // NOTE: ideally would have a foreign key here BUT since it can be either a project OR a sub OR a one-off
+        // that would require an additional table
         cmds["timestamps"] = "CREATE TABLE IF NOT EXISTS timestamps(id INTEGER PRIMARY KEY, time INTEGER, project_id CHAR(36));";
         cmds["digest_periods"] = "CREATE TABLE IF NOT EXISTS digest_periods(id INTEGER PRIMARY KEY, start INTEGER, duration INTEGER);";
         //NOTE project id can be a project OR a subproject
@@ -631,6 +633,28 @@ class databaseStore{
       std::string cmd = "SELECT time, project_id from timestamps t "+where_clause + order_clause + ';';
       sqlite3_stmt * prep_cmd;
       int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr); 
+      std::vector<timeStamp> ret;
+      while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            timeStamp stamp;
+            stamp.time = sqlite3_column_int64(prep_cmd, 0);
+            stamp.projectUid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1)));
+            ret.push_back(stamp);
+        }
+        if(err != SQLITE_DONE){
+            throw std::runtime_error("Failed to fetch tracker entries");
+        }
+        sqlite3_finalize(prep_cmd);
+        return ret;
+    }
+
+    std::vector<timeStamp> fetchTrackerEntries(proIds::Uuid const & id){
+      const std::string id_str = id.to_string();
+
+      std::string cmd = "SELECT time, project_id from timestamps t WHERE project_id = ? ORDER BY time;";
+      sqlite3_stmt * prep_cmd;
+      int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+      sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
+
       std::vector<timeStamp> ret;
       while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
             timeStamp stamp;

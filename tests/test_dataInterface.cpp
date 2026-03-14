@@ -452,12 +452,12 @@ TEST_CASE("Int -Writing Tracker" "[Database]"){
 
 //Delete tracker
 TEST_CASE("Int -Delete Tracker By ID" "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db"};
+  databaseIO theDB{"./Scratch/TestDatabase3I.db"};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
   auto pid2 = theGen.getNextId();
-  timeStamp stamp{879, pid}; // Note may have one at 854 from previous test
+  timeStamp stamp{879, pid};
   theDB.writeTrackerEntry(stamp);
   timeStamp stamp2{100023, pid2};
   theDB.writeTrackerEntry(stamp2);

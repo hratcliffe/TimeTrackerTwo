@@ -340,6 +340,36 @@ TEST_CASE("Int -Edit project", "[Database]"){
   REQUIRE(pd.end == pd_in.end);
 }
 
+TEST_CASE("Int -Edit subproject", "[Database]"){
+  databaseIO theDB{"./Scratch/TestDatabase2.db"};
+
+  uniqueIdGenerator theGen;
+  auto pid = theGen.getNextId();
+  auto id = theGen.getNextId();
+  auto pd = writeProjI(theDB, pid);
+  // Read it back:
+
+  fullSubProjectData sd;
+  sd.name = "Written Subproject";
+  sd.frac = 0.3;
+  sd.uid = id;
+  sd.parentUid = pid;
+
+  theDB.writeSubproject(sd);
+
+  //Write with a modification
+  sd.name = "Modified Subproject";
+  sd.frac = 0.21;
+  theDB.writeSubproject(sd);
+
+  // Read it back:
+  auto sd_in = theDB.readSubproject(id);
+
+  REQUIRE(sd.name == sd_in.name);
+  REQUIRE(sd.frac == sd_in.frac);
+  REQUIRE(sd.uid == sd_in.uid);
+  REQUIRE(sd.parentUid == sd_in.parentUid);
+}
 // Tracker (timestamps) -----------------------------------------------------------------------
 // Fetch tracker
 // NOTE: tracker entries _are_ guaranteed to be in time order

@@ -14,7 +14,7 @@ class dataIO{
     dataIO()=default;
     dataIO(std::string fileName); /**< \brief Constructor with file name */
     dataIO(const dataIO &other) = delete;
-    virtual ~dataIO()=0;
+    virtual ~dataIO()=default;
 
     virtual void writeReferenceTime(timecode time) = 0; /**< \brief Write a reference time for verification later*/
 

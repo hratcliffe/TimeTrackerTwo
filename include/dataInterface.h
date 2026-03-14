@@ -76,6 +76,7 @@ class databaseIO : public dataIO{
     databaseIO()=delete;
     databaseIO(std::string fileName): dbStore(fileName){;}; /**< \brief Constructor with file name */
     ~databaseIO(){;};
+    void closeDB(){dbStore.closeDB();}
     void writeReferenceTime(timecode time) override {
       // Implementation for writing reference time to database
       std::cerr<<"Writing reference time not implemented yet."<<std::endl;

@@ -220,7 +220,7 @@ class databaseStore{
         }
         sqlite3_finalize(prep_cmd);
     }
-    void writeSubProject(const fullSubProjectData & dat){
+    void writeSubproject(const fullSubProjectData & dat){
 
         //Unpacking
         const std::string & id = dat.uid.to_string();

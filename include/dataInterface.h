@@ -111,7 +111,7 @@ class databaseIO : public dataIO{
     }
     void writeSubproject(fullSubProjectData const &dat) override {
       // Implementation for writing subproject data to database
-        dbStore.writeSubProject(dat);
+        dbStore.writeSubproject(dat);
     }
     fullSubProjectData readSubproject(proIds::Uuid const & id) override {
       // Implementation for reading subproject data from database
@@ -121,7 +121,7 @@ class databaseIO : public dataIO{
       dbStore.deleteSubproject(id);
     }
     void updateSubproject(fullSubProjectData const & dat) override{
-      dbStore.writeSubProject(dat);
+      dbStore.writeSubproject(dat);
     }
 
     void writeOneOffProject(fullOneOffProjectData const & dat) override{

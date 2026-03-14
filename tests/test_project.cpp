@@ -41,6 +41,55 @@ TEST_CASE("Project Creation with ID", "[Basic]"){
   REQUIRE(str.find("0 subprojects") != std::string::npos);
 
 }
+
+TEST_CASE("Project Start/End dates", "[Basic]"){
+  fullProjectData pd;
+  uniqueIdGenerator theGen;
+  pd.name = "Test Proj";
+  pd.FTE = 0.3;
+  pd.uid = theGen.getNextId();
+  pd.useStart = true;
+  pd.start = 10;
+  pd.useEnd = true;
+  pd.end = 20;
+  project p{pd};
+
+  REQUIRE(p.getName() == pd.name);
+  REQUIRE(p.getUid() == pd.uid);
+  REQUIRE(p.getFTE() == pd.FTE);
+  auto ran = p.getDateRange();
+  REQUIRE(ran.first == pd.start);
+  REQUIRE(ran.second == pd.end);
+
+  //Alter and check again
+  p.setDateRange(77, 97);
+  ran = p.getDateRange();
+  REQUIRE(ran.first == 77);
+  REQUIRE(ran.second == 97);
+
+}
+TEST_CASE("Project Start/End dates - one ended", "[Basic]"){
+  fullProjectData pd;
+  uniqueIdGenerator theGen;
+  pd.name = "Test Proj";
+  pd.FTE = 0.3;
+  pd.uid = theGen.getNextId();
+  pd.useStart = false;
+  pd.useEnd = false;
+  project p{pd};
+
+  p.setDateRange(10, timecodeNull);
+  auto ran = p.getDateRange();
+  REQUIRE(ran.first == 10);
+  REQUIRE(ran.second == timecodeNull);
+
+  //Alter and check again
+  p.setDateRange(timecodeNull, 10);
+  ran = p.getDateRange();
+  REQUIRE(ran.second == 10);
+  REQUIRE(ran.first == timecodeNull);
+
+}
 TEST_CASE("Subproject Creation", "[Basic]"){
   fullSubProjectData sd;
   uniqueIdGenerator theGen;

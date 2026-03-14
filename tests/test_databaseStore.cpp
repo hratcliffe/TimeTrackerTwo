@@ -240,12 +240,12 @@ TEST_CASE("Writing Sub Project", "[Database]"){
   auto pd = writeProj(theDB, pid);
 
   fullSubProjectData sd;
-  sd.name = "Written SubProject";
+  sd.name = "Written Subproject";
   sd.frac = 0.3;
   sd.uid = id;
   sd.parentUid = pid;
 
-  theDB.writeSubProject(sd);
+  theDB.writeSubproject(sd);
 
   // Read it back:
   auto sd_in = theDB.readSubproject(id);
@@ -297,12 +297,12 @@ TEST_CASE("Deleting Sub Project", "[Database]"){
   auto pd = writeProj(theDB, pid);
 
   fullSubProjectData sd;
-  sd.name = "Written SubProject";
+  sd.name = "Written Subproject";
   sd.frac = 0.3;
   sd.uid = id;
   sd.parentUid = pid;
 
-  theDB.writeSubProject(sd);
+  theDB.writeSubproject(sd);
   theDB.deleteSubproject(id);
 
   // Read it back:

@@ -30,5 +30,6 @@ SOURCES += \
     test_databaseStore.cpp \
     test_projectManager.cpp \
     test_dataObjects.cpp \
+    test_dataInterface.cpp \
     test_TrackerData.cpp
 

@@ -105,7 +105,7 @@ TEST_CASE("Verifying a subproject", "[Basic]"){
 }
 
 // ------ Basic projectManager check facilities
-TEST_CASE("Uses and Available FTE", "[Basic]"){
+TEST_CASE("Used and Available FTE", "[Basic]"){
   projectManager pm;
   auto pd = createProj();
   pd.FTE = 0.3;
@@ -295,11 +295,73 @@ TEST_CASE("Restoring Time-specified Project - inactive", "[Basic]"){
 //Now describe, to check the active flag works
 
 //--------- Modifying --------------------------------------------------------------
+TEST_CASE("Updating Project FTE", "[Basic]"){
+  projectManager pm;
+  auto pd = createProj();
+  pd.FTE = 0.3;
+  proIds::Uuid proj = pm.addProject(pd);
+  //Adding another
+  pd.FTE = 0.35;
+  proIds::Uuid proj2 = pm.addProject(pd);
+
+  //Modifying the first one
+  pm.setFTE(proj, 0.25);
+  auto avail = pm.availableFTE();
+  auto used = pm.allocatedFTE();
+  REQUIRE(used == Catch::Approx(0.25+0.35).margin(margin));
+  REQUIRE( (avail+used) == Catch::Approx(1.0).margin(margin) );
+}
+
+TEST_CASE("Updating sub frac", "[Basic]"){
+  projectManager pm;
+  auto pid = pm.addProject(createProj());
+  auto proj = pm.addSubproject(createSubProj(), pid);
+  pm.addSubproject(createSubProj(), pid);
+  // 0.4 each - 0.2 left
+  // Update first to 0.33 -> 0.73 used, 0.27 left
+  pm.setFrac(proj, 0.33);
+  auto frac = pm.availableSubFrac(pid);
+  REQUIRE(frac == Catch::Approx(0.27).margin(margin));
+}
 
 //---------- Fetching Details -----------------------------------------------------
 
 //----------- Summarising ---------------------------------------------------------
+TEST_CASE("Summarising a project", "[Display]"){
+  projectManager pm;
+  auto pd = createProj();
+  proIds::Uuid proj = pm.addProject(pd);
+  std::string summ = pm.summariseProject(proj);
+  //Exact formatting may vary, but should contain at least name, FTE and sub count
+  REQUIRE(summ.find(pd.name) != std::string::npos);
+  REQUIRE(summ.find("40 %") != std::string::npos);
+  REQUIRE(summ.find("0 subprojects") != std::string::npos);
+}
+TEST_CASE("Summaring a project with subs", "[Display]"){
+  projectManager pm;
+  auto pd = createSubProj();
+  pd.name = "Fancier label";
+  pd.frac = 0.81;
+  auto parent = createProj();
+  parent.name = "Another title";
+  parent.FTE = 0.2;
+  auto pid = pm.addProject(parent);
+  proIds::Uuid proj = pm.addSubproject(pd, pid);
 
+  std::string summ = pm.summariseProject(pid);
+  REQUIRE(summ.find(pd.name) != std::string::npos);
+  REQUIRE(summ.find("20 %") != std::string::npos);
+  REQUIRE(summ.find("1 subprojects") != std::string::npos);
+  REQUIRE(summ.find(pd.name) != std::string::npos);
+  REQUIRE(summ.find("81 %") != std::string::npos);
+}
+TEST_CASE("Summarising a one-off", "[Display]"){
+  projectManager pm;
+  auto pid = uniqueIdGenerator().getNextId();
+  pid.tag(proIds::uidTag::oneoff);
+  std::string summ = pm.summariseProject(pid);
+  REQUIRE(summ.find("One-off project") != std::string::npos);
+}
 //------ Some failure cases ----------------------------------------------------------
 //Trying to add a project for more than the available FTE
 
@@ -331,3 +393,10 @@ TEST_CASE("Getting parent name for absent project", "[Basic]"){
 //Restoring a project into a subproject and vice versa
 
 //Trying to restore proj or sub with a oneoff id
+
+//Summarising a non-existent project
+TEST_CASE("Summarising non-existent project", "[Display]"){
+  projectManager pm;
+  auto pid = uniqueIdGenerator().getNextId();
+  REQUIRE_THROWS(pm.summariseProject(pid));
+}

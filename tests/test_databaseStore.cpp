@@ -426,6 +426,15 @@ TEST_CASE("Reading Known Data - Tracker with Range", "[Database]"){
   REQUIRE(stamps[0] == timeStamp{689, sid1});
   REQUIRE(stamps[1] == timeStamp{3609, sid2});
 }
+
+TEST_CASE("Reading Known Data - Tracker By Id", "[Database]"){
+  databaseStore theDB{"./InputData/KnownDatabase.db"};
+  auto sid1 = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
+  auto list = theDB.fetchTrackerEntries(sid1);
+  REQUIRE(list.size() == 1);
+  auto stamp = list[0];
+  REQUIRE(stamp == timeStamp{689, sid1});
+}
 //Fetch at
 TEST_CASE("Reading Known Data - Tracker At", "[Database]"){
   databaseStore theDB{"./InputData/KnownDatabase.db"};
@@ -483,7 +492,45 @@ TEST_CASE("Delete Tracker By ID" "[Database]"){
 }
 
 //Delete tracker in interval
+TEST_CASE("Delete Tracker in Interval", "[Database]"){
+  databaseStore theDB{"./Scratch/TestDatabase4.db"};
 
+  uniqueIdGenerator theGen;
+  std::vector<long> times{112, 1093, 1345, 1780};
+  std::vector<proIds::Uuid> pids;
+  for(auto time : times){
+    auto pid = theGen.getNextId();
+    pids.push_back(pid);
+    theDB.writeTrackerEntry({time, pid});
+  }
+
+  //Double check:
+  auto stamps_in = theDB.fetchTrackerEntries();
+  REQUIRE(stamps_in.size() == 4);
+  for(auto & pid : pids){
+    auto check = [pid](timeStamp t){return t.projectUid == pid;};
+    REQUIRE( std::find_if(stamps_in.begin(), stamps_in.end(), check) != stamps_in.end());
+  }
+
+  //Delete between 100 and 1100 - should be first two stamps.
+  theDB.deleteTrackerInInterval(100, 1100);
+
+  stamps_in = theDB.fetchTrackerEntries();
+  REQUIRE(stamps_in.size() == 2);
+  for(int i = 0; i<2; i++){
+    auto pid = pids[i];
+    auto time = times[i];
+    auto check = [pid, time](timeStamp t){return t.projectUid == pid && t.time == time;};
+    REQUIRE( std::find_if(stamps_in.begin(), stamps_in.end(), check) == stamps_in.end());
+  }
+  for(int i = 2; i<4; i++){
+    auto pid = pids[i];
+    auto time = times[i];
+    auto check = [pid, time](timeStamp t){return t.projectUid == pid && t.time == time;};
+    REQUIRE( std::find_if(stamps_in.begin(), stamps_in.end(), check) != stamps_in.end());
+  }
+
+}
 
 //Digests
 // Read Known data
@@ -641,6 +688,32 @@ TEST_CASE("Specific digest update", "[Database]"){
 }
 
 //Update ID in tracker or digest
+TEST_CASE("Update Tracker", "[Database]"){
 
-// Write some entries, run the update, check the result
+  databaseStore theDB{"./Scratch/TestDatabase5.db"};
 
+  uniqueIdGenerator theGen;
+  std::vector<long> times{112, 1093, 1345, 1780};
+  std::vector<proIds::Uuid> pids;
+  for(auto time : times){
+    auto pid = theGen.getNextId();
+    pids.push_back(pid);
+    theDB.writeTrackerEntry({time, pid});
+  }
+  //Now write another for pid@2
+  theDB.writeTrackerEntry({1900, pids[2]});
+
+  //Now re-write pid@2 into pid@1
+  theDB.updateTimestampEntriesId(pids[2], pids[1]);
+
+  //Now check - select those with pid&2 - should be none
+  auto lst = theDB.fetchTrackerEntries(pids[2]);
+  REQUIRE(lst.size() == 0);
+  // Select pid@1 - should be 3 at 1093, 1345, 1900
+  lst = theDB.fetchTrackerEntries(pids[1]);
+  REQUIRE(lst.size() == 3);
+  REQUIRE(lst[0].time == 1093);
+  REQUIRE(lst[1].time == 1345);
+  REQUIRE(lst[2].time == 1900);
+
+}

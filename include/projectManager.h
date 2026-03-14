@@ -23,6 +23,13 @@ class projectManager{
     std::map<proIds::Uuid, subproject> subprojects; /**< \brief Subproject store. Contains subprojects only*/
     float maxFTE = 1.0;
     void setupGenerator(){this->gen = new uniqueIdGenerator();}; 
+    float availableSubFracImpl(const project & proj){
+      float total = 0.0;
+      for(auto & sub : proj.subprojects){
+        total += subprojects[sub].getFrac();
+      }
+      return 1.0 - total;
+    }
     float allocatedFTEImpl(){
       float fte = 0.0;
       for(auto & proj: projects){
@@ -45,17 +52,10 @@ class projectManager{
 
     float availableSubFrac(const proIds::Uuid & proj){
       if(projects.count(proj) > 0){
-        return availableSubFrac(projects[proj]);
+        return availableSubFracImpl(projects[proj]);
       }else{
         return 0.0;
       }
-    }
-    float availableSubFrac(const project & proj){
-      float total = 0.0;
-      for(auto & sub : proj.subprojects){
-        total += subprojects[sub].getFrac();
-      }
-      return 1.0 - total;
     }
     bool checkFrac(const proIds::Uuid & proj){
       return availableSubFrac(proj) > 0.0;
@@ -280,7 +280,7 @@ class projectManager{
         details.name = proj.name;
         details.FTE = proj.FTE;
         details.subprojectCount = proj.subprojects.size();
-        details.assignedSubprojFraction = 1.0 - availableSubFrac(proj);
+        details.assignedSubprojFraction = 1.0 - availableSubFracImpl(proj);
         details.active = true;
         if(proj.subprojects.size()> 0){
           for(auto & sub_id: proj.subprojects){

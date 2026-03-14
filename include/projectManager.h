@@ -46,6 +46,14 @@ class projectManager{
     projectManager& operator=(const projectManager&)=delete;
 
     int projectCount(){return projects.size();}
+    int subprojectCount(){return subprojects.size();}
+    int subprojectCount(proIds::Uuid const & parent){
+      if(projects.count(parent) > 0){
+        return projects[parent].subprojects.size();
+      }else{
+        return 0;
+      }
+    }
     float allocatedFTE(){return allocatedFTEImpl();}
     float availableFTE(){return maxFTE - allocatedFTE();}
     bool checkFTE(float requested){return (allocatedFTE() + requested) <= maxFTE + 1e-5;} //Tiny rounding error allowance

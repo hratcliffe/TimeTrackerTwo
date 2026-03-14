@@ -209,6 +209,7 @@ class databaseIO : public dataIO{
     void rewriteTrackerProjectId(proIds::Uuid current, proIds::Uuid target) override{
       // Rewrite the Uid for timestamp and digest entries from current to target
       dbStore.updateTimestampEntriesId(current, target);
+      // TODO - this doesn't work - need to MERGE the digests
       dbStore.updateDigestEntriesId(current, target);
     }
 

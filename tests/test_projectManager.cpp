@@ -2,6 +2,7 @@
 
 #include "projectManager.h"
 
+//TODO - replace Approx with Matchers
 const static float margin = 0.001;
 
 // Basic manager --------------------------------------------------------------------
@@ -164,6 +165,141 @@ TEST_CASE("Getting Parent from Sub", "[Basic]"){
   REQUIRE(pm.getParentNameForSub(sub) == proj.name);
 }
 
+// ------- Removing ----------------------------------------------------------------
+TEST_CASE("Deleting project", "[Basic]"){
+  projectManager pm;
+  auto pd = createProj();
+  pd.FTE = 0.11;
+  proIds::Uuid proj = pm.addProject(pd);
+  //Add a second, to check we remove correct one
+  auto pd2 = createProj();
+  pd2.FTE = 0.22;
+  auto proj2 = pm.addProject(pd2);
+  REQUIRE(pm.projectCount() == 2);
+  pm.deleteProjectById(proj);
+  REQUIRE(pm.projectCount() == 1);
+  REQUIRE(pm.getFTE(proj2) == Catch::Approx(0.22).margin(margin));
+
+}
+TEST_CASE("Deleting sub-project", "[Basic]"){
+  projectManager pm;
+  auto pd = createSubProj();
+  pd.frac = 0.33;
+  auto parent = createProj();
+  auto pid = pm.addProject(parent);
+  proIds::Uuid proj = pm.addSubproject(pd, pid);
+  REQUIRE(pm.subprojectCount() == 1);
+  auto pd2 = createSubProj();
+  pd2.frac = 0.45;
+  proIds::Uuid proj2 = pm.addSubproject(pd2, pid);
+  REQUIRE(pm.subprojectCount() == 2);
+
+  pm.deleteSubprojectById(proj);
+  REQUIRE(pm.subprojectCount() == 1);
+  REQUIRE(pm.getFrac(proj2) == Catch::Approx(0.45).margin(margin));
+  REQUIRE(pm.subprojectCount(pid) == 1);
+}
+//  Remove sub from parent, but not completely
+TEST_CASE("Remove sub", "[Basic]"){
+  // Does not delete anything, but removes sub ref from parent list
+  projectManager pm;
+  auto pd = createSubProj();
+  pd.frac = 0.33;
+  auto parent = createProj();
+  auto pid = pm.addProject(parent);
+  proIds::Uuid proj = pm.addSubproject(pd, pid);
+  auto pd2 = createSubProj();
+  pd2.frac = 0.45;
+  proIds::Uuid proj2 = pm.addSubproject(pd2, pid);
+  REQUIRE(pm.subprojectCount() == 2);
+
+  pm.removeSubproject(pid, proj);
+
+  REQUIRE(pm.subprojectCount() == 2);
+  REQUIRE(pm.getParentId(proj) == proIds::NullUid);
+  REQUIRE(pm.getParentId(proj2) == pid);
+}
+
+// ------- Restoring (IDs already assigned) ----------------------------------------
+TEST_CASE("Restoring Project", "[Basic]"){
+  projectManager pm;
+  fullProjectData pd;
+  pd.name = "Project from file";
+  pd.FTE = 0.7;
+  pd.useEnd = false;
+  pd.useStart = false;
+  pd.uid = uniqueIdGenerator().getNextId();
+
+  pm.restoreProject(pd, 10);
+  REQUIRE(pm.projectCount() == 1);
+  REQUIRE(pm.getName(pd.uid) == pd.name);
+}
+TEST_CASE("Restoring Subproject", "[Basic]"){
+  projectManager pm;
+  auto theGen = uniqueIdGenerator();
+  //Parent:
+  fullProjectData pd;
+  pd.name = "Project from file";
+  pd.FTE = 0.7;
+  pd.useEnd = false;
+  pd.useStart = false;
+  pd.uid = theGen.getNextId();
+
+  pm.restoreProject(pd, 10);
+
+  fullSubProjectData sd;
+  sd.name = "Subproject from file";
+  sd.frac = 0.7;
+  sd.uid = theGen.getNextId();
+  sd.uid.tag(proIds::uidTag::sub);
+  sd.parentUid = pd.uid;
+
+  pm.restoreSubproject(sd);
+  REQUIRE(pm.projectCount() == 1);
+  REQUIRE(pm.getName(pd.uid) == pd.name);
+  REQUIRE(pm.subprojectCount() ==1);
+  REQUIRE(pm.getName(sd.uid) == sd.name);
+  REQUIRE(pm.getParentId(sd.uid) == pd.uid);
+}
+//Restore proj with start or end
+TEST_CASE("Restoring Time-specified Project", "[Basic]"){
+  projectManager pm;
+  fullProjectData pd;
+  pd.name = "Project from file with time";
+  pd.FTE = 0.7;
+  pd.useEnd = false;
+  pd.useStart = true;
+  pd.start = 5;
+  pd.uid = uniqueIdGenerator().getNextId();
+
+  pm.restoreProject(pd, 10);
+  REQUIRE(pm.projectCount() == 1);
+  REQUIRE(pm.getName(pd.uid) == pd.name);
+  REQUIRE(pm.isActiveProject(pd.uid));
+}
+TEST_CASE("Restoring Time-specified Project - inactive", "[Basic]"){
+  projectManager pm;
+  fullProjectData pd;
+  pd.name = "Project from file with time";
+  pd.FTE = 0.7;
+  pd.useEnd = false;
+  pd.useStart = true;
+  pd.start = 15;
+  pd.uid = uniqueIdGenerator().getNextId();
+
+  pm.restoreProject(pd, 10);
+  REQUIRE(pm.projectCount() == 1);
+  REQUIRE(pm.getName(pd.uid) == pd.name);
+  REQUIRE_FALSE(pm.isActiveProject(pd.uid));
+}
+//Now describe, to check the active flag works
+
+//--------- Modifying --------------------------------------------------------------
+
+//---------- Fetching Details -----------------------------------------------------
+
+//----------- Summarising ---------------------------------------------------------
+
 //------ Some failure cases ----------------------------------------------------------
 //Trying to add a project for more than the available FTE
 
@@ -191,3 +327,7 @@ TEST_CASE("Getting parent name for absent project", "[Basic]"){
   projectManager pm;
   REQUIRE(pm.getParentNameForSub(uniqueIdGenerator().getNextId()) == "Not a subproject");
 }
+
+//Restoring a project into a subproject and vice versa
+
+//Trying to restore proj or sub with a oneoff id

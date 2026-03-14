@@ -264,15 +264,14 @@ class projectManager{
         details.name = sub.name;
         details.frac = sub.frac;
         details.active = true;
-
       }
       return details;
     }
     projectDetails getDetails(proIds::Uuid uid){
       projectDetails details; 
-      details.uid = uid;
       if(projects.count(uid) > 0){
         auto & proj = projects[uid];
+        details.uid = uid;
         details.name = proj.name;
         details.FTE = proj.FTE;
         details.subprojectCount = proj.subprojects.size();

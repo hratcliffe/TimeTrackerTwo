@@ -682,4 +682,74 @@ TEST_CASE("Int -Specific digest update", "[Database]"){
 //Update ID in tracker or digest
 
 // Write some entries, run the update, check the result
+TEST_CASE("Int- Update Tracker+Digests ", "[Database]"){
+
+  databaseIO theDB{"./Scratch/TestDatabase5I.db"};
+
+  uniqueIdGenerator theGen;
+  std::vector<long> times{112, 1093, 1345, 1780, 2078};
+  std::vector<proIds::Uuid> pids;
+  for(auto time : times){
+    auto pid = theGen.getNextId();
+    pids.push_back(pid);
+    theDB.writeTrackerEntry({time, pid});
+  }
+  //Now write another for pid@3
+  theDB.writeTrackerEntry({2507, pids[3]});
+
+  // Write for a single digest period
+  // Store code does a check on multiple
+  timeDigestPeriod tp;
+  tp.start = 100;
+  tp.duration = 600;
+  tp.displayName = "Ten Mins";
+  tp.id = 1;
+
+  std::vector<long> durations{15, 201, 73, 11, 24};
+  std::vector<timeDigestEntry> entries;
+  for(int i=0; i< times.size(); i++){
+    timeDigestEntry te;
+    te.projectUid = pids[i];
+    te.duration = times[i];
+    te.period = 1; // Fresh database, sequential ids
+    entries.push_back(te);
+  }
+  theDB.writeDigestEntries(tp, entries);
+
+  // Re-write - expect the digests to merge, and the timestamps to be re-mapped
+  theDB.rewriteTrackerProjectId(pids[3], pids[0]);
+
+  //Now check - select tracker with pid@3 - should be none
+  auto lst = theDB.fetchTrackerEntries(pids[3]);
+  REQUIRE(lst.size() == 0);
+  // And digests ditto
+  auto lstd = theDB.fetchDigestEntries(tp);
+  auto check = [pid=pids[3]](timeDigestEntry td){return td.projectUid == pid;};
+  REQUIRE(std::find_if(lstd.begin(), lstd.end(), check) == lstd.end());
+
+  // Select pid@0 - should be 3 at 1093, 1345, 1900
+  lst = theDB.fetchTrackerEntries(pids[0]);
+  REQUIRE(lst.size() == 3);
+  REQUIRE(lst[0].time == 112);
+  REQUIRE(lst[1].time == 1780);
+  REQUIRE(lst[2].time == 2501);
+
+  // pid@3 must NOT be present,  0 should be the sum of 0+3 and 1,2,4 should be unchanged
+  // Now check both periods
+  auto entries_in = theDB.fetchDigestEntries(tp);
+  REQUIRE(entries_in.size() == 4);
+  for(int i=0; i< 4; i++){
+    // Check all 4 ids present
+    auto tpid = pids[i];
+    auto time = times[i];
+    if(i ==0) time = times[0] + times[3];
+    auto check = [tpid, time](timeDigestEntry te){return te.projectUid == tpid && te.duration == time;};
+    if(i == 3){
+     REQUIRE(std::find_if(entries_in.begin(), entries_in.end(), check) == entries_in.end());
+    }else{
+      REQUIRE(std::find_if(entries_in.begin(), entries_in.end(), check) != entries_in.end());
+    }
+  }
+
+}
 

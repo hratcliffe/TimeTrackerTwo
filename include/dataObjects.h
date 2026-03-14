@@ -265,6 +265,9 @@ inline std::ostream& operator<< (std::ostream& stream, const timeDigestEntry& ts
   stream << "Day: " << ts.period <<", Duration: "<<ts.duration<< ", Project UID: " << ts.projectUid;
   return stream;
 };
+inline bool operator==(const timeDigestEntry & a, const timeDigestEntry & b){
+  return a.projectUid == b.projectUid && a.period==b.period && a.duration == b.duration;
+}
 
 
 #endif

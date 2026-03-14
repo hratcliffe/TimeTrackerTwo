@@ -85,6 +85,13 @@ class projectManager{
 
     bool isProject(proIds::Uuid id ){return projects.count(id) > 0;};
     bool isSubProject(proIds::Uuid id ){return subprojects.count(id) > 0;};
+    bool isActiveProject(proIds::Uuid id){
+      if(isProject(id)){
+        return projects[id].active;
+      }else{
+        return false;
+      }
+    }
 
     proIds::Uuid getNextOneOffId(){
       return gen->getNextId(proIds::uidTag::oneoff);

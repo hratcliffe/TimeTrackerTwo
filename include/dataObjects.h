@@ -123,7 +123,7 @@ class fullOneOffProjectData{
 inline std::ostream& operator<< (std::ostream& stream, const fullOneOffProjectData& data){
 /** \brief Stream operator for fullProjectData
 */
-  stream << data.name<<" ()"<<data.description<<")";
+  stream << data.name<<", "<<data.uid <<" ("<<data.description<<")";
   return stream;
 };
 

@@ -114,6 +114,7 @@ class databaseStore{
     } 
     void closeDB(){
         if(DB) sqlite3_close(DB);
+        DB = nullptr;
         throw std::runtime_error("Database was closed by user, cannot continue");
     }
     bool isConnected(){return DB != nullptr;}
@@ -169,6 +170,7 @@ class databaseStore{
         }else{
             item = 0; // TODO - what to do for bad key?
         }
+        sqlite3_finalize(prep_cmd);
       }else if constexpr(std::is_same<T, std::string>::value){
         std::string cmd = "SELECT value FROM app_data WHERE key = ?;";
         sqlite3_stmt * prep_cmd;
@@ -179,10 +181,10 @@ class databaseStore{
         }else{
             item = ""; // TODO - what to do for bad key?
         }
+        sqlite3_finalize(prep_cmd);
       }else{
         assert(false);
       }
-
       return item;
     }
 

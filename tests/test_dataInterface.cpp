@@ -426,6 +426,14 @@ TEST_CASE("Int -Reading Known Data - Tracker with Range", "[Database]"){
   REQUIRE(stamps[1] == timeStamp{3609, sid2});
 }
 //Fetch at
+TEST_CASE("Int-Reading Known Data - Tracker By Id", "[Database]"){
+  databaseIO theDB{"./InputData/KnownDatabase.db"};
+  auto sid1 = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
+  auto list = theDB.fetchTrackerEntries(sid1);
+  REQUIRE(list.size() == 1);
+  auto stamp = list[0];
+  REQUIRE(stamp == timeStamp{689, sid1});
+}
 TEST_CASE("Int -Reading Known Data - Tracker At", "[Database]"){
   databaseIO theDB{"./InputData/KnownDatabase.db"};
   auto sid1 = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
@@ -482,7 +490,43 @@ TEST_CASE("Int -Delete Tracker By ID" "[Database]"){
 }
 
 //Delete tracker in interval
+TEST_CASE("Int-Delete Tracker in Interval", "[Database]"){
+  databaseIO theDB{"./Scratch/TestDatabase4I.db"};
 
+  uniqueIdGenerator theGen;
+  std::vector<long> times{89, 703, 901, 1002, 1115};
+  std::vector<proIds::Uuid> pids;
+  for(auto time : times){
+    auto pid = theGen.getNextId();
+    pids.push_back(pid);
+    theDB.writeTrackerEntry({time, pid});
+  }
+
+  //Double check:
+  auto stamps_in = theDB.fetchTrackerEntries();
+  REQUIRE(stamps_in.size() == 5);
+  for(auto & pid : pids){
+    auto check = [pid](timeStamp t){return t.projectUid == pid;};
+    REQUIRE( std::find_if(stamps_in.begin(), stamps_in.end(), check) != stamps_in.end());
+  }
+
+  //Delete between 900 and 950 - should be third stamp only
+  theDB.deleteTrackerInInterval(900, 950);
+
+  stamps_in = theDB.fetchTrackerEntries();
+
+  REQUIRE(stamps_in.size() == 4);
+  for(int i = 0; i<5; i++){
+    auto pid = pids[i];
+    auto time = times[i];
+    auto check = [pid, time](timeStamp t){return t.projectUid == pid && t.time == time;};
+    if(i != 2){
+      REQUIRE( std::find_if(stamps_in.begin(), stamps_in.end(), check) != stamps_in.end());
+    }else{
+      REQUIRE( std::find_if(stamps_in.begin(), stamps_in.end(), check) == stamps_in.end());
+    }
+  }
+}
 
 //Digests
 // Read Known data

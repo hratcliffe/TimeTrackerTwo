@@ -73,3 +73,12 @@ TEST_CASE("Uid comparisons", "[Basic]"){
 
  }
 
+ TEST_CASE("Uid special case checks", "[Basic]"){
+  auto theGen = uniqueIdGenerator();
+  auto id = theGen.getNextId();
+  REQUIRE(id.isProj());
+  REQUIRE_FALSE(id.isNull());
+  auto id2 = theGen.getNullId();
+  REQUIRE(id2.isNull());
+  REQUIRE_FALSE(id2.isProj());
+ }

@@ -34,6 +34,7 @@ class dataIO{
     virtual void updateSubproject(fullSubProjectData const & dat) = 0;
     virtual void writeOneOffProject(fullOneOffProjectData const &dat) = 0;
     virtual fullOneOffProjectData readOneOffProject(proIds::Uuid const &id) = 0;
+    virtual void deleteOneOffProject(proIds::Uuid const & id) = 0;
 
     virtual void writeTrackerEntry(timeStamp const & stamp) = 0;
 
@@ -49,6 +50,7 @@ class dataIO{
     virtual timeStamp fetchLatestTrackerEntry() = 0;/**< \brief Fetch the latest (most recent) tracker entry */
 
     virtual void deleteTrackerInInterval(timecode start, timecode end) = 0;/**< \brief Delete tracker entries in the given range*/
+    virtual void deleteTrackerEntry(const timeStamp & stamp) = 0;/**< \brief Delete specific timestamp */
 
     //Digests
     virtual void writeDigestEntries(timeDigestPeriod period, std::vector<timeDigestEntry> entries) = 0;/**< \brief Write the daily digests of time spent, assuming not previously written */
@@ -131,6 +133,9 @@ class databaseIO : public dataIO{
     fullOneOffProjectData readOneOffProject(proIds::Uuid const &id) override{
         return dbStore.readOneOff(id);
     }
+    void deleteOneOffProject(proIds::Uuid const & id)override{
+      dbStore.deleteOneOff(id);
+    }
 
     void writeTrackerEntry(timeStamp const & stamp) override {
       // Implementation for writing tracker entry to database
@@ -171,6 +176,9 @@ class databaseIO : public dataIO{
       return dbStore.fetchLatestTrackerEntry();
     }
 
+    void deleteTrackerEntry(const timeStamp & stamp) override{
+      dbStore.deleteTrackerEntry(stamp);
+    };
     void deleteTrackerInInterval(timecode start, timecode end) override{
       dbStore.deleteTrackerInInterval(start, end);
     }

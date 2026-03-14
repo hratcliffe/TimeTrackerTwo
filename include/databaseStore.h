@@ -811,8 +811,9 @@ class databaseStore{
     std::vector<timeDigestEntry> fetchDigestEntries(timecode start, timecode end){
         //Fetching the entries for ALL PERIODS in the range
         // IMPORTANT : end here means the end of the period - this fetches digests WHOLLY within the interval!
+        // Start and end are INCLUSIVE
 
-        std::string cmd = "select td.duration, td.period_id, project_id from time_digests as td inner join digest_periods as dp on td.period_id=dp.id where dp.start > ? and dp.start+dp.duration < ?;";
+        std::string cmd = "select td.duration, td.period_id, project_id from time_digests as td inner join digest_periods as dp on td.period_id=dp.id where dp.start >= ? and dp.start+dp.duration <= ?;";
 
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);

@@ -2,5 +2,7 @@ rm -rf ./Scratch/*.db
 chmod u-r ./InputData/UnreadableFile.db
 chmod u-w ./InputData/ReadOnlyFile.db
 cp ./InputData/KnownDatabaseActive.db ./Scratch
+cp ./InputData/KnownDatabaseForDelete.db ./Scratch
+cp ./InputData/KnownDatabaseForDelete.db ./Scratch/KnownDatabaseForDelete2.db
 ./ttt_tests.app/Contents/MacOS/ttt_tests --order rand --warn NoAssertions
 chmod u+r ./InputData/UnreadableFile.db

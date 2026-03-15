@@ -599,6 +599,170 @@ TEST_CASE("Closing without active project", "[QTAware, Slots]"){
   REQUIRE( sig.stashPayloadForReturn<bool, SignalCatcher::close>(false, false));
 }
 
+TEST_CASE("Deleting Stamps", "[QTAware]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./Scratch/KnownDatabaseForDelete.db")};
+  //TODO - refactor if we create a better way to check the stamps
+  //Check initial state
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::timeSummaryReady, &sig, &SignalCatcher::emitTimeSummary);
+
+  td.loadProjects(16000);
+  td.generateTimeSummary(timeSummaryUnit::debug);
+  std::vector<timeSummaryItem> summary;
+  summary = sig.stashPayloadForReturn(summary, false);
+
+
+  //Uptime
+  {auto check = [](timeSummaryItem & ts){return ts.text.find("15927.0 units") != std::string::npos;};
+  REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
+  //Alpha
+  {
+  auto check = [](timeSummaryItem & ts){return ts.text.find("Project Alpha") != std::string::npos;};
+  auto fst = std::find_if(summary.begin(), summary.end(), check);
+  fst++; // Next line : expect 8928
+  REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
+  REQUIRE(fst->text.find("8928.0 units") != std::string::npos);
+  }
+  // BETA
+  {
+  auto check = [](timeSummaryItem & ts){return ts.text.find("Project Beta") != std::string::npos;};
+  auto fst = std::find_if(summary.begin(), summary.end(), check);
+  fst++; // Next line : expect 5977
+  REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
+  REQUIRE(fst->text.find("5977.0 units") != std::string::npos);
+  }
+
+  {
+    // Delete stamps -
+    // NOTE: pay attention to function contract - the last timestamp is LEFT ALONE
+    // because it is needed to know status
+    td.deleteIndividualStamps(timeWrapper::fromSeconds(9000), timeWrapper::fromSeconds(10112));
+    //Deletes 9023 change to Important Title, instead stay stopped
+    // Uptime -> 13787, Beta -> 4889
+    // Check final state
+    td.generateTimeSummary(timeSummaryUnit::debug);
+    std::vector<timeSummaryItem> summary;
+    summary = sig.stashPayloadForReturn(summary, false);
+
+    //Uptime
+    {auto check = [](timeSummaryItem & ts){return ts.text.find("15927.0 units") != std::string::npos;};
+    REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
+    //Alpha
+    {
+    auto check = [](timeSummaryItem & ts){return ts.text.find("Project Alpha") != std::string::npos;};
+    auto fst = std::find_if(summary.begin(), summary.end(), check);
+    fst++; // Next line : expect 7898
+    REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
+    REQUIRE(fst->text.find("8928.0 units") != std::string::npos);
+    }
+    // BETA
+    {
+    auto check = [](timeSummaryItem & ts){return ts.text.find("Project Beta") != std::string::npos;};
+    auto fst = std::find_if(summary.begin(), summary.end(), check);
+    fst++; // Next line : expect 4889
+    REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
+    REQUIRE(fst->text.find("4889.0 units") != std::string::npos);
+    }
+  }
+  FAIL("Uptime definition is NOT time on Projects");
+}
+
+TEST_CASE("Deleting Stamps - no-op cases", "[QTAware]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./Scratch/KnownDatabaseForDelete2.db")};
+  //TODO - refactor if we create a better way to check the stamps
+  //Check initial state
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::timeSummaryReady, &sig, &SignalCatcher::emitTimeSummary);
+
+  td.loadProjects(16000);
+  td.generateTimeSummary(timeSummaryUnit::debug);
+  std::vector<timeSummaryItem> summary;
+  summary = sig.stashPayloadForReturn(summary, false);
+
+  //Uptime
+  {auto check = [](timeSummaryItem & ts){return ts.text.find("15927.0 units") != std::string::npos;};
+  REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
+  //Alpha
+  {
+  auto check = [](timeSummaryItem & ts){return ts.text.find("Project Alpha") != std::string::npos;};
+  auto fst = std::find_if(summary.begin(), summary.end(), check);
+  fst++; // Next line : expect 8928
+  REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
+  REQUIRE(fst->text.find("8928.0 units") != std::string::npos);
+  }
+  // BETA
+  {
+  auto check = [](timeSummaryItem & ts){return ts.text.find("Project Beta") != std::string::npos;};
+  auto fst = std::find_if(summary.begin(), summary.end(), check);
+  fst++; // Next line : expect 5977
+  REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
+  REQUIRE(fst->text.find("5977.0 units") != std::string::npos);
+  }
+
+  SECTION("Time span past last in list"){
+    // Delete stamps -
+    REQUIRE_NOTHROW(td.deleteIndividualStamps(timeWrapper::fromSeconds(17000), timeWrapper::fromSeconds(18000)));
+    // Should change nothing
+    // Check final state
+    td.generateTimeSummary(timeSummaryUnit::debug);
+    std::vector<timeSummaryItem> summary;
+    summary = sig.stashPayloadForReturn(summary, false);
+
+    //Uptime
+    {auto check = [](timeSummaryItem & ts){return ts.text.find("15927.0 units") != std::string::npos;};
+    REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
+    //Alpha
+    {
+    auto check = [](timeSummaryItem & ts){return ts.text.find("Project Alpha") != std::string::npos;};
+    auto fst = std::find_if(summary.begin(), summary.end(), check);
+    fst++; // Next line : expect 7898
+    REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
+    REQUIRE(fst->text.find("8928.0 units") != std::string::npos);
+    }
+    // BETA
+    {
+    auto check = [](timeSummaryItem & ts){return ts.text.find("Project Beta") != std::string::npos;};
+    auto fst = std::find_if(summary.begin(), summary.end(), check);
+    fst++; // Next line : expect 4889
+    REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
+    REQUIRE(fst->text.find("5977.0 units") != std::string::npos);
+    }
+  }
+  SECTION("Time span before first"){
+    // Delete stamps -
+    REQUIRE_NOTHROW(td.deleteIndividualStamps(timeWrapper::fromSeconds(1), timeWrapper::fromSeconds(2)));
+    // Should change nothing
+    // Check final state
+    td.generateTimeSummary(timeSummaryUnit::debug);
+    std::vector<timeSummaryItem> summary;
+    summary = sig.stashPayloadForReturn(summary, false);
+
+    //Uptime
+    {auto check = [](timeSummaryItem & ts){return ts.text.find("15927.0 units") != std::string::npos;};
+    REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
+    //Alpha
+    {
+    auto check = [](timeSummaryItem & ts){return ts.text.find("Project Alpha") != std::string::npos;};
+    auto fst = std::find_if(summary.begin(), summary.end(), check);
+    fst++; // Next line : expect 7898
+    REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
+    REQUIRE(fst->text.find("8928.0 units") != std::string::npos);
+    }
+    // BETA
+    {
+    auto check = [](timeSummaryItem & ts){return ts.text.find("Project Beta") != std::string::npos;};
+    auto fst = std::find_if(summary.begin(), summary.end(), check);
+    fst++; // Next line : expect 4889
+    REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
+    REQUIRE(fst->text.find("5977.0 units") != std::string::npos);
+    }
+  }
+}
+
 //Failure case - marking something that does not exist in PM
 TEST_CASE("Marking Nonexistent Project", "[QTAware, Slots]"){
   auto app = dummyApp();

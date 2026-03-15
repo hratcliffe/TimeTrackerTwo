@@ -467,7 +467,18 @@ TEST_CASE("Empty Data - Time summary", "[QTAware, Slots]"){
   REQUIRE(summary[0].text.find("No time entries found!") != std::string::npos);
 }
 
+TEST_CASE("Known Data - Time summary with downtime", "[QTAware, Slots]"){
+  FAIL("Uptime is not total time on projects....");
+}
+
+TEST_CASE("OneOff Marks - Time Summary", "[QTAware, Slots]"){
+
+}
+
 // -------- Digest Generation ------------------------------------------------------------------------
+TEST_CASE("Generating Digests", "[QTAware, Slots]"){
+  // NOTE: need a known start DB, but will modify it
+}
 
 //----------- Loading Projects ----------------------------------------------------------------------
 TEST_CASE("Known Data - Load projects", "[QTAware]"){
@@ -516,6 +527,12 @@ TEST_CASE("Known Data - Load projects with active project", "[QTAware]"){
   REQUIRE(str == "Testing");
 
 }
+
+// ---------- Merging Projects ---------------------------------------------------------------------
+TEST_CASE("Merging project data", "[QTAware, Slots]"){
+
+}
+
 // ---------- Special functions ---------------------------------------------------------------------
 
 TEST_CASE("Known Data - Timestamps before", "[QTAware]"){

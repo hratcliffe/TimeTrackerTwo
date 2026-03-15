@@ -24,6 +24,7 @@ class projectStatus{
 };
 };
 
+// TODO - add a read-only DB open mode??
 class TrackerData: public QWidget{
 Q_OBJECT
 

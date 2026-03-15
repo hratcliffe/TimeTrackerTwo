@@ -1,8 +1,10 @@
 #include "catch2/catch_all.hpp"
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
-#include <QApplication>;
+#include <QApplication>
+#include <QObject>
 #include "TrackerData.h"
+#include "QTSignalHelper.h"
 
 //NOTE: only really some of this is amenable to testing, the
 // rest is too QT/Signal enmeshed
@@ -112,3 +114,40 @@ TEST_CASE("Create and read - specific", "[QTAware]"){
   REQUIRE_THAT(p_descr.FTE, WithinAbs(pd.FTE, margin));
 }
 
+TEST_CASE("Create and read - with helper", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+
+  projectData pd;
+  pd.name = "XYZ Created by Tracker Mk3";
+  pd.FTE = 0.54;
+  pd.useStart = false;
+  pd.useEnd = false;
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+  td.createProject(pd);
+
+  std::vector<selectableEntity> list;
+  list = sig.stashPayloadForReturn(list, false);
+  REQUIRE(list.size() == 1);
+  REQUIRE(list[0].name == pd.name);
+  REQUIRE(list[0].level == 0);
+
+}
+
+TEST_CASE("Updating One-Off Id", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::oneOffIdUpdate, &sig, &SignalCatcher::emitId);
+
+  //Double check:
+  auto id = sig.stashPayloadForReturn(proIds::NullUid, false);
+  REQUIRE(id == proIds::NullUid);
+
+  td.oneOffIdRequired();
+  id = sig.stashPayloadForReturn(proIds::NullUid, false);
+  REQUIRE(id != proIds::NullUid);
+}

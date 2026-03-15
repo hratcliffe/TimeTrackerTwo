@@ -45,5 +45,6 @@ HEADERS += ../include/dataObjects.h \
            ../include/dataInterface.h \
            ../include/timeWrapper.h \
            ../include/timestampProcessor.h \
-           ../include/appClock.h
+           ../include/appClock.h \
+           QTSignalHelper.h
 

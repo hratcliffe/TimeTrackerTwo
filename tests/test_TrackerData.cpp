@@ -72,10 +72,10 @@ proIds::Uuid InferIDFromName(const std::map<proIds::Uuid, projectDetails> & map,
   return proIds::NullUid;
 }
 
-proIds::Uuid CreateProjectAndReturnId(TrackerData & td, std::string name){
+proIds::Uuid CreateProjectAndReturnId(TrackerData & td, std::string name, float FTE=0.4){
   projectData pd;
   pd.name = name;
-  pd.FTE = 0.4;
+  pd.FTE = FTE;
   pd.useStart = false;
   pd.useEnd = false;
 
@@ -299,5 +299,59 @@ TEST_CASE("Pause and Resume", "[QTAware, Slots]"){
 
 }
 
+// ------- Summaries and display ---------------------------------------------------------------------
+TEST_CASE("Summarising a project", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectSummaryReady, &sig, &SignalCatcher::emitString);
+
+  std::string name = "Project for Summarisation B";
+  auto pid = CreateProjectAndReturnId(td, name);
+
+  td.generateProjectSummary(pid);
+  std::string descr;
+  descr = sig.stashPayloadForReturn(descr, false);
+  REQUIRE(descr != "");
+  REQUIRE(descr.find(name) != std::string::npos);
+  REQUIRE(descr.find("40 %") != std::string::npos);
+  REQUIRE(descr.find("0 subprojects") != std::string::npos);
+
+}
+TEST_CASE("Summarising a bad project", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectSummaryReady, &sig, &SignalCatcher::emitString);
+
+  std::string name = "Project for Summarisation B";
+  auto pid = uniqueIdGenerator().getNextId();
+
+  REQUIRE_THROWS(td.generateProjectSummary(pid));
+}
+
+TEST_CASE("Overall Summary", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectSummaryReady, &sig, &SignalCatcher::emitString);
+
+  std::string name = "Project for Summarisation B";
+  std::string name2 = "Project for Summarisation ZZAlpha";
+  auto pid = CreateProjectAndReturnId(td, name, 0.3);
+  auto pid2 = CreateProjectAndReturnId(td, name, 0.4);
+
+  td.generateToplevelSummary();
+  std::string descr;
+  descr = sig.stashPayloadForReturn(descr, false);
+  REQUIRE(descr != "");
+  REQUIRE(descr.find("2 projects active") != std::string::npos);
+  REQUIRE(descr.find("70 % FTE allocated") != std::string::npos);
+}
+
+// -------- Digest Generation ------------------------------------------------------------------------
 
 //Failure case - marking something that does not exist in PM

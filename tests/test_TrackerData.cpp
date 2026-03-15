@@ -6,8 +6,6 @@
 #include "TrackerData.h"
 #include "QTSignalHelper.h"
 
-//NOTE: only really some of this is amenable to testing, the
-// rest is too QT/Signal enmeshed
 
 auto dummyApp(){
     int argc=0;
@@ -63,6 +61,8 @@ TEST_CASE("Config round trip", "[QTAware]"){
   std::string c = td.readConfig("vers");
   REQUIRE(c == "Version c6qe");
 }
+
+//--- Adding/creating ----------------------------------------------------------------------------
 
 static const float margin = 0.001; // Float margin
 auto WithinAbs = Catch::Matchers::WithinAbs;
@@ -125,7 +125,9 @@ TEST_CASE("Create and read - with helper", "[QTAware, Slots]"){
   pd.useEnd = false;
 
   SignalCatcher sig;
+  //OK - these signals have different types so will not collide
   QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectTotalUpdateEvent, &sig, &SignalCatcher::emitDoubleX2);
   td.createProject(pd);
 
   std::vector<selectableEntity> list;
@@ -133,6 +135,11 @@ TEST_CASE("Create and read - with helper", "[QTAware, Slots]"){
   REQUIRE(list.size() == 1);
   REQUIRE(list[0].name == pd.name);
   REQUIRE(list[0].level == 0);
+
+  double dummy=0.0;
+  auto fte = sig.stashPayloadForReturn(dummy, dummy, false);
+  REQUIRE_THAT(fte.first, WithinAbs(0.54, margin));
+  REQUIRE_THAT(fte.second, WithinAbs(0.46, margin));
 
 }
 

@@ -38,6 +38,7 @@ namespace dateLimits{
 }
 
 enum class dataBackendType{
+  none, /**< \brief Default invalid value */
   flatfile, /**< \brief Flat file data backend */
   database /**< \brief Database data backend */
 };

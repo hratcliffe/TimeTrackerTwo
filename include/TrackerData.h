@@ -34,6 +34,8 @@ Q_OBJECT
   public:
 
     TrackerData(appConfig config){
+      //TODO - flatfile would be really hard, but could allow support for other DBs so don't
+      // remove this entirely, just adjust
       if(config.backend == dataBackendType::database){
         dataHandler = new databaseIO(config.dataFileName);
       }else if(config.backend == dataBackendType::flatfile){

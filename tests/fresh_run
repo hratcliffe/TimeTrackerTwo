@@ -1,0 +1,6 @@
+rm -rf ./Scratch/*.db
+chmod u-r ./InputData/UnreadableFile.db
+chmod u-w ./InputData/ReadOnlyFile.db
+cp ./InputData/KnownDatabaseActive.db ./Scratch
+./ttt_tests.app/Contents/MacOS/ttt_tests --order rand --warn NoAssertions
+chmod u+r ./InputData/UnreadableFile.db

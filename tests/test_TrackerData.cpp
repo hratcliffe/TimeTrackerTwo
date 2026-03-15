@@ -504,7 +504,7 @@ TEST_CASE("Known Data - Load projects", "[QTAware]"){
 }
 TEST_CASE("Known Data - Load projects with active project", "[QTAware]"){
   auto app = dummyApp();
-  TrackerData td{basicConfig("./InputData/KnownDatabaseActive.db")};
+  TrackerData td{basicConfig("./Scratch/KnownDatabaseActive.db")};
 
   SignalCatcher sig;
   QAbstractEventDispatcher::connect(&td, &TrackerData::projectRunningUpdate, &sig, &SignalCatcher::emitString);

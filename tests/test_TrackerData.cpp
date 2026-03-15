@@ -72,6 +72,20 @@ proIds::Uuid InferIDFromName(const std::map<proIds::Uuid, projectDetails> & map,
   return proIds::NullUid;
 }
 
+proIds::Uuid CreateProjectAndReturnId(TrackerData & td, std::string name){
+  projectData pd;
+  pd.name = name;
+  pd.FTE = 0.4;
+  pd.useStart = false;
+  pd.useEnd = false;
+
+  td.createProject(pd);
+
+  //Unfortunately Can't get the ID back out without looking up
+  auto descr = td.projectDetailsRequired();
+  return InferIDFromName(descr, pd.name);
+}
+
 TEST_CASE("Create and read", "[QTAware]"){
   auto app = dummyApp();
   TrackerData td{basicConfig()};
@@ -142,6 +156,32 @@ TEST_CASE("Create and read - with helper", "[QTAware, Slots]"){
   REQUIRE_THAT(fte.second, WithinAbs(0.46, margin));
 
 }
+TEST_CASE("Create and read - subproj", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+
+  std::string name = "XYZ Created by Tracker Mk3";
+  auto pid = CreateProjectAndReturnId(td, name);
+
+  REQUIRE(pid != proIds::NullUid);
+
+  subProjectData spd;
+  spd.name = "SubXYZ Created by Tracker Mk3";
+  spd.frac = 0.3;
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+  td.createSubproject(spd, pid);
+
+  std::vector<selectableEntity> list;
+  list = sig.stashPayloadForReturn(list, false);
+  REQUIRE(list.size() == 2);
+  REQUIRE(list[0].name == name);
+  REQUIRE(list[0].level == 0);
+  REQUIRE(list[1].name == spd.name);
+  REQUIRE(list[1].level == 1);
+
+}
 
 TEST_CASE("Updating One-Off Id", "[QTAware, Slots]"){
   auto app = dummyApp();
@@ -150,13 +190,42 @@ TEST_CASE("Updating One-Off Id", "[QTAware, Slots]"){
   SignalCatcher sig;
   QAbstractEventDispatcher::connect(&td, &TrackerData::oneOffIdUpdate, &sig, &SignalCatcher::emitId);
 
-  //Double check:
-  auto id = sig.stashPayloadForReturn(proIds::NullUid, false);
+  //Ensure starts as null:
+  auto id = sig.stashPayloadForReturn(proIds::NullUid, true);
   REQUIRE(id == proIds::NullUid);
 
   td.oneOffIdRequired();
   id = sig.stashPayloadForReturn(proIds::NullUid, false);
   REQUIRE(id != proIds::NullUid);
+  REQUIRE(id.isTaggedAs(proIds::uidTag::oneoff));
+}
+TEST_CASE("Creating OneOff", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::oneOffIdUpdate, &sig, &SignalCatcher::emitId);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectSummaryReady, &sig, &SignalCatcher::emitString);
+
+  // No summary yet:
+  td.generateOneOffSummary();
+  std::string descr;
+  descr = sig.stashPayloadForReturn(descr, false);
+  REQUIRE(descr != "");
+  REQUIRE(descr.find("No One Offs") != std::string::npos);
+
+  auto oid = uniqueIdGenerator().getNextId();
+  oid.tag(proIds::uidTag::oneoff);
+  td.createOneOff(oid, "One Off Wobbly", "A generic description");
+  auto id = sig.stashPayloadForReturn(proIds::NullUid, false);
+  REQUIRE(id != proIds::NullUid);
+  REQUIRE(id != oid);
+
+  // Getting the summary
+  td.generateOneOffSummary();
+  descr = sig.stashPayloadForReturn(descr, false);
+  REQUIRE(descr != "");
+  REQUIRE(descr.find("One Off Wobbly") != std::string::npos);
 }
 
 // ------ Mark, pause, stop etc -----------------------------------------------------------------------
@@ -201,3 +270,34 @@ TEST_CASE("Stopping", "[QTAware, Slots]"){
   //Now check that we wrote a stop at time 128 and that id has 5 seconds allocated, as expected
 
 }
+TEST_CASE("Pause and Resume", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+
+  SignalCatcher sig;
+  // These do collide, but we just have to remember to do one thing at a time!
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectRunningUpdate, &sig, &SignalCatcher::emitString);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectPaused, &sig, &SignalCatcher::emitPaused);
+
+  //Marking something
+  std::string name = "Wibble 79";
+  auto pid = CreateProjectAndReturnId(td, name);
+  td.markProject(pid, name, 123);
+
+  std::string str;
+  str = sig.stashPayloadForReturn(str, false);
+  REQUIRE(str == name);
+
+  //Pausing
+  td.pauseProject(180);
+  str = sig.stashPayloadForReturn(str, false);
+  REQUIRE(str == "paused "+name);
+
+  td.resumeProject(223);
+  str = sig.stashPayloadForReturn(str, false);
+  REQUIRE(str == name);
+
+}
+
+
+//Failure case - marking something that does not exist in PM

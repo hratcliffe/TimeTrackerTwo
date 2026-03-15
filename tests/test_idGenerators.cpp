@@ -44,7 +44,6 @@ TEST_CASE("Uid string functions", "[Basic]"){
   auto id = theGen.getNextId();
   //To string
   ss<<id;
-  std::cout<<ss.str()<<std::endl;
 
   // Checking only valid characters
   auto checkUid = [](std::string str){

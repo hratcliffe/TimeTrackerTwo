@@ -461,9 +461,6 @@ TEST_CASE("Empty Data - Time summary", "[QTAware, Slots]"){
   std::vector<timeSummaryItem> summary;
   summary = sig.stashPayloadForReturn(summary, false);
   REQUIRE(summary.size() == 1);
-  for(auto item : summary){
-    std::cout<<item<<std::endl;
-  }
   REQUIRE(summary[0].text.find("No time entries found!") != std::string::npos);
 }
 

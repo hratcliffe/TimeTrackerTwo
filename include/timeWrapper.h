@@ -86,7 +86,6 @@ class timeWrapper{
     static timePoint startOfMonth(timePoint tp){
       std::time_t theTime = clock::to_time_t(tp);
       auto timeInfo = localtime(&theTime);
-      std::cout<<timeInfo->tm_hour<<" "<<timeInfo->tm_min<<std::endl;
       timeInfo->tm_mday = 1;
       timeInfo->tm_hour = 0;
       timeInfo->tm_min = 0;

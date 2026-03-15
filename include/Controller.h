@@ -202,8 +202,6 @@ Q_OBJECT
     // Format  "%Y-%m-%d %H:%M:%S"
     std::string time_str;
     time_str = time.toString("yyyy-MM-dd hh:mm:ss").toStdString();
-    //std::cout<<time_str<<std::endl;
-    //std::cout<<timeWrapper::formatTime(timeWrapper::parseTimeZoned(time_str))<<std::endl;
     return timeWrapper::parseTimeZoned(time_str);
   }
 

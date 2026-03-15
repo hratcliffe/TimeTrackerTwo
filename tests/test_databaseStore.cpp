@@ -1,4 +1,5 @@
 #include "catch2/catch_all.hpp"
+#include "shorthand.h"
 
 #include "databaseStore.h"
 
@@ -61,7 +62,7 @@ TEST_CASE("Reading Known Data - Project", "[Database]"){
   auto pd = theDB.readProject(id);
 
   REQUIRE(pd.name == "Project Alpha");
-  REQUIRE(pd.FTE == Catch::Approx(0.5));
+  REQUIRE_THAT(pd.FTE, WithinAbs(0.5, margin));
   REQUIRE(pd.uid == id);
   //TODO - start and end
 }
@@ -71,7 +72,7 @@ TEST_CASE("Reading Known Data - Sub", "[Database]"){
   auto sd = theDB.readSubproject(id);
 
   REQUIRE(sd.name == "Documentation");
-  REQUIRE(sd.frac == Catch::Approx(0.3));
+  REQUIRE_THAT(sd.frac, WithinAbs(0.3, margin));
   REQUIRE(sd.uid == id);
   REQUIRE(sd.parentUid == proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}"));
 }
@@ -99,14 +100,14 @@ TEST_CASE("List fetch - projects", "[Database]"){
   {
   auto pd = projList[0];
   REQUIRE(pd.name == "Project Alpha");
-  REQUIRE(pd.FTE == Catch::Approx(0.5));
+  REQUIRE_THAT(pd.FTE, WithinAbs(0.5, margin));
   REQUIRE(pd.uid == id);
   //TODO - start and end
   }
   {
   auto pd = projList[1];
   REQUIRE(pd.name == "Project Beta");
-  REQUIRE(pd.FTE == Catch::Approx(0.25));
+  REQUIRE_THAT(pd.FTE, WithinAbs(0.25, margin));
   REQUIRE(pd.uid == id2);
   //TODO - start and end
   }
@@ -123,13 +124,13 @@ TEST_CASE("List fetch - project active", "[Database]"){
   {
   auto pd = projList[0];
   REQUIRE(pd.name == "Project Alpha");
-  REQUIRE(pd.FTE == Catch::Approx(0.5));
+  REQUIRE_THAT(pd.FTE, WithinAbs(0.5, margin));
   REQUIRE(pd.uid == id);
   }
   {
   auto pd = projList[1];
   REQUIRE(pd.name == "Project Beta");
-  REQUIRE(pd.FTE == Catch::Approx(0.25));
+  REQUIRE_THAT(pd.FTE, WithinAbs(0.25, margin));
   REQUIRE(pd.uid == id2);
   }
 }
@@ -145,15 +146,15 @@ TEST_CASE("List fetch - subprojects", "[Database]"){
   auto lst = theDB.fetchSubprojectList();
   REQUIRE(lst.size() == 3);
   {
-    auto cmp = [id, pid](fullSubProjectData & sd){ return sd.uid == id && sd.parentUid == pid && sd.name =="Documentation" && sd.frac == Catch::Approx(0.3);};
+    auto cmp = [id, pid](fullSubProjectData & sd){ return sd.uid == id && sd.parentUid == pid && sd.name =="Documentation" && std::abs(sd.frac - 0.3) < margin;};
     REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
   }
   {
-    auto cmp = [id2, pid](fullSubProjectData & sd){ return sd.uid == id2 && sd.parentUid == pid && sd.name =="Testing" && sd.frac == Catch::Approx(0.7);};
+    auto cmp = [id2, pid](fullSubProjectData & sd){ return sd.uid == id2 && sd.parentUid == pid && sd.name =="Testing" && std::abs(sd.frac -0.7) < margin;};
     REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
   }
   {
-    auto cmp = [id3, pid2](fullSubProjectData & sd){ return sd.uid == id3 && sd.parentUid == pid2 && sd.name == "Important Title" && sd.frac == Catch::Approx(0.23);};
+    auto cmp = [id3, pid2](fullSubProjectData & sd){ return sd.uid == id3 && sd.parentUid == pid2 && sd.name == "Important Title" && std::abs(sd.frac -0.23) < margin;};
     REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
   }
 
@@ -168,11 +169,11 @@ TEST_CASE("List fetch - subprojects by parent", "[Database]"){
   auto lst = theDB.fetchSubprojectListForParents({pid});// Takes a vector, pass single-el-vec
   REQUIRE(lst.size() == 2);
   {
-    auto cmp = [id, pid](fullSubProjectData & sd){ return sd.uid == id && sd.parentUid == pid && sd.name =="Documentation" && sd.frac == Catch::Approx(0.3);};
+    auto cmp = [id, pid](fullSubProjectData & sd){ return sd.uid == id && sd.parentUid == pid && sd.name =="Documentation" && std::abs(sd.frac -0.3) < margin;};
     REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
   }
   {
-    auto cmp = [id2, pid](fullSubProjectData & sd){ return sd.uid == id2 && sd.parentUid == pid && sd.name =="Testing" && sd.frac == Catch::Approx(0.7);};
+    auto cmp = [id2, pid](fullSubProjectData & sd){ return sd.uid == id2 && sd.parentUid == pid && sd.name =="Testing" && std::abs(sd.frac -0.7) < margin;};
     REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
   }
   //Nothing assoc with the other parent

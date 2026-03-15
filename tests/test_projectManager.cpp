@@ -1,9 +1,7 @@
 #include "catch2/catch_all.hpp"
+#include "shorthand.h"
 
 #include "projectManager.h"
-
-//TODO - replace Approx with Matchers
-const static float margin = 0.001;
 
 // Basic manager --------------------------------------------------------------------
 
@@ -113,8 +111,8 @@ TEST_CASE("Used and Available FTE", "[Basic]"){
   auto avail = pm.availableFTE();
   auto used = pm.allocatedFTE();
   //Default is sum to 1.0
-  REQUIRE(used == Catch::Approx(0.3).margin(margin));
-  REQUIRE( (avail+used) == Catch::Approx(1.0).margin(margin) );
+  REQUIRE_THAT(used, WithinAbs(0.3, margin));
+  REQUIRE_THAT(avail+used,  WithinAbs(1.0, margin));
 
   //Adding another
   pd.FTE = 0.35;
@@ -122,8 +120,8 @@ TEST_CASE("Used and Available FTE", "[Basic]"){
   avail = pm.availableFTE();
   used = pm.allocatedFTE();
 
-  REQUIRE(used == Catch::Approx(0.3+0.35).margin(margin));
-  REQUIRE( (avail+used) == Catch::Approx(1.0).margin(margin) );
+  REQUIRE_THAT(used, WithinAbs(0.3+0.35, margin));
+  REQUIRE_THAT(avail+used, WithinAbs(1.0, margin));
 }
 // Checking the fraction left under a project
 TEST_CASE("Checking sub frac", "[Basic]"){
@@ -134,7 +132,7 @@ TEST_CASE("Checking sub frac", "[Basic]"){
   REQUIRE(pm.subprojectCount() == 2);
   // 0.4 each - 0.2 left
   auto frac = pm.availableSubFrac(pid);
-  REQUIRE(frac == Catch::Approx(0.2).margin(margin));
+  REQUIRE_THAT(frac, WithinAbs(0.2, margin));
 }
 
 TEST_CASE("Getting Project name and FTE", "[Basic]"){
@@ -178,7 +176,7 @@ TEST_CASE("Deleting project", "[Basic]"){
   REQUIRE(pm.projectCount() == 2);
   pm.deleteProjectById(proj);
   REQUIRE(pm.projectCount() == 1);
-  REQUIRE(pm.getFTE(proj2) == Catch::Approx(0.22).margin(margin));
+  REQUIRE_THAT(pm.getFTE(proj2), WithinAbs(0.22, margin));
 
 }
 TEST_CASE("Deleting sub-project", "[Basic]"){
@@ -196,7 +194,7 @@ TEST_CASE("Deleting sub-project", "[Basic]"){
 
   pm.deleteSubprojectById(proj);
   REQUIRE(pm.subprojectCount() == 1);
-  REQUIRE(pm.getFrac(proj2) == Catch::Approx(0.45).margin(margin));
+  REQUIRE_THAT(pm.getFrac(proj2), WithinAbs(0.45, margin));
   REQUIRE(pm.subprojectCount(pid) == 1);
 }
 //  Remove sub from parent, but not completely
@@ -308,8 +306,8 @@ TEST_CASE("Updating Project FTE", "[Basic]"){
   pm.setFTE(proj, 0.25);
   auto avail = pm.availableFTE();
   auto used = pm.allocatedFTE();
-  REQUIRE(used == Catch::Approx(0.25+0.35).margin(margin));
-  REQUIRE( (avail+used) == Catch::Approx(1.0).margin(margin) );
+  REQUIRE_THAT(used, WithinAbs(0.25+0.35, margin));
+  REQUIRE_THAT(avail+used, WithinAbs(1.0, margin) );
 }
 
 TEST_CASE("Updating sub frac", "[Basic]"){
@@ -321,7 +319,7 @@ TEST_CASE("Updating sub frac", "[Basic]"){
   // Update first to 0.33 -> 0.73 used, 0.27 left
   pm.setFrac(proj, 0.33);
   auto frac = pm.availableSubFrac(pid);
-  REQUIRE(frac == Catch::Approx(0.27).margin(margin));
+  REQUIRE_THAT(frac, WithinAbs(0.27, margin));
 }
 
 //---------- Fetching Details -----------------------------------------------------
@@ -374,11 +372,11 @@ TEST_CASE("Getting Name for absent project", "[Basic]"){
 }
 TEST_CASE("Getting FTE for absent project", "[Basic]"){
   projectManager pm;
-  REQUIRE(pm.getFTE(uniqueIdGenerator().getNextId()) == Catch::Approx(0.0).margin(margin));
+  REQUIRE_THAT(pm.getFTE(uniqueIdGenerator().getNextId()), WithinAbs(0.0, margin));
 }
 TEST_CASE("Getting frac for absent project", "[Basic]"){
   projectManager pm;
-  REQUIRE(pm.getFrac(uniqueIdGenerator().getNextId()) == Catch::Approx(0.0).margin(margin));
+  REQUIRE_THAT(pm.getFrac(uniqueIdGenerator().getNextId()), WithinAbs(0.0, margin));
 }
 // Parent look-ups for not-a-sub
 TEST_CASE("Getting parent ID for absent project", "[Basic]"){

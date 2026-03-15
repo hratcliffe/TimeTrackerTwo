@@ -1,5 +1,5 @@
 #include "catch2/catch_all.hpp"
-#include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include "shorthand.h"
 
 #include <QApplication>
 #include <QObject>
@@ -65,8 +65,6 @@ TEST_CASE("Config round trip", "[QTAware]"){
 
 //--- Adding/creating ----------------------------------------------------------------------------
 
-static const float margin = 0.001; // Float margin
-auto WithinAbs = Catch::Matchers::WithinAbs;
 proIds::Uuid InferIDFromName(const std::map<proIds::Uuid, projectDetails> & map, std::string name){
   auto tmp = std::find_if(map.begin(), map.end(), [name](const std::pair< proIds::Uuid,projectDetails> & det){return det.second.name == name;});
   if(tmp != map.end()) return tmp->first;

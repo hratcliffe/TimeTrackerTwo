@@ -43,14 +43,14 @@ inline std::ostream& operator<< (std::ostream& stream, const projectData& data){
 *
 *
 */
-struct subProjectData{
+struct subprojectData{
 
   std::string name;/**< \brief Name of project */
   float frac;/**< \brief Fraction of parent this uses */
 };
 
-inline std::ostream& operator<< (std::ostream& stream, const subProjectData& data){
-/** \brief Stream op for subProjectData
+inline std::ostream& operator<< (std::ostream& stream, const subprojectData& data){
+/** \brief Stream op for subprojectData
 */
 
   stream << data.name <<" "<<(int)(data.frac*100)<<"%";
@@ -100,7 +100,7 @@ class fullSubProjectData{
     proIds::Uuid parentUid; /**< \brief Unique identifier for the parent project */
 
     fullSubProjectData() = default;
-    fullSubProjectData(proIds::Uuid id, subProjectData const &data, proIds::Uuid parentId)
+    fullSubProjectData(proIds::Uuid id, subprojectData const &data, proIds::Uuid parentId)
         : uid(id), name(data.name), frac(data.frac), parentUid(parentId) {};
 };
 inline std::ostream& operator<< (std::ostream& stream, const fullSubProjectData& data){

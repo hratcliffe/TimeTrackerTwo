@@ -8,7 +8,17 @@ Q_OBJECT
 
 public:
 
+static const int close = 1;
+static const int stop = 2;
+static const int pause = 3;
+
 template<typename T>
+T stashPayloadForReturn(T payload, bool stash=true){
+    static T payload_int;
+    if(stash) payload_int = payload;
+    return payload_int;
+}
+template<typename T, int>
 T stashPayloadForReturn(T payload, bool stash=true){
     static T payload_int;
     if(stash) payload_int = payload;
@@ -37,8 +47,9 @@ public slots:
   void emitOrderedProjectList(std::vector<selectableEntity> p){stashPayloadForReturn(p);}
   void emitTimeSummary(std::vector<timeSummaryItem> s){stashPayloadForReturn(s);}
 
-  // Payload-less or ambiguous slots - here use a tag string instead
+  // Payload-less or ambiguous slots - here use a tag string and a tag instead
   void emitStopped(){stashPayloadForReturn<std::string>("stopped");}
   void emitPaused(std::string p){stashPayloadForReturn("paused "+p);}
+  void emitReadyToClose(){stashPayloadForReturn<std::string, SignalCatcher::close>("ready2close");}
 
 };

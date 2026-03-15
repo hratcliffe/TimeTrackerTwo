@@ -542,6 +542,53 @@ TEST_CASE("Missing Data - Timestamps before", "[QTAware]"){
   REQUIRE(cnt == 0);
 }
 
+TEST_CASE("Closing with active project", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./Scratch/Empty_89dfn.db")};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::readyToClose, &sig, &SignalCatcher::emitReadyToClose);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectRunningFlash, &sig, &SignalCatcher::emitString);
+
+  //Creating a project and marking it running
+  const std::string name = "Project to be marked 125fgw";
+  auto id = CreateProjectAndReturnId(td, name);
+  td.markProject(id, name, 123);
+
+  //Silent close should NOT change active project
+  //Check what is running:
+  td.flashProject();
+  std::string name_in;
+  name_in = sig.stashPayloadForReturn(name_in, false);
+  REQUIRE(name == name_in);
+
+  SECTION("Silent closing"){
+
+    //Plan to close
+    td.handleCloseRequest(true, 150);
+    //Check close signal sent
+    std::string tmp; tmp = sig.stashPayloadForReturn<std::string, SignalCatcher::close>(tmp, false);
+    REQUIRE(tmp == "ready2close");
+
+    // Check same project still running
+    td.flashProject();
+    name_in = sig.stashPayloadForReturn(name_in, false);
+    REQUIRE(name == name_in);
+  }
+  SECTION("Stop and close"){
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectStopped, &sig, &SignalCatcher::emitStopped);
+    td.handleCloseRequest(false, 150);
+    //Check close signal sent
+    std::string tmp; tmp = sig.stashPayloadForReturn<std::string, SignalCatcher::close>(tmp, false);
+    REQUIRE(tmp == "ready2close");
+
+    // Nothing should be running
+    td.flashProject();
+    name_in = sig.stashPayloadForReturn(name_in, false);
+    REQUIRE("" == name_in);
+  }
+
+}
 
 //Failure case - marking something that does not exist in PM
 TEST_CASE("Marking Nonexistent Project", "[QTAware, Slots]"){

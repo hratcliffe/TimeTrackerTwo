@@ -586,6 +586,18 @@ TEST_CASE("Closing with active project", "[QTAware, Slots]"){
   }
 
 }
+TEST_CASE("Closing without active project", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./Scratch/Empty_89dfn.db")};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::readyToClose, &sig, &SignalCatcher::emitReadyToClose);
+
+  //Plan to close
+  REQUIRE_NOTHROW(td.handleCloseRequest(true, 150));
+  //Check close signal sent
+  REQUIRE( sig.stashPayloadForReturn<bool, SignalCatcher::close>(false, false));
+}
 
 //Failure case - marking something that does not exist in PM
 TEST_CASE("Marking Nonexistent Project", "[QTAware, Slots]"){

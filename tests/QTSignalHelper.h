@@ -35,6 +35,7 @@ public slots:
   void emitDoubleX2(double a, double b){stashPayloadForReturn(a, b);}
 
   void emitOrderedProjectList(std::vector<selectableEntity> p){stashPayloadForReturn(p);}
+  void emitTimeSummary(std::vector<timeSummaryItem> s){stashPayloadForReturn(s);}
 
   // Payload-less or ambiguous slots - here use a tag string instead
   void emitStopped(){stashPayloadForReturn<std::string>("stopped");}

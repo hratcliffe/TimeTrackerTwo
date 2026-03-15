@@ -381,6 +381,77 @@ TEST_CASE("Overall Summary", "[QTAware, Slots]"){
   REQUIRE(descr.find("70 % FTE allocated") != std::string::npos);
 }
 
+TEST_CASE("Known Data - Time summary", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./InputData/KnownDatabase.db")};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::timeSummaryReady, &sig, &SignalCatcher::emitTimeSummary);
+
+  td.loadProjects(4000);
+  td.generateTimeSummary(timeSummaryUnit::debug);
+
+  std::vector<timeSummaryItem> summary;
+  summary = sig.stashPayloadForReturn(summary, false);
+  REQUIRE(summary.size() > 0);
+
+  //Uptime
+  {auto check = [](timeSummaryItem & ts){return ts.text.find("8053.0 units") != std::string::npos;};
+  REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
+  /// Alpha
+  {auto check = [](timeSummaryItem & ts){return ts.text.find("Project Alpha") != std::string::npos;};
+  REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
+  // Exact format not fixed, but these strings expected:
+  {auto check = [](timeSummaryItem & ts){return ts.text.find("Time on project and sub") != std::string::npos && ts.text.find("8053.0 units")!=std::string::npos;};
+  REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
+  {auto check = [](timeSummaryItem & ts){return ts.text.find("Project Beta") != std::string::npos;};
+  REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
+  {auto check = [](timeSummaryItem & ts){return ts.text.find("Time on project and sub") != std::string::npos && ts.text.find(" 0.0 units")!=std::string::npos;};
+  REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
+
+  //Check the 3 summary lines for alpha
+  auto check = [](timeSummaryItem & ts){return ts.text.find("Project Alpha") != std::string::npos;};
+  auto fst = find_if(summary.begin(), summary.end(), check);
+  fst++; fst++; // Skip over next line
+  REQUIRE(fst->text == "Fraction of uptime 100% (target 50%)");
+  REQUIRE(fst->stat == timeSummaryStatus::overTarget);
+  auto check2 = [](timeSummaryItem & ts){return ts.text.find("Project Alpha: Documentation") != std::string::npos;};
+  fst = find_if(summary.begin(), summary.end(), check2);
+  fst++;
+  REQUIRE(fst->text == "Fraction on sub 37% (target 30%)");
+  REQUIRE(fst->stat == timeSummaryStatus::overTarget);
+  auto check3 = [](timeSummaryItem & ts){return ts.text.find("Project Alpha: Testing") != std::string::npos;};
+  fst = find_if(summary.begin(), summary.end(), check3);
+  fst++;
+  REQUIRE(fst->text == "Fraction on sub 55% (target 70%)");
+  REQUIRE(fst->stat == timeSummaryStatus::underTarget);
+
+  //Exactly what happens for beta sub breakdown is not prescribed
+
+  //And check the off-off
+  {auto check = [](timeSummaryItem & ts){return ts.text.find("One Off Projects: 0 units") != std::string::npos;};
+  REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
+
+}
+TEST_CASE("Empty Data - Time summary", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./Scratch/Empty_dfkhawf.db")};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::timeSummaryReady, &sig, &SignalCatcher::emitTimeSummary);
+
+  td.loadProjects(4000);
+  td.generateTimeSummary(timeSummaryUnit::debug);
+
+  std::vector<timeSummaryItem> summary;
+  summary = sig.stashPayloadForReturn(summary, false);
+  REQUIRE(summary.size() == 1);
+  for(auto item : summary){
+    std::cout<<item<<std::endl;
+  }
+  REQUIRE(summary[0].text.find("No time entries found!") != std::string::npos);
+}
+
 // -------- Digest Generation ------------------------------------------------------------------------
 
 //----------- Loading Projects ----------------------------------------------------------------------

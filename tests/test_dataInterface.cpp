@@ -11,36 +11,36 @@
 
 TEST_CASE("Int -Bad Table", "[Database]"){
   auto init = [](){
-    databaseIO theDB{"./InputData/BadTestDatabase.db"};
+    databaseIO theDB{"./InputData/BadTestDatabase.db", false};
   };
   REQUIRE_THROWS(init());
 }
 TEST_CASE("Int -Bad File", "[Database]"){
   auto init = [](){
-    databaseIO theDB{"./InputData/BadFileName.db"};
+    databaseIO theDB{"./InputData/BadFileName.db", false};
   };
   REQUIRE_THROWS(init());
 }
 TEST_CASE("Int -Unreadable File", "[Database]"){
   auto init = [](){
-    databaseIO theDB{"InputData/UnreadableFile.db"};
+    databaseIO theDB{"InputData/UnreadableFile.db", false};
   };
   REQUIRE_THROWS(init());
 }
 TEST_CASE("Int -Read Only File", "[Database]"){
   auto init = [](){
-    databaseIO theDB{"InputData/ReadOnlyFile.db"};
+    databaseIO theDB{"InputData/ReadOnlyFile.db", false};
   };
   REQUIRE_THROWS(init());
 }
 
 TEST_CASE("Int -Bad File 2", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db"};
+  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
   REQUIRE_THROWS(theDB.closeDB());
 }
 
 TEST_CASE("Int- Reference Time", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db"};
+  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
   theDB.writeReferenceTime(0);
   REQUIRE((false)); // Not implemented function, test cannot be performed
 }
@@ -48,7 +48,7 @@ TEST_CASE("Int- Reference Time", "[Database]"){
 // Projects -----------------------------------------------------------------------------
 
 TEST_CASE("Int -Reading Known Data - Project", "[Database]"){
-  databaseIO theDB{"./InputData/KnownDatabase.db"};
+  databaseIO theDB{"./InputData/KnownDatabase.db", true};
   auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
   auto pd = theDB.readProject(id);
 
@@ -58,7 +58,7 @@ TEST_CASE("Int -Reading Known Data - Project", "[Database]"){
   //TODO - start and end
 }
 TEST_CASE("Int -Reading Known Data - Sub", "[Database]"){
-  databaseIO theDB{"./InputData/KnownDatabase.db"};
+  databaseIO theDB{"./InputData/KnownDatabase.db", true};
   auto id = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
   auto sd = theDB.readSubproject(id);
 
@@ -68,7 +68,7 @@ TEST_CASE("Int -Reading Known Data - Sub", "[Database]"){
   REQUIRE(sd.parentUid == proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}"));
 }
 TEST_CASE("Int -Reading Known Data - Oneoff", "[Database]"){
-  databaseIO theDB{"./InputData/KnownDatabase.db"};
+  databaseIO theDB{"./InputData/KnownDatabase.db", true};
   auto id = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
   auto oo = theDB.readOneOffProject(id);
 
@@ -81,7 +81,7 @@ TEST_CASE("Int -Reading Known Data - Oneoff", "[Database]"){
 //NOTE: projects list order is NOT guaranteed per contract
 
 TEST_CASE("Int -List fetch - projects", "[Database]"){
-  databaseIO theDB{"./InputData/KnownDatabase.db"};
+  databaseIO theDB{"./InputData/KnownDatabase.db", true};
   auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
   auto id2 = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
 
@@ -105,7 +105,7 @@ TEST_CASE("Int -List fetch - projects", "[Database]"){
 }
 
 TEST_CASE("Int -List fetch - project active", "[Database]"){
-   databaseIO theDB{"./InputData/KnownDatabase.db"};
+   databaseIO theDB{"./InputData/KnownDatabase.db", true};
   auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
   auto id2 = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
 
@@ -128,7 +128,7 @@ TEST_CASE("Int -List fetch - project active", "[Database]"){
 }
 
 TEST_CASE("Int -List fetch - subprojects", "[Database]"){
-  databaseIO theDB{"./InputData/KnownDatabase.db"};
+  databaseIO theDB{"./InputData/KnownDatabase.db", true};
   auto pid  = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
   auto id   = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
   auto id2  = proIds::Uuid("{de58a6f8-d0bb-46c8-af18-aed15e92060c}");
@@ -152,7 +152,7 @@ TEST_CASE("Int -List fetch - subprojects", "[Database]"){
 
 }
 TEST_CASE("Int -List fetch - subprojects by parent", "[Database]"){
-  databaseIO theDB{"./InputData/KnownDatabase.db"};
+  databaseIO theDB{"./InputData/KnownDatabase.db", true};
   auto pid = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
   auto id  = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
   auto id2 = proIds::Uuid("{de58a6f8-d0bb-46c8-af18-aed15e92060c}");
@@ -177,7 +177,7 @@ TEST_CASE("Int -List fetch - subprojects by parent", "[Database]"){
 }
 
 TEST_CASE("Int -List fetch - oneoff", "[Database]"){
-  databaseIO theDB{"./InputData/KnownDatabase.db"};
+  databaseIO theDB{"./InputData/KnownDatabase.db", true};
   auto id1 = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
   auto id2 = proIds::Uuid("{d74a08d4-35b4-4b7a-b525-b5da00af6269}");
   auto id3 = proIds::Uuid("{07e453ad-b698-47b8-aa52-c7ef2306731d}");
@@ -200,7 +200,7 @@ TEST_CASE("Int -List fetch - oneoff", "[Database]"){
 }
 
 TEST_CASE("Int -List fetch - oneoff range", "[Database]"){
-  databaseIO theDB{"./InputData/KnownDatabaseO.db"};
+  databaseIO theDB{"./InputData/KnownDatabaseO.db", true};
   auto id1 = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
   auto id2 = proIds::Uuid("{d74a08d4-35b4-4b7a-b525-b5da00af6269}");
   auto id3 = proIds::Uuid("{07e453ad-b698-47b8-aa52-c7ef2306731d}");
@@ -231,7 +231,7 @@ fullProjectData writeProjI(databaseIO & theDB, proIds::Uuid & pid){
   return pd;
 }
 TEST_CASE("Int -Writing Project", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db"};
+  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -247,7 +247,7 @@ TEST_CASE("Int -Writing Project", "[Database]"){
 }
 
 TEST_CASE("Int -Writing Sub Project", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db"};
+  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
 
   uniqueIdGenerator theGen;
   auto id = theGen.getNextId();
@@ -271,7 +271,7 @@ TEST_CASE("Int -Writing Sub Project", "[Database]"){
   REQUIRE(sd.parentUid == sd_in.parentUid);
 }
 TEST_CASE("Int -Writing One Off", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db"};
+  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -291,7 +291,7 @@ TEST_CASE("Int -Writing One Off", "[Database]"){
 //Delete
 
 TEST_CASE("Int -Deleting Project", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db"};
+  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -304,7 +304,7 @@ TEST_CASE("Int -Deleting Project", "[Database]"){
 }
 
 TEST_CASE("Int -Deleting Sub Project", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db"};
+  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
 
   uniqueIdGenerator theGen;
   auto id = theGen.getNextId();
@@ -325,7 +325,7 @@ TEST_CASE("Int -Deleting Sub Project", "[Database]"){
 
 }
 TEST_CASE("Int -Deleting One Off", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db"};
+  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -341,7 +341,7 @@ TEST_CASE("Int -Deleting One Off", "[Database]"){
 
 //Edit (uses write)
 TEST_CASE("Int -Edit project", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db"};
+  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -361,7 +361,7 @@ TEST_CASE("Int -Edit project", "[Database]"){
 }
 
 TEST_CASE("Int -Edit subproject", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db"};
+  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -394,7 +394,7 @@ TEST_CASE("Int -Edit subproject", "[Database]"){
 // Fetch tracker
 // NOTE: tracker entries _are_ guaranteed to be in time order
 TEST_CASE("Int -Reading Known Data - Tracker", "[Database]"){
-  databaseIO theDB{"./InputData/KnownDatabase.db"};
+  databaseIO theDB{"./InputData/KnownDatabase.db", true};
   auto pid = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
   auto sid1 = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
   auto sid2 = proIds::Uuid("{de58a6f8-d0bb-46c8-af18-aed15e92060c}");
@@ -408,7 +408,7 @@ TEST_CASE("Int -Reading Known Data - Tracker", "[Database]"){
 }
 
 TEST_CASE("Int -Reading Known Data - Tracker with Range", "[Database]"){
-  databaseIO theDB{"./InputData/KnownDatabase.db"};
+  databaseIO theDB{"./InputData/KnownDatabase.db", true};
   auto pid = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
   auto sid1 = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
   auto sid2 = proIds::Uuid("{de58a6f8-d0bb-46c8-af18-aed15e92060c}");
@@ -420,7 +420,7 @@ TEST_CASE("Int -Reading Known Data - Tracker with Range", "[Database]"){
 }
 //Fetch at
 TEST_CASE("Int-Reading Known Data - Tracker By Id", "[Database]"){
-  databaseIO theDB{"./InputData/KnownDatabase.db"};
+  databaseIO theDB{"./InputData/KnownDatabase.db", true};
   auto sid1 = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
   auto list = theDB.fetchTrackerEntries(sid1);
   REQUIRE(list.size() == 1);
@@ -428,21 +428,21 @@ TEST_CASE("Int-Reading Known Data - Tracker By Id", "[Database]"){
   REQUIRE(stamp == timeStamp{689, sid1});
 }
 TEST_CASE("Int -Reading Known Data - Tracker At", "[Database]"){
-  databaseIO theDB{"./InputData/KnownDatabase.db"};
+  databaseIO theDB{"./InputData/KnownDatabase.db", true};
   auto sid1 = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
   auto stamp = theDB.fetchTrackerAt(3000);
   REQUIRE(stamp == timeStamp{689, sid1});
 }
 //Fetch latest
 TEST_CASE("Int -Reading Known Data - Latest Tracker", "[Database]"){
-  databaseIO theDB{"./InputData/KnownDatabase.db"};
+  databaseIO theDB{"./InputData/KnownDatabase.db", true};
   auto stamp = theDB.fetchLatestTrackerEntry();
   REQUIRE(stamp == timeStamp{8001, proIds::NullUid});
 }
 
 //Write tracker
 TEST_CASE("Int -Writing Tracker" "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db"};
+  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -457,7 +457,7 @@ TEST_CASE("Int -Writing Tracker" "[Database]"){
 
 //Delete tracker
 TEST_CASE("Int -Delete Tracker By ID" "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase3I.db"};
+  databaseIO theDB{"./Scratch/TestDatabase3I.db", false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -484,7 +484,7 @@ TEST_CASE("Int -Delete Tracker By ID" "[Database]"){
 
 //Delete tracker in interval
 TEST_CASE("Int-Delete Tracker in Interval", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase4I.db"};
+  databaseIO theDB{"./Scratch/TestDatabase4I.db", false};
 
   uniqueIdGenerator theGen;
   std::vector<long> times{89, 703, 901, 1002, 1115};
@@ -524,7 +524,7 @@ TEST_CASE("Int-Delete Tracker in Interval", "[Database]"){
 //Digests
 // Read Known data
 TEST_CASE("Int -Reading Known Data - Digest Periods", "[Database]"){
-  databaseIO theDB{"./InputData/KnownDatabase.db"};
+  databaseIO theDB{"./InputData/KnownDatabase.db", true};
   auto dp = theDB.fetchDigestPeriods();
 
   REQUIRE(dp[0].duration == 100);
@@ -535,7 +535,7 @@ TEST_CASE("Int -Reading Known Data - Digest Periods", "[Database]"){
   //TODO start and end
 }
 TEST_CASE("Int -Reading Known Data - Digest By Period", "[Database]"){
-  databaseIO theDB{"./InputData/KnownDatabase.db"};
+  databaseIO theDB{"./InputData/KnownDatabase.db", true};
   auto dp = theDB.fetchDigestPeriods();
 
   auto dig = theDB.fetchDigestEntries(dp[0]);
@@ -553,7 +553,7 @@ TEST_CASE("Int -Reading Known Data - Digest By Period", "[Database]"){
   }
 }
 TEST_CASE("Int -Reading Known Data - Digest By Time", "[Database]"){
-  databaseIO theDB{"./InputData/KnownDatabase.db"};
+  databaseIO theDB{"./InputData/KnownDatabase.db", true};
   auto dig = theDB.fetchDigestEntriesForTime(100, 301);
 
  {
@@ -573,14 +573,14 @@ TEST_CASE("Int -Reading Known Data - Digest By Time", "[Database]"){
 // Read and write state
 
 TEST_CASE("Int -Round trip State", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db"};
+  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
 
   theDB.writeAppState("conf_i", 137);
   auto item = theDB.readAppState("conf_i");
   REQUIRE(item == 137);
 }
 TEST_CASE("Int -Round trip Config", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db"};
+  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
 
   theDB.writeAppConfig("conf2_i", "XY_23");
   auto item2 = theDB.readAppConfig("conf2_i");
@@ -589,7 +589,7 @@ TEST_CASE("Int -Round trip Config", "[Database]"){
 
 // Write digest period + entry (i.e. first touch)
 TEST_CASE("Int -Write Digest", "[Database]"){
-  databaseIO theDB{"./Scratch/DigestDatabaseI.db"};
+  databaseIO theDB{"./Scratch/DigestDatabaseI.db", false};
 
   // Create a project
   uniqueIdGenerator theGen;
@@ -635,7 +635,7 @@ TEST_CASE("Int -Write Digest", "[Database]"){
 
 //Update digest for id
 TEST_CASE("Int -Specific digest update", "[Database]"){
-  databaseIO theDB{"./Scratch/DigestDatabase2I.db"};
+  databaseIO theDB{"./Scratch/DigestDatabase2I.db", false};
 
   // Create a project
   uniqueIdGenerator theGen;
@@ -677,7 +677,7 @@ TEST_CASE("Int -Specific digest update", "[Database]"){
 // Write some entries, run the update, check the result
 TEST_CASE("Int- Update Tracker+Digests ", "[Database]"){
 
-  databaseIO theDB{"./Scratch/TestDatabase5I.db"};
+  databaseIO theDB{"./Scratch/TestDatabase5I.db", false};
 
   uniqueIdGenerator theGen;
   std::vector<long> times{112, 1093, 1345, 1780, 2078};

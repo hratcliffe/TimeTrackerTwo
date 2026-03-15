@@ -281,10 +281,7 @@ TEST_CASE("Stopping", "[QTAware, Slots]"){
 
   //Stop it again
   td.stopProject(128);
-  std::string str;
-  str = sig.stashPayloadForReturn(str, false);
-  std::cout<<str<<std::endl;
-  REQUIRE(str == "stopped");
+  REQUIRE(sig.stashPayloadForReturn<bool, SignalCatcher::stop>(false, false));
 
   //Now check that we wrote a stop at time 128 and that id has 5 seconds allocated, as expected
 
@@ -309,7 +306,7 @@ TEST_CASE("Pause and Resume", "[QTAware, Slots]"){
 
   //Pausing
   td.pauseProject(180);
-  str = sig.stashPayloadForReturn(str, false);
+  str = sig.stashPayloadForReturn<std::string, SignalCatcher::pause>(str, false);
   REQUIRE(str == "paused "+name);
 
   td.resumeProject(223);
@@ -338,7 +335,7 @@ TEST_CASE("Pause and Resume - OneOff", "[QTAware, Slots]"){
 
   //Pausing
   td.pauseProject(180);
-  str = sig.stashPayloadForReturn(str, false);
+  str = sig.stashPayloadForReturn<std::string, SignalCatcher::pause>(str, false);
   REQUIRE(str == "paused "+name);
 
   td.resumeProject(223);
@@ -567,8 +564,7 @@ TEST_CASE("Closing with active project", "[QTAware, Slots]"){
     //Plan to close
     td.handleCloseRequest(true, 150);
     //Check close signal sent
-    std::string tmp; tmp = sig.stashPayloadForReturn<std::string, SignalCatcher::close>(tmp, false);
-    REQUIRE(tmp == "ready2close");
+    REQUIRE( sig.stashPayloadForReturn<bool, SignalCatcher::close>(false, false));
 
     // Check same project still running
     td.flashProject();
@@ -579,12 +575,13 @@ TEST_CASE("Closing with active project", "[QTAware, Slots]"){
     QAbstractEventDispatcher::connect(&td, &TrackerData::projectStopped, &sig, &SignalCatcher::emitStopped);
     td.handleCloseRequest(false, 150);
     //Check close signal sent
-    std::string tmp; tmp = sig.stashPayloadForReturn<std::string, SignalCatcher::close>(tmp, false);
-    REQUIRE(tmp == "ready2close");
+    REQUIRE(sig.stashPayloadForReturn<bool, SignalCatcher::close>(false, false));
 
+    //Check stop signal sent
+    REQUIRE(sig.stashPayloadForReturn<bool, SignalCatcher::stop>(false, false));
     // Nothing should be running
     td.flashProject();
-    name_in = sig.stashPayloadForReturn(name_in, false);
+    name_in = sig.stashPayloadForReturn<std::string>(name_in, false);
     REQUIRE("" == name_in);
   }
 

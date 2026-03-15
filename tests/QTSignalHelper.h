@@ -14,26 +14,25 @@ static const int pause = 3;
 
 template<typename T>
 T stashPayloadForReturn(T payload, bool stash=true){
-    static T payload_int;
+    static T payload_int{};
     if(stash) payload_int = payload;
     return payload_int;
 }
 template<typename T, int>
 T stashPayloadForReturn(T payload, bool stash=true){
-    static T payload_int;
+    static T payload_int{};
     if(stash) payload_int = payload;
     return payload_int;
 }
 template<typename T1, typename T2>
 std::pair<T1, T2> stashPayloadForReturn(T1 a, T2 b, bool stash=true){
-    static std::pair<T1, T2> payload_int;
+    static std::pair<T1, T2> payload_int{};
     if(stash){
       payload_int.first = a;
       payload_int.second = b;
     }
     return payload_int;
 }
-
 
 public slots:
   // No need to name slots - just something unique based on the payload they recieve
@@ -48,8 +47,8 @@ public slots:
   void emitTimeSummary(std::vector<timeSummaryItem> s){stashPayloadForReturn(s);}
 
   // Payload-less or ambiguous slots - here use a tag string and a tag instead
-  void emitStopped(){stashPayloadForReturn<std::string>("stopped");}
-  void emitPaused(std::string p){stashPayloadForReturn("paused "+p);}
-  void emitReadyToClose(){stashPayloadForReturn<std::string, SignalCatcher::close>("ready2close");}
+  void emitStopped(){stashPayloadForReturn<bool, SignalCatcher::stop>(true);}
+  void emitPaused(std::string p){stashPayloadForReturn<std::string, SignalCatcher::pause>("paused "+p);}
+  void emitReadyToClose(){stashPayloadForReturn<bool, SignalCatcher::close>("ready2close");}
 
 };

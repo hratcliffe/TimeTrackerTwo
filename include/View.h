@@ -39,8 +39,6 @@ inline QDateTime toQDateTime(TW_timePoint time){
   // Format  "%Y-%m-%d %H:%M:%S"
   std::string time_str;
   time_str = timeWrapper::formatTime(time);
-  std::cout<<time_str<<std::endl;
-  //std::cout<<timeWrapper::formatTime(timeWrapper::parseTimeZoned(time_str))<<std::endl;
   return QDateTime::fromString(QString::fromStdString(time_str),"yyyy-MM-dd hh:mm:ss");
 }
 
@@ -149,7 +147,6 @@ Q_OBJECT
       for(auto & proj: details){
         QVariant data = QVariant(proj.first.to_string().c_str());
         addUi.ParentDropdown->addItem(proj.second.name.c_str(), data);
-        std::cout<<proj.second<<std::endl;
       }
 
       //Disable OK button and require fields set to enable it
@@ -170,10 +167,8 @@ Q_OBJECT
         float frac = (float)addUi.PercentField->value()/100.0;
         proIds::Uuid parent = proIds::Uuid(addUi.ParentDropdown->currentData().toString().toStdString());
         emit subprojectAddRequested(subprojectData{addUi.NameField->text().toStdString(), frac}, parent);
-        std::cout<<subprojectData{addUi.NameField->text().toStdString(), frac}<<" "<<parent<<std::endl;
 
       }
-      std::cout<<result<<std::endl;
       // TODO - refresh and for similar functions
   }
 
@@ -294,7 +289,6 @@ Q_OBJECT
         legendText.push_back(item.second.name);
         //auto & slice = series->at(qsizetype(i));
         //slice.setLabel((displayFloat(item.second.FTE*100)+" %").c_str());
-        std::cout<<item.second.name<<" "<<item.second.FTE<<std::endl;
       }
     }
     series->setLabelsVisible();
@@ -333,7 +327,6 @@ Q_OBJECT
     }
 
     void projectListUpdated(std::vector<selectableEntity> const & newList){
-      std::cout << "Project list updated with " << newList.size() << " projects." << std::endl;
 
       updateTButtons(newList);
       updatePButtons(newList);
@@ -367,9 +360,7 @@ Q_OBJECT
 
     void showAddDialog(){
 
-      std::cout<<freeFTE<<std::endl;
       if(freeFTE < 0.01){ //TODO - this should be the minimum FTE increment from app settings
-        std::cout<<"No FTE to assign"<<std::endl;
         QMessageBox box;
         box.setText("Maximum FTE already reached. Deactivate some projects or increase maximum");
         box.exec();
@@ -424,7 +415,6 @@ Q_OBJECT
         emit projectOneOffAdd(id, addUi.name->text().toStdString(), addUi.descr->text().toStdString()); // NOTE - this may change the bound ID of the button!
         emit projectSelectedTrack(id, addUi.name->text().toStdString());
       }
-      std::cout<<result<<std::endl;
     }
 
     void showTimeTravelDialog(std::string clockTime, QDateTime time){

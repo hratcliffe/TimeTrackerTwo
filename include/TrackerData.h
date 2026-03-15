@@ -101,7 +101,6 @@ Q_OBJECT
     void loadProjects(timecode now){
       if(! dataHandler) throw std::runtime_error("No Data Backend Found");
 
-      std::cout<<"Loading projects from backend"<<std::endl;
       auto projectList = dataHandler->fetchProjectList();
       auto subprojectList = dataHandler->fetchSubprojectList();
 
@@ -120,7 +119,6 @@ Q_OBJECT
         if(latest.projectUid != proIds::NullUid){
           // Project in progress. Place a mark
           //TODO - if it has been a long time, offer an option to place an end mark?
-          std::cout<<"Starting with active project :"<<thePM.getName(latest.projectUid)<<std::endl;
           markProject(latest.projectUid, thePM.getName(latest.projectUid), now);
         }
       }catch (const std::runtime_error &e){
@@ -133,8 +131,6 @@ Q_OBJECT
       //Timestamp project with current 'time' - (NB app time, not necessarily real time)
 
       auto stamp = timeStamp{now, uid};
-      std::cout << "Marking project "<<name<< " UID: " << uid << " "<<timeWrapper::formatTime(timeWrapper::fromSeconds(stamp.time))<< std::endl;
- 
       currentProjectStatus.uid = uid;
       currentProjectStatus.status = trackerTypes::projectStatusFlag::active;
       currentProjectStatus.name = name;
@@ -157,7 +153,6 @@ Q_OBJECT
 
     void stopProject(timecode now){
       if(currentProjectStatus.status == trackerTypes::projectStatusFlag::active){
-        std::cout << "Stopping project with UID: " << currentProjectStatus.uid << std::endl;
         currentProjectStatus.status = trackerTypes::projectStatusFlag::none;
         emit projectStopped(); // Notify view that no project is running
         dataHandler->writeTrackerEntry({now, proIds::NullUid});
@@ -165,7 +160,6 @@ Q_OBJECT
     }
     void pauseProject(timecode now){
       if(currentProjectStatus.status == trackerTypes::projectStatusFlag::active){
-        std::cout << "Pausing project with UID: " << currentProjectStatus.uid << std::endl;
         currentProjectStatus.status = trackerTypes::projectStatusFlag::paused;
         if(currentProjectStatus.uid.isTaggedAs(proIds::uidTag::oneoff)){
           emit projectPaused(currentProjectStatus.name); //If it's a one-off, use stored name
@@ -177,7 +171,6 @@ Q_OBJECT
     }
     void resumeProject(timecode now){
       if(currentProjectStatus.status == trackerTypes::projectStatusFlag::paused){
-        std::cout << "Resuming project with UID: " << currentProjectStatus.uid << std::endl;
         currentProjectStatus.status = trackerTypes::projectStatusFlag::active;
         if(currentProjectStatus.uid.isTaggedAs(proIds::uidTag::oneoff)){
           emit projectRunningUpdate(currentProjectStatus.name); //If it's a one-off, use stored name
@@ -189,7 +182,6 @@ Q_OBJECT
     }
 
     void generateProjectSummary(proIds::Uuid uid){
-      std::cout << "Generating summary for project with UID: " << uid << std::endl;
       std::string summary = thePM.summariseProject(uid);
       emit projectSummaryReady(summary); // Notify view that a project summary is ready
     }
@@ -233,14 +225,12 @@ Q_OBJECT
         emit timeSummaryReady(summary);
         return;
       }
-      std::cout<<"Fetched "<<timestamps.size()<<" timestamps"<<std::endl;
       //TODO - should this always go until now? C.f. previous - time range selection?
       timecode window = timeWrapper::toSeconds(timeWrapper::now()) - timestamps[0].time; 
       std::map<proIds::Uuid, timecode> durations = timestampProcessor::stampsToDurations(timestamps);
 
       //Next add in durations from digests
       auto digests = dataHandler->fetchDigestEntriesForTime(0, timeWrapper::toSeconds(timeWrapper::now()));
-      std::cout<<"Fetched "<<digests.size()<<" digests"<<std::endl;
       for(auto & item : digests){
         if(durations.count(item.projectUid) > 0){
           durations[item.projectUid] += item.duration;
@@ -248,11 +238,6 @@ Q_OBJECT
           durations[item.projectUid] = item.duration;
         }
       }
-
-      for(auto & item: durations){
-        std::cout<<item.first<<" "<<item.second<<std::endl;
-      }
-
 
       std::string unit_str = unitToString(units);
       timecode unit_factor = unitToDivisor(units);
@@ -399,14 +384,10 @@ Q_OBJECT
 
     void handleCloseRequest(bool silent, timecode now){
       if(silent){
-        // Just ensure data is saved and exit
-        std::cout << "Silent close requested. Saving data..." << std::endl;
-        if(currentProjectStatus.status == trackerTypes::projectStatusFlag::active) std::cout<<"Leaving Project Active: "<<thePM.getName(currentProjectStatus.uid)<<std::endl; //TODO - can we persist a pause?
-
+        // Just exit
+        // TODO - can we persist a pause?
       }else{
-        std::cout<<" Closing requested. Saving data..." << std::endl;
         stopProject(now);
-
       }
       emit readyToClose(); // Done, ready to shutdown now
     }

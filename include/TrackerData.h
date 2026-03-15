@@ -81,6 +81,7 @@ Q_OBJECT
     }
 
     void oneOffIdRequired(){
+      /** Inform the View of the ID for a fresh, future one-off project */
       proIds::Uuid id = thePM.getNextOneOffId();
       emit oneOffIdUpdate(id);
     }

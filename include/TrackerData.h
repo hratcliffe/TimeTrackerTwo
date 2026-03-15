@@ -24,7 +24,6 @@ class projectStatus{
 };
 };
 
-// TODO - add a read-only DB open mode??
 class TrackerData: public QWidget{
 Q_OBJECT
 
@@ -38,7 +37,7 @@ Q_OBJECT
       //TODO - flatfile would be really hard, but could allow support for other DBs so don't
       // remove this entirely, just adjust
       if(config.backend == dataBackendType::database){
-        dataHandler = new databaseIO(config.dataFileName);
+        dataHandler = new databaseIO(config.dataFileName, config.read_only);
       }else if(config.backend == dataBackendType::flatfile){
         //dataHandler = new flatfileIO(config.dataFileName);
         throw std::runtime_error("Flat file backend not implemented");

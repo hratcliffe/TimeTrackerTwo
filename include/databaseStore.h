@@ -93,17 +93,24 @@ class databaseStore{
 
     }
     public:
-    databaseStore(std::string fileName, bool verbose=false) : dbFileName(fileName) {
+    databaseStore(std::string fileName, bool readOnly, bool verbose=false) : dbFileName(fileName) {
         if(verbose) std::cout<<"Opening Database"<<std::endl; 
         sqlite3_config(SQLITE_CONFIG_SERIALIZED);
-        int exit = sqlite3_open_v2((dbFileName).c_str(), &DB, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+        int exit = SQLITE_OK;
+        if(readOnly){
+          exit = sqlite3_open_v2((dbFileName).c_str(), &DB, SQLITE_OPEN_READONLY, NULL);
+        }else{
+          exit = sqlite3_open_v2((dbFileName).c_str(), &DB, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+        }
         if(exit != SQLITE_OK){
             std::cerr << "Error opening database: " << sqlite3_errmsg(DB) << std::endl;
             throw std::runtime_error("Failed to open database");
         }
         // READWRITE will not fail if permissions are read-only. Have to check:
-        if(sqlite3_db_readonly(DB, "main") == 1){
+        if(!readOnly && sqlite3_db_readonly(DB, "main") == 1){
           throw std::runtime_error("Database is read-only");
+        }else if(readOnly && sqlite3_db_readonly(DB, "main") == 0){
+          throw std::runtime_error("Intended to open read-only, but is writeable");
         }
         if(verbose) std::cout<<"Opened Database"<<std::endl;
 

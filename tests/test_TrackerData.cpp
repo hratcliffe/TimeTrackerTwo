@@ -158,3 +158,46 @@ TEST_CASE("Updating One-Off Id", "[QTAware, Slots]"){
   id = sig.stashPayloadForReturn(proIds::NullUid, false);
   REQUIRE(id != proIds::NullUid);
 }
+
+// ------ Mark, pause, stop etc -----------------------------------------------------------------------
+
+TEST_CASE("Marking", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectRunningUpdate, &sig, &SignalCatcher::emitString);
+
+  auto id = uniqueIdGenerator().getNextId();
+  std::string name = "Wibble 79";
+  td.markProject(id, name, 123);
+  
+  std::string str;
+  str = sig.stashPayloadForReturn(str, false);
+  REQUIRE(str == name);
+
+  // TODO - Now check we wrote the mark...
+
+}
+TEST_CASE("Stopping", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectStopped, &sig, &SignalCatcher::emitStopped);
+  
+  //Mark some dummy project
+  auto id = uniqueIdGenerator().getNextId();
+  std::string name = "Wibble 79";
+  td.markProject(id, name, 123);
+
+  //Stop it again
+  td.stopProject(128);
+  std::string str;
+  str = sig.stashPayloadForReturn(str, false);
+  std::cout<<str<<std::endl;
+  REQUIRE(str == "stopped");
+
+  //Now check that we wrote a stop at time 128 and that id has 5 seconds allocated, as expected
+
+}

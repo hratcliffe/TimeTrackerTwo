@@ -36,4 +36,7 @@ public slots:
 
   void emitOrderedProjectList(std::vector<selectableEntity> p){stashPayloadForReturn(p);}
 
+  // Payload-less slots - here use a tag string instead
+  void emitStopped(){stashPayloadForReturn<std::string>("stopped");}
+
 };

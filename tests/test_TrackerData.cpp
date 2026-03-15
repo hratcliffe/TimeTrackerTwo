@@ -238,8 +238,8 @@ TEST_CASE("Marking", "[QTAware, Slots]"){
   SignalCatcher sig;
   QAbstractEventDispatcher::connect(&td, &TrackerData::projectRunningUpdate, &sig, &SignalCatcher::emitString);
 
-  auto id = uniqueIdGenerator().getNextId();
-  std::string name = "Wibble 79";
+  std::string name = "Project to be marked dfhkaeh";
+  auto id = CreateProjectAndReturnId(td, name);
   td.markProject(id, name, 123);
   
   std::string str;
@@ -410,3 +410,17 @@ TEST_CASE("Missing Data - Timestamps before", "[QTAware]"){
 
 
 //Failure case - marking something that does not exist in PM
+TEST_CASE("Marking Nonexistent Project", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectRunningUpdate, &sig, &SignalCatcher::emitString);
+
+  auto id = uniqueIdGenerator().getNextId();
+  std::string name = "Wibble 79";
+  //If this is not a real project, it should reject
+  REQUIRE_THROWS(td.markProject(id, name, 123));
+
+}
+

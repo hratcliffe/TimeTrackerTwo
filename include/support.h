@@ -44,6 +44,7 @@ enum class dataBackendType{
 };
 
 struct appConfig{
+  bool read_only = false; /**< \brief App backend should be opened in read-only mode (Many operations will fail) */
   std::string dataFileName = "";
   dataBackendType backend = dataBackendType::database; /**< \brief Type of data backend to use */
 };

@@ -12,7 +12,7 @@ class dataIO{
 
   public:
     dataIO()=default;
-    dataIO(std::string fileName); /**< \brief Constructor with file name */
+    explicit dataIO(std::string fileName, bool readOnly = false); /**< \brief Constructor with file name */
     dataIO(const dataIO &other) = delete;
     virtual ~dataIO()=default;
 
@@ -77,7 +77,7 @@ class databaseIO : public dataIO{
 
   public:
     databaseIO()=delete;
-    databaseIO(std::string fileName): dbStore(fileName){;}; /**< \brief Constructor with file name */
+    databaseIO(std::string fileName, bool readOnly): dbStore(fileName, readOnly){;}; /**< \brief Constructor with file name */
     ~databaseIO(){;};
     void closeDB(){dbStore.closeDB();}
     void writeReferenceTime(timecode time) override {

@@ -65,8 +65,8 @@ TEST_CASE("Verifying a project", "[Basic]"){
 }
 // ---- Repeating for subproject ----------------------------------------------------
 //Helper to create a generic project
-subProjectData createSubProj(){
-  subProjectData pd;
+subprojectData createSubProj(){
+  subprojectData pd;
   pd.name = "Sub Project Alpha";
   pd.frac = 0.4;
   return pd;

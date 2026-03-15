@@ -166,7 +166,7 @@ TEST_CASE("Create and read - subproj", "[QTAware, Slots]"){
 
   REQUIRE(pid != proIds::NullUid);
 
-  subProjectData spd;
+  subprojectData spd;
   spd.name = "SubXYZ Created by Tracker Mk3";
   spd.frac = 0.3;
 

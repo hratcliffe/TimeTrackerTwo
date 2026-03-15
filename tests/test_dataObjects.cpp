@@ -75,7 +75,7 @@ TEST_CASE("Project and Sub", "[Stream]"){
   REQUIRE(ss.str().find(pd.name) != std::string::npos);
   REQUIRE(ss.str().find("70%") != std::string::npos);
 
-  subProjectData sd;
+  subprojectData sd;
   float frac = 0.1;
   sd.name = "SubWibble";
   sd.frac = frac;
@@ -112,7 +112,7 @@ TEST_CASE("Full Project", "[Stream]"){
 
 }
 TEST_CASE("Full Sub", "[Stream]"){
-  subProjectData sd;
+  subprojectData sd;
   float frac = 0.11;
   sd.name = "Wibble";
   sd.frac = frac;

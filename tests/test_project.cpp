@@ -124,7 +124,7 @@ TEST_CASE("Subproject Creation with bad tag", "[Basic]"){
 }
 
 TEST_CASE("Subproject Creation with ID", "[Basic]"){
-  subProjectData sd;
+  subprojectData sd;
   uniqueIdGenerator theGen;
   sd.frac = 0.39;
   auto uid = theGen.getNextId();
@@ -146,7 +146,7 @@ TEST_CASE("Subproject Creation with ID", "[Basic]"){
 }
 
 TEST_CASE("Subproject Creation with bad tag from id", "[Basic]"){
-  subProjectData sd;
+  subprojectData sd;
   uniqueIdGenerator theGen;
   sd.name = "Subproj alpha";
   sd.frac = 0.21;

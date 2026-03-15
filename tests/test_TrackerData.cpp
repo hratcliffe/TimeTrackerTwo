@@ -249,6 +249,24 @@ TEST_CASE("Marking", "[QTAware, Slots]"){
   // TODO - Now check we wrote the mark...
 
 }
+TEST_CASE("Flashing", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./Scratch/Empty_89dfn.db")};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectRunningFlash, &sig, &SignalCatcher::emitString);
+
+  //Creating a project and marking it running
+  std::string name = "Project to be marked 125fgw";
+  auto id = CreateProjectAndReturnId(td, name);
+  td.markProject(id, name, 123);
+
+  //Check what is running:
+  td.flashProject();
+  std::string name_in;
+  name_in = sig.stashPayloadForReturn(name, false);
+  REQUIRE(name_in == name);
+}
 TEST_CASE("Stopping", "[QTAware, Slots]"){
   auto app = dummyApp();
   TrackerData td{basicConfig()};

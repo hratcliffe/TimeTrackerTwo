@@ -144,6 +144,18 @@ Q_OBJECT
 
     }
 
+    void flashProject(){
+      if(currentProjectStatus.status == trackerTypes::projectStatusFlag::active){
+        if(currentProjectStatus.uid.isTaggedAs(proIds::uidTag::oneoff)){
+          emit projectRunningFlash(currentProjectStatus.name); //If it's a one-off, use stored name
+        }else{
+          emit projectRunningFlash(thePM.getName(currentProjectStatus.uid));
+        }
+      }else{
+        emit projectRunningFlash(""); // Blank
+      }
+    }
+
     void stopProject(timecode now){
       if(currentProjectStatus.status == trackerTypes::projectStatusFlag::active){
         std::cout << "Stopping project with UID: " << currentProjectStatus.uid << std::endl;
@@ -464,6 +476,7 @@ Q_OBJECT
       void projectSummaryReady(std::string summary); /**< \brief Signal emitted when a summary is ready, with the summary text */
       void timeSummaryReady(std::vector<timeSummaryItem> summary);
       void projectRunningUpdate(std::string name); /**< \brief Signal emitted when a project is running, with the name of the project */
+      void projectRunningFlash(std::string name); /**< \brief Signal emitted when requested showing if a project is running, with the name of the project, or empty if stopped/paused etc */
       void projectPaused(std::string name); /**< \brief Signal emitted when a project is paused, with the name of the project */
       void projectStopped(); /**< \brief Signal emitted when no project is running */
       void readyToClose(); /**< \brief Signal emitted when data is saved and app is ready to close */

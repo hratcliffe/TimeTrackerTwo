@@ -5,6 +5,7 @@
 #include <QObject>
 #include "TrackerData.h"
 #include "QTSignalHelper.h"
+#include "timeWrapper.h"
 
 
 auto dummyApp(){
@@ -298,7 +299,35 @@ TEST_CASE("Pause and Resume", "[QTAware, Slots]"){
   REQUIRE(str == name);
 
 }
+TEST_CASE("Pause and Resume - OneOff", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
 
+  SignalCatcher sig;
+  // These do collide, but we just have to remember to do one thing at a time!
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectRunningUpdate, &sig, &SignalCatcher::emitString);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectPaused, &sig, &SignalCatcher::emitPaused);
+
+  //Creating something
+  auto oid = uniqueIdGenerator().getNextId();
+  oid.tag(proIds::uidTag::oneoff);
+  std::string name = "One Off Wibbly";
+  td.markProject(oid, name, 113);
+
+  std::string str;
+  str = sig.stashPayloadForReturn(str, false);
+  REQUIRE(str == name);
+
+  //Pausing
+  td.pauseProject(180);
+  str = sig.stashPayloadForReturn(str, false);
+  REQUIRE(str == "paused "+name);
+
+  td.resumeProject(223);
+  str = sig.stashPayloadForReturn(str, false);
+  REQUIRE(str == name);
+
+}
 // ------- Summaries and display ---------------------------------------------------------------------
 TEST_CASE("Summarising a project", "[QTAware, Slots]"){
   auto app = dummyApp();
@@ -353,5 +382,31 @@ TEST_CASE("Overall Summary", "[QTAware, Slots]"){
 }
 
 // -------- Digest Generation ------------------------------------------------------------------------
+
+//----------- Loading Projects ----------------------------------------------------------------------
+
+// ---------- Special functions ---------------------------------------------------------------------
+
+TEST_CASE("Known Data - Timestamps before", "[QTAware]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./InputData/KnownDatabase.db")};
+
+  int cnt = td.checkForTimeStampsBefore(timeWrapper::fromSeconds(3000));
+  REQUIRE(cnt == 2);
+  cnt = td.checkForTimeStampsBefore(timeWrapper::fromSeconds(30));
+  REQUIRE(cnt == 0);
+  cnt = td.checkForTimeStampsBefore(timeWrapper::fromSeconds(9000));
+  REQUIRE(cnt == 4);
+}
+TEST_CASE("Missing Data - Timestamps before", "[QTAware]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./Scratch/BlankDB_zbt53.db")};
+
+  int cnt = td.checkForTimeStampsBefore(timeWrapper::fromSeconds(3000));
+  REQUIRE(cnt == 0);
+  cnt = td.checkForTimeStampsBefore(timeWrapper::fromSeconds(0));
+  REQUIRE(cnt == 0);
+}
+
 
 //Failure case - marking something that does not exist in PM

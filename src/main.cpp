@@ -18,7 +18,9 @@ NOTE: after a period (default 100 days), only summary info is available
 */
 
 // TODO - csv and pdf? reporting
-// TODO - add a 'recent events' Tab and show recent start, stop etc
+// TODO - add a 'recent events' Tab and show recent start, stop etca
+// TODO - BETTER: stamp review tab which shows recent marks and allows to remove. Also should allow time travel to insert
+
 // TODO - alter summary to allow specifying date range
 // TODO - add configuration update options (selected while running)
 // TODO add a 'load projects from file' option ?
@@ -38,6 +40,9 @@ NOTE: after a period (default 100 days), only summary info is available
 
 //TODO - available frac does not seem to get displayed? Nothing even calls availableSubFrac
 // TODO - fix the case of subProject -> subproject
+
+//TODO - OneOff projects should have unique names?
+
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);

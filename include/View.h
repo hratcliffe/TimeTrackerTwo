@@ -169,8 +169,8 @@ Q_OBJECT
       if(result){
         float frac = (float)addUi.PercentField->value()/100.0;
         proIds::Uuid parent = proIds::Uuid(addUi.ParentDropdown->currentData().toString().toStdString());
-        emit subprojectAddRequested(subProjectData{addUi.NameField->text().toStdString(), frac}, parent);
-        std::cout<<subProjectData{addUi.NameField->text().toStdString(), frac}<<" "<<parent<<std::endl;
+        emit subprojectAddRequested(subprojectData{addUi.NameField->text().toStdString(), frac}, parent);
+        std::cout<<subprojectData{addUi.NameField->text().toStdString(), frac}<<" "<<parent<<std::endl;
 
       }
       std::cout<<result<<std::endl;
@@ -494,7 +494,7 @@ Q_OBJECT
     void closeRequested(bool silent);/**< \brief Signal emitted when the close button is clicked, silent is true if the silent close button is clicked */
 
     void projectAddRequested(const projectData & data);
-    void subprojectAddRequested(const subProjectData & data, const proIds::Uuid & parent);
+    void subprojectAddRequested(const subprojectData & data, const proIds::Uuid & parent);
     void mergeRequested(const proIds::Uuid & selection, const proIds::Uuid & sub_selection, const proIds::Uuid & target, const proIds::Uuid & sub_target);
     void oneOffIdRequired();
     void projectDetailsRequiredAll(projectDetailsArgCallbackType);

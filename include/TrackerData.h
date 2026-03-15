@@ -71,7 +71,7 @@ Q_OBJECT
       emit projectListUpdateEvent(thePM.getOrderedProjectList());
       emit projectTotalUpdateEvent(thePM.allocatedFTE(), thePM.availableFTE());
     }
-    void createSubproject(const subProjectData & dat, const proIds::Uuid & parentId){
+    void createSubproject(const subprojectData & dat, const proIds::Uuid & parentId){
       //Create a new sub under and existing project
       auto idS = thePM.addSubproject(dat, parentId);
       dataHandler->writeSubproject(fullSubProjectData(idS, dat, parentId)); // Write to data handler

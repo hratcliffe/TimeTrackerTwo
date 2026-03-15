@@ -87,7 +87,7 @@ class subproject: public projectLike{
       uid = data.uid;
       parentUid = data.parentUid;
     }
-    subproject(subProjectData data, proIds::Uuid uid_in, proIds::Uuid parentUid_in){
+    subproject(subprojectData data, proIds::Uuid uid_in, proIds::Uuid parentUid_in){
         name = data.name;
         frac = data.frac;
         if(!uid_in.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Subproject must have sub tag");

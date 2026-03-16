@@ -206,9 +206,6 @@ class projectManager{
       auto p_id = getParentId(uid);
       if(projects.count(p_id) > 0){
         removeSubproject(p_id, uid);
-      }else{
-        //TODO - should have a way to delete it even in this case!
-        throw std::runtime_error("This subproject has no parent");
       }
       subprojects.erase(uid);
     };
@@ -231,11 +228,9 @@ class projectManager{
         proIds::Uuid parentUid = subprojects[uid].getParentUid();
         if(projects.find(parentUid) != projects.end()){
           return projects[parentUid].getName();
-        }else{
-          return "Unknown Parent Project";
         }
       }else{
-        return "Not a subproject";
+        throw std::runtime_error("Not a subproject");
       }
     }
     proIds::Uuid getParentId(proIds::Uuid uid){

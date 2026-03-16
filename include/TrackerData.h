@@ -129,14 +129,16 @@ Q_OBJECT
 
     void markProject(proIds::Uuid uid, std::string name, timecode now){
       //Timestamp project with current 'time' - (NB app time, not necessarily real time)
-
-      auto stamp = timeStamp{now, uid};
-      currentProjectStatus.uid = uid;
-      currentProjectStatus.status = trackerTypes::projectStatusFlag::active;
-      currentProjectStatus.name = name;
-      dataHandler->writeTrackerEntry(stamp); // Write to data handler
-      emit projectRunningUpdate(name); // Notify view that a project is running
-
+      if(uid.isTaggedAs(proIds::uidTag::oneoff) || (uid.isTaggedAs(proIds::uidTag::sub) && thePM.isSubProject(uid)) || thePM.isActiveProject(uid)){
+        auto stamp = timeStamp{now, uid};
+        currentProjectStatus.uid = uid;
+        currentProjectStatus.status = trackerTypes::projectStatusFlag::active;
+        currentProjectStatus.name = name;
+        dataHandler->writeTrackerEntry(stamp); // Write to data handler
+        emit projectRunningUpdate(name); // Notify view that a project is running
+      }else{
+        throw std::runtime_error("Attempting to Mark a nonexistent project");
+      }
     }
 
     void flashProject(){

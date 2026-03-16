@@ -43,6 +43,9 @@ NOTE: after a period (default 100 days), only summary info is available
 
 //TODO - OneOff projects should have unique names?
 
+//TODO - Should Projects and subs have unique names?
+// TODO - what about one-offs? Maybe Name+day?
+
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);

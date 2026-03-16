@@ -253,8 +253,18 @@ class projectManager{
       }
     }
     void setFTE(proIds::Uuid uid, float FTE){
-       if(projects.count(uid) > 0){
-        projects[uid].FTE = FTE;
+      if(FTE < 0.0){
+        throw std::runtime_error("Cannot set FTE to negative value");
+      }
+      if(projects.count(uid) > 0){
+        float bump = FTE - projects[uid].FTE; // MAY be -ve
+        if(availableFTE() >= bump){
+          projects[uid].FTE = FTE;
+        }else{
+          throw std::runtime_error("Cannot set FTE - value exceeds available amount");
+        }
+      }else{
+        throw std::runtime_error("Cannot set FTE - id is not a project");
       }
     }
     float getFrac(proIds::Uuid uid){
@@ -265,8 +275,19 @@ class projectManager{
       }
     }
     void setFrac(proIds::Uuid uid, float frac){
+      if(frac < 0.0){
+        throw std::runtime_error("Cannot set frac to negative value");
+      }
       if(subprojects.count(uid) > 0){
-        subprojects[uid].frac = frac;
+        auto parent_uid = getParentId(uid);
+        float bump = frac - subprojects[uid].frac; // MAY be -ve
+        if(availableSubFrac(parent_uid) >= bump){
+          subprojects[uid].frac = frac;
+        }else{
+          throw std::runtime_error("Cannot set frac - value exceeds available amount");
+        }
+      }else{
+        throw std::runtime_error("Cannot set frac - id is not a subproject");
       }
     }
 

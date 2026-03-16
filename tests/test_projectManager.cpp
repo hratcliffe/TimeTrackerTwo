@@ -443,6 +443,13 @@ TEST_CASE("Adding a sub with frac > 1"){
   REQUIRE_THROWS(pm.addSubproject(sd, pid));
 }
 
+//Adding a sub to a project that does not exist
+TEST_CASE("Adding a subproject to non-existent project"){
+  projectManager pm;
+  auto sd = createSubProj();
+  REQUIRE_THROWS(pm.addSubproject(sd, uniqueIdGenerator().getNextId()));
+}
+
 //Adding a sub to a sub
 TEST_CASE("Adding a subproject to a subproject"){
   projectManager pm;
@@ -509,9 +516,81 @@ TEST_CASE("Setting frac wrongly", "[Basic]"){
     REQUIRE_THROWS(pm.setFrac(sid, 0.8));
   }
 }
-//Restoring a project into a subproject and vice versa
 
-//Trying to restore proj or sub with a oneoff id
+//Restoring using bad ids:
+TEST_CASE("Restoring a project using invalid id"){
+  projectManager pm;
+  fullProjectData pd;
+  pd.name = "Project from file";
+  pd.FTE = 0.7;
+  pd.useEnd = false;
+  pd.useStart = false;
+  pd.uid = uniqueIdGenerator().getNextId();
+
+  SECTION("Subproject tag"){
+    pd.uid.tag(proIds::uidTag::sub);
+    REQUIRE_THROWS(pm.restoreProject(pd, 10));
+  }
+  SECTION("One off tag"){
+    pd.uid.tag(proIds::uidTag::oneoff);
+    REQUIRE_THROWS(pm.restoreProject(pd, 10));
+  }
+  SECTION("Null uid"){
+    pd.uid = proIds::NullUid;
+    REQUIRE_THROWS(pm.restoreProject(pd, 10));
+  }
+}
+TEST_CASE("Restoring a subproject using invalid id"){
+  projectManager pm;
+  auto pid = pm.addProject(createProj());
+  fullSubProjectData pd;
+  pd.name = "Project from file";
+  pd.frac = 0.7;
+  pd.uid = uniqueIdGenerator().getNextId();
+  pd.parentUid = pid;
+
+  SECTION("Project tag"){
+    REQUIRE_THROWS(pm.restoreSubproject(pd));
+  }
+  SECTION("One off tag"){
+    pd.uid.tag(proIds::uidTag::oneoff);
+    REQUIRE_THROWS(pm.restoreSubproject(pd));
+  }
+  SECTION("Null uid"){
+    pd.uid = proIds::NullUid;
+    REQUIRE_THROWS(pm.restoreSubproject(pd));
+  }
+}
+TEST_CASE("Restoring a subproject with no parent"){
+  projectManager pm;
+  fullSubProjectData pd;
+  pd.name = "Project from file";
+  pd.frac = 0.7;
+  pd.uid = uniqueIdGenerator().getNextId();
+  pd.uid.tag(proIds::uidTag::sub);
+  SECTION("Parent invalid"){
+    pd.parentUid = uniqueIdGenerator().getNextId();
+    REQUIRE_THROWS(pm.restoreSubproject(pd));
+  }
+  SECTION("Parent invalid"){
+    pd.parentUid = uniqueIdGenerator().getNextId();
+    REQUIRE_THROWS(pm.restoreSubproject(pd));
+  }
+  SECTION("Parent null"){
+    pd.parentUid = proIds::NullUid;
+    REQUIRE_THROWS(pm.restoreSubproject(pd));
+  }
+  SECTION("Parent is sub"){
+    pd.parentUid = uniqueIdGenerator().getNextId();
+    pd.parentUid.tag(proIds::uidTag::sub);
+    REQUIRE_THROWS(pm.restoreSubproject(pd));
+  }
+  SECTION("Parent is oneoff"){
+    pd.parentUid = uniqueIdGenerator().getNextId();
+    pd.parentUid.tag(proIds::uidTag::oneoff);
+    REQUIRE_THROWS(pm.restoreSubproject(pd));
+  }
+}
 
 //Summarising a non-existent project
 TEST_CASE("Summarising non-existent project", "[Display]"){

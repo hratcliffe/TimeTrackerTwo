@@ -473,6 +473,21 @@ TEST_CASE("Getting frac for absent project", "[Basic]"){
   projectManager pm;
   REQUIRE_THAT(pm.getFrac(uniqueIdGenerator().getNextId()), WithinAbs(0.0, margin));
 }
+
+//Active check for invalid project
+TEST_CASE("Checking active for bad id"){
+  projectManager pm;
+  SECTION("Null"){
+    REQUIRE_THROWS(pm.isActiveProject(proIds::NullUid));
+  }
+  SECTION("Subproj"){
+    REQUIRE_THROWS(pm.isActiveProject(uniqueIdGenerator().getNextId().tag(proIds::uidTag::sub)));
+  }
+  SECTION("OneOff"){
+    REQUIRE_THROWS(pm.isActiveProject(uniqueIdGenerator().getNextId().tag(proIds::uidTag::oneoff)));
+  }
+}
+
 // Parent look-ups for not-a-sub
 TEST_CASE("Getting parent ID for absent project", "[Basic]"){
   projectManager pm;

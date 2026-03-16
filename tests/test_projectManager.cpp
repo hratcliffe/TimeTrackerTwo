@@ -607,6 +607,7 @@ TEST_CASE("Restoring a subproject using invalid id"){
   }
   SECTION("Null uid"){
     pd.uid = proIds::NullUid;
+    pd.uid.tag(proIds::uidTag::sub);
     REQUIRE_THROWS(pm.restoreSubproject(pd));
   }
 }

@@ -8,24 +8,17 @@
 
 //Stateful class to allow 'time travel' gimmick - go to a specific time and use the app
 
-//TODO - consider removing flag and branch, just set target and zero to 0
 class appClock{
   TW_timePoint appTime;
-  bool t_travelling = false;
-  TW_timePoint travelTimeTarget, travelTimeZero;
+  TW_timePoint travelTimeTarget = timeWrapper::fromSeconds(0), travelTimeZero = timeWrapper::fromSeconds(0);
 
   public:
 
     appClock(){appTime = timeWrapper::now();};
     // Update the clock - does not _advance_ the clock - syncs it with the built-in
     void tick(){
-        if(t_travelling){
-            //Update to correct duration since zero-hour
-            appTime = travelTimeTarget + (timeWrapper::now() - travelTimeZero);
-        }else{
-            appTime = timeWrapper::now();
-        }
-
+        //Update to correct duration including any zero-hour and offset
+        appTime = travelTimeTarget + (timeWrapper::now() - travelTimeZero);
     }
 
     timecode now(){
@@ -38,18 +31,22 @@ class appClock{
         return timeWrapper::formatTimeAsClock(appTime);
     }
 
-    bool travelling(){return t_travelling;}
+    bool travelling(){return travelTimeTarget != travelTimeZero;}
     void travelTo(TW_timePoint time){
-        //TODO - this doesn't actually set the time until the next tick
-        if(time != appTime){
+        auto now = timeWrapper::now();
+        if(time == now){
+            travelTimeTarget = timeWrapper::fromSeconds(0);
+            travelTimeZero = timeWrapper::fromSeconds(0);
+            //Back to synchronous
+        }else if(time != appTime){
             travelTimeTarget = time;
             travelTimeZero = timeWrapper::now(); // Baseline is always against current time
-            t_travelling = true;
-
         }else{
-            t_travelling = false;
+            travelTimeTarget = timeWrapper::fromSeconds(0);
+            travelTimeZero = timeWrapper::fromSeconds(0);
             //Back to synchronous
         }
+        tick();
     }
     void travelBy(TW_duration interval){
         // Offset against current APP TIME
@@ -58,6 +55,11 @@ class appClock{
     }
     void travelBy(long seconds){
         return travelTo( timeWrapper::fromSeconds(seconds + timeWrapper::toSeconds(appTime)));
+    }
+    void restoreToNow(){
+      travelTimeTarget = timeWrapper::fromSeconds(0);
+      travelTimeZero = timeWrapper::fromSeconds(0);
+      tick();
     }
 
 };

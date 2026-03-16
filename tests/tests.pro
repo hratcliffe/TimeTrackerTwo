@@ -8,7 +8,7 @@ CONFIG += console         # don't pull in Qt widgets by default
 CONFIG += c++11           # match the main project
 QT += widgets # Need signal/slot even here 
 
-QMAKE_CXXFLAGS += -g -fprofile-instr-generate -fcoverage-mapping
+QMAKE_CXXFLAGS += -g -fprofile-instr-generate -fcoverage-mapping -Wall
 QMAKE_LFLAGS += -g -fprofile-instr-generate -fcoverage-mapping
 
 INCLUDEPATH += $$PWD/../include

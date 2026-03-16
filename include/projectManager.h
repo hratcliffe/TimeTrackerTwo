@@ -117,6 +117,7 @@ class projectManager{
     void restoreProject(const fullProjectData & dat, timecode now){
       //Restore a project from e.g. file - i.e. one that already HAS a uid
       auto id = dat.uid;
+      if(id == proIds::NullUid) throw std::runtime_error("Cannot restore project with Null Uid");
       if(!id.isTaggedAs(proIds::uidTag::none)) throw std::runtime_error("Id is not for a project");
       project tmp = project(dat);
       bool active = true;
@@ -130,6 +131,7 @@ class projectManager{
       // Restore a subproject. Parent MUST exist already
       auto id = dat.uid;
       auto parentUid = dat.parentUid;
+      if(id == proIds::NullUid) throw std::runtime_error("Cannot restore subproject with Null Uid");
       if(parentUid.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Parent must not be a subproject");
       if(!id.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Id is not for a subproject");
       if(projects.count(parentUid) == 0 ) throw std::runtime_error("Parent project does not exist");

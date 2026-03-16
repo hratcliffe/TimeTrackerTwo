@@ -236,16 +236,39 @@ TEST_CASE("Marking", "[QTAware, Slots]"){
   SignalCatcher sig;
   QAbstractEventDispatcher::connect(&td, &TrackerData::projectRunningUpdate, &sig, &SignalCatcher::emitString);
 
-  std::string name = "Project to be marked dfhkaeh";
-  auto id = CreateProjectAndReturnId(td, name);
-  td.markProject(id, name, 123);
-  
-  std::string str;
-  str = sig.stashPayloadForReturn(str, false);
-  REQUIRE(str == name);
+  SECTION("Regular project"){
+    std::string name = "Project to be marked dfhkaeh";
+    auto id = CreateProjectAndReturnId(td, name);
+    td.markProject(id, name, 123);
+
+    std::string str;
+    str = sig.stashPayloadForReturn(str, false);
+    REQUIRE(str == name);
 
   // TODO - Now check we wrote the mark...
+  }
+  SECTION("One Off"){
+    std::string name = "One off project for mark dfh";
+    td.markProject(uniqueIdGenerator().getNextId().tag(proIds::uidTag::oneoff), name, 187);
+    std::string str;
+    str = sig.stashPayloadForReturn(str, false);
+    REQUIRE(str == name);
+  }
+  SECTION("Subproject"){
+    std::string name = "Project to be marked dfhkaeh";
+    auto id = CreateProjectAndReturnId(td, name);
+    subprojectData spd;
+    spd.name = "SubXYZ Created by Tracker Mk3";
+    spd.frac = 0.3;
+    td.createSubproject(spd, id);
 
+    //td.markProject(id, name, 123);
+    //Need to get the id back for marking...
+    std::string str;
+    str = sig.stashPayloadForReturn(str, false);
+    //REQUIRE(str == name);
+
+  }
 }
 TEST_CASE("Flashing", "[QTAware, Slots]"){
   auto app = dummyApp();
@@ -254,16 +277,27 @@ TEST_CASE("Flashing", "[QTAware, Slots]"){
   SignalCatcher sig;
   QAbstractEventDispatcher::connect(&td, &TrackerData::projectRunningFlash, &sig, &SignalCatcher::emitString);
 
-  //Creating a project and marking it running
-  std::string name = "Project to be marked 125fgw";
-  auto id = CreateProjectAndReturnId(td, name);
-  td.markProject(id, name, 123);
+  SECTION("Project"){
+    //Creating a project and marking it running
+    std::string name = "Project to be marked 125fgw";
+    auto id = CreateProjectAndReturnId(td, name);
+    td.markProject(id, name, 123);
 
-  //Check what is running:
-  td.flashProject();
-  std::string name_in;
-  name_in = sig.stashPayloadForReturn(name, false);
-  REQUIRE(name_in == name);
+    //Check what is running:
+    td.flashProject();
+    std::string name_in;
+    name_in = sig.stashPayloadForReturn(name, false);
+    REQUIRE(name_in == name);
+    }
+  SECTION("One Off"){
+    std::string name = "One off project for mark dfh";
+    td.markProject(uniqueIdGenerator().getNextId().tag(proIds::uidTag::oneoff), name, 187);
+    //Check what is running:
+    td.flashProject();
+    std::string name_in;
+    name_in = sig.stashPayloadForReturn(name, false);
+    REQUIRE(name_in == name);
+  }
 }
 TEST_CASE("Stopping", "[QTAware, Slots]"){
   auto app = dummyApp();

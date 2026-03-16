@@ -290,15 +290,44 @@ TEST_CASE("Restoring Time-specified Project", "[Basic]"){
   fullProjectData pd;
   pd.name = "Project from file with time";
   pd.FTE = 0.7;
-  pd.useEnd = false;
-  pd.useStart = true;
-  pd.start = 5;
   pd.uid = uniqueIdGenerator().getNextId();
 
-  pm.restoreProject(pd, 10);
-  REQUIRE(pm.projectCount() == 1);
-  REQUIRE(pm.getName(pd.uid) == pd.name);
-  REQUIRE(pm.isActiveProject(pd.uid));
+  SECTION("Start time - active"){
+    pd.useEnd = false;
+    pd.useStart = true;
+    pd.start = 5;
+    pm.restoreProject(pd, 10);
+    REQUIRE(pm.projectCount() == 1);
+    REQUIRE(pm.getName(pd.uid) == pd.name);
+    REQUIRE(pm.isActiveProject(pd.uid));
+  }
+  SECTION("End time - active"){
+    pd.useEnd = true;
+    pd.useStart = false;
+    pd.end = 15;
+    pm.restoreProject(pd, 10);
+    REQUIRE(pm.projectCount() == 1);
+    REQUIRE(pm.getName(pd.uid) == pd.name);
+    REQUIRE(pm.isActiveProject(pd.uid));
+  }
+  SECTION("Start time - in-active"){
+    pd.useEnd = false;
+    pd.useStart = true;
+    pd.start = 5;
+    pm.restoreProject(pd, 3);
+    REQUIRE(pm.projectCount() == 1);
+    REQUIRE(pm.getName(pd.uid) == pd.name);
+    REQUIRE_FALSE(pm.isActiveProject(pd.uid));
+  }
+  SECTION("End time - active"){
+    pd.useEnd = true;
+    pd.useStart = false;
+    pd.end = 15;
+    pm.restoreProject(pd, 20);
+    REQUIRE(pm.projectCount() == 1);
+    REQUIRE(pm.getName(pd.uid) == pd.name);
+    REQUIRE_FALSE(pm.isActiveProject(pd.uid));
+  }
 }
 TEST_CASE("Restoring Time-specified Project - inactive", "[Basic]"){
   projectManager pm;
@@ -723,7 +752,16 @@ TEST_CASE("Deleting a Parent before subs"){
     REQUIRE_THROWS(pm.deleteProjectById(pid));
   }
 }
-
+//Deleting non-existent project
+TEST_CASE("Deleting bad project"){
+  projectManager pm;
+  SECTION("Null project"){
+    REQUIRE_THROWS(pm.deleteProjectById(proIds::NullUid));
+  }
+  SECTION("Non-existant project"){
+    REQUIRE_THROWS(pm.deleteProjectById(uniqueIdGenerator().getNextId()));
+  }
+}
 //Summarising a non-existent project
 TEST_CASE("Summarising non-existent project", "[Display]"){
   projectManager pm;

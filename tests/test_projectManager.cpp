@@ -499,6 +499,20 @@ TEST_CASE("Getting parent name for absent project", "[Basic]"){
 }
 
 //Setting FTE or frac to invalid values
+TEST_CASE("Setting FTE for nonexistent project"){
+  projectManager pm;
+  //Includes subproject as this cannot be a project
+  REQUIRE_THROWS(pm.setFTE(uniqueIdGenerator().getNextId(), 0.5));
+}
+TEST_CASE("Setting frac for nonexistent subproject"){
+  projectManager pm;
+  SECTION("Subproject ID, but does not exist"){
+    REQUIRE_THROWS(pm.setFTE(uniqueIdGenerator().getNextId().tag(proIds::uidTag::sub), 0.5));
+  }
+  SECTION("Is not even a subproject"){
+    REQUIRE_THROWS(pm.setFTE(uniqueIdGenerator().getNextId(), 0.5));
+  }
+}
 TEST_CASE("Setting FTE to invalid value", "[Basic]"){
   projectManager pm;
   auto pd = createProj();

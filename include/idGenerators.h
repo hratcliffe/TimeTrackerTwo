@@ -59,7 +59,7 @@ namespace proIds{
       /** \brief Apply tag
         @param tag Tag to apply
       */
-      void tag(uidTag tag){this->Itag = tag;}
+      uidWrapper & tag(uidTag tag){this->Itag = tag; return *this;}
 
       bool isTaggedAs(uidTag tag)const{
         /** \brief Check if tagged as

@@ -603,7 +603,7 @@ TEST_CASE("Round trip Config", "[Database]"){
 
 }
 TEST_CASE("Write State to Readonly", "[Database]"){
-  databaseStore theDB{"./Scratch/TestDatabase2.db", true};
+  databaseStore theDB{"./InputData/BlankDatabase.db", true};
 
   REQUIRE_THROWS(theDB.writeItem<long long>("conf", 123));
 }

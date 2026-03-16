@@ -273,8 +273,8 @@ TEST_CASE("Stopping", "[QTAware, Slots]"){
   QAbstractEventDispatcher::connect(&td, &TrackerData::projectStopped, &sig, &SignalCatcher::emitStopped);
   
   //Mark some dummy project
-  auto id = uniqueIdGenerator().getNextId();
   std::string name = "Wibble 79";
+  auto id = CreateProjectAndReturnId(td, name);
   td.markProject(id, name, 123);
 
   //Stop it again

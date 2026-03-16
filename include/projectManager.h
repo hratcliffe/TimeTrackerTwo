@@ -234,11 +234,9 @@ class projectManager{
         proIds::Uuid parentUid = subprojects[uid].getParentUid();
         if(projects.find(parentUid) != projects.end()){
           return projects[parentUid].getName();
-        }else{
-          return "Unknown Parent Project";
         }
       }else{
-        return "Not a subproject";
+        throw std::runtime_error("Not a subproject");
       }
     }
     proIds::Uuid getParentId(proIds::Uuid uid){

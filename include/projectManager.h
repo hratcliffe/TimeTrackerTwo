@@ -204,7 +204,11 @@ class projectManager{
       return refs;
     }
 
-    void deleteProjectById(proIds::Uuid uid){projects.erase(uid);};
+    void deleteProjectById(proIds::Uuid uid){
+      if(projects.count(uid) == 0) throw std::runtime_error("Project does not exist");
+      if(projects[uid].subprojects.size() != 0) throw std::runtime_error("Project still has subprojects");
+      projects.erase(uid);
+    };
     void deleteSubprojectById(proIds::Uuid uid){
       auto p_id = getParentId(uid);
       if(projects.count(p_id) > 0){

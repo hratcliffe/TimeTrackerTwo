@@ -388,7 +388,70 @@ TEST_CASE("Summarising a one-off", "[Display]"){
 //------ Some failure cases ----------------------------------------------------------
 //Trying to add a project for more than the available FTE
 
+//Trying to add a project with insufficient FTE
+TEST_CASE("Adding a project with insufficient FTE"){
+  projectManager pm;
+  auto pd = createProj();
+  pd.FTE = 0.8;
+  pm.addProject(pd);
+  auto pd2 = createProj();
+  pd2.name = "Too much";
+  REQUIRE_THROWS(pm.addProject(pd2));
+}
+
+TEST_CASE("Adding a project with FTE > 100%"){
+  projectManager pm;
+  auto pd = createProj();
+  pd.FTE = 1.2;
+  REQUIRE_THROWS(pm.addProject(pd));
+}
+
+TEST_CASE("Adding a subproject to bad parent"){
+  projectManager pm;
+  auto sd = createSubProj();
+  SECTION("Null Uid"){
+    REQUIRE_THROWS(pm.addSubproject(sd, proIds::NullUid));
+  }
+  SECTION("Nonexistent project"){
+    REQUIRE_THROWS(pm.addSubproject(sd, uniqueIdGenerator().getNextId()));
+  }
+  SECTION("One off tag"){
+    auto pid = uniqueIdGenerator().getNextId();
+    pid.tag(proIds::uidTag::oneoff);
+    REQUIRE_THROWS(pm.addSubproject(sd, pid));
+  }
+}
+
 // Trying to add a sub for more than available frac
+TEST_CASE("Adding a sub with insufficient frac"){
+  projectManager pm;
+  auto pd = createProj();
+  auto pid = pm.addProject(pd);
+  auto sd = createSubProj();
+  sd.frac = 0.8;
+  pm.addSubproject(sd, pid);
+  sd.name = "New name";
+  REQUIRE_THROWS(pm.addSubproject(sd, pid));
+}
+// Or frac > 1.0
+TEST_CASE("Adding a sub with frac > 1"){
+  projectManager pm;
+  auto pd = createProj();
+  auto pid = pm.addProject(pd);
+  auto sd = createSubProj();
+  sd.frac = 1.1;
+  REQUIRE_THROWS(pm.addSubproject(sd, pid));
+}
+
+//Adding a sub to a sub
+TEST_CASE("Adding a subproject to a subproject"){
+  projectManager pm;
+  auto pd = createProj();
+  auto pid = pm.addProject(pd);
+  auto sd = createSubProj();
+  auto sid = pm.addSubproject(sd, pid);
+  REQUIRE_THROWS(pm.addSubproject(sd, sid));
+}
 
 // Lookups for bad PID
 TEST_CASE("Getting Name for absent project", "[Basic]"){
@@ -413,6 +476,39 @@ TEST_CASE("Getting parent name for absent project", "[Basic]"){
   REQUIRE(pm.getParentNameForSub(uniqueIdGenerator().getNextId()) == "Not a subproject");
 }
 
+//Setting FTE or frac to invalid values
+TEST_CASE("Setting FTE to invalid value", "[Basic]"){
+  projectManager pm;
+  auto pd = createProj();
+  auto pid = pm.addProject(pd);
+  REQUIRE_THROWS(pm.setFTE(pid, 1.2));
+}
+TEST_CASE("Setting FTE higher than available", "[Basic]"){
+  projectManager pm;
+  auto pd = createProj();
+  pd.FTE = 0.4;
+  auto pid = pm.addProject(pd);
+  pd.name = "fgdjhjsgfl";
+  pm.addProject(pd);
+  REQUIRE_THROWS(pm.setFTE(pid, 0.8));
+}
+TEST_CASE("Setting frac wrongly", "[Basic]"){
+  projectManager pm;
+  auto pd = createProj();
+  auto pid = pm.addProject(pd);
+  subprojectData sd;
+  sd.name = "Sub AA";
+  sd.frac = 0.5;
+  auto sid = pm.addSubproject(sd, pid);
+  SECTION("Setting frac too high"){
+    REQUIRE_THROWS(pm.setFrac(sid, 1.2));
+  }
+  SECTION("Setting frac higher than available"){
+    sd.name = "BB";
+    auto sid2 = pm.addSubproject(sd, pid);
+    REQUIRE_THROWS(pm.setFrac(sid, 0.8));
+  }
+}
 //Restoring a project into a subproject and vice versa
 
 //Trying to restore proj or sub with a oneoff id

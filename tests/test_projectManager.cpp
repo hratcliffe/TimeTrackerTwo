@@ -134,7 +134,32 @@ TEST_CASE("Checking sub frac", "[Basic]"){
   auto frac = pm.availableSubFrac(pid);
   REQUIRE_THAT(frac, WithinAbs(0.2, margin));
 }
-
+TEST_CASE("Checking counts - no projects", "[Basic]"){
+  projectManager pm;
+  REQUIRE(pm.projectCount() == 0);
+  REQUIRE(pm.subprojectCount() == 0);
+  REQUIRE(pm.subprojectCount(proIds::NullUid) == 0);
+}
+TEST_CASE("Checking counts - nonexistent project", "[Basic]"){
+  projectManager pm;
+  auto pid = pm.addProject(createProj());
+  REQUIRE(pm.subprojectCount() == 0);
+  REQUIRE(pm.subprojectCount(proIds::NullUid) == 0);
+}
+TEST_CASE("Checking FTE - no projects", "[Basic]"){
+  projectManager pm;
+  REQUIRE_THAT(pm.availableFTE(), WithinAbs(1.0, margin));
+  REQUIRE_THAT(pm.allocatedFTE(), WithinAbs(0.0, margin));
+}
+TEST_CASE("Checking sub frac - no projects", "[Basic]"){
+  projectManager pm;
+  REQUIRE_THAT(pm.availableSubFrac(proIds::NullUid), WithinAbs(0.0, margin));
+}
+TEST_CASE("Checking sub frac - nonexistent project", "[Basic]"){
+  projectManager pm;
+  auto pid = pm.addProject(createProj());
+  REQUIRE_THAT(pm.availableSubFrac(proIds::NullUid), WithinAbs(0.0, margin));
+}
 TEST_CASE("Getting Project name and FTE", "[Basic]"){
   projectManager pm;
   auto pd = createProj();

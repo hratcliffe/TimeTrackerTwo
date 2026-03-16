@@ -83,7 +83,7 @@ class projectManager{
     }
 
     proIds::Uuid addSubproject(const subprojectData & dat, const proIds::Uuid & parentUid){
-      if(parentUid.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Parent must not be a subproject"); //TODO re-examine this?
+      if(parentUid.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Parent must not be a subproject");
       if(!checkFrac(parentUid)) throw std::runtime_error("Fraction too large to add subproject");
       subproject tmp = createSubproject(dat, parentUid);
       subprojects[tmp.getUid()] = tmp;

@@ -82,7 +82,6 @@ Q_OBJECT
 
     //Connecting Tab bar to refresh actions
     connect(ui->tabWidget, &QTabWidget::currentChanged, [this](int index){if(index == 1) emit timeSummaryRequested(timeSummaryUnit::minute); if(index == 3) this->reportSelected();});
-    //TODO maybe use a call not a lambda
     //TODO - minutes for dev, -> hours for real
     //TODO - add summary filtering dialog
 
@@ -320,7 +319,6 @@ Q_OBJECT
 
     void updateOneOffId(proIds::Uuid next){
       //Storing Id ready for future click
-      // TODO - if there were multiple entities, should each bind their own?
       if(oneOffTrackerButton){
         oneOffTrackerButton->projectId = next;
       }

@@ -3,7 +3,7 @@
 #include "timeWrapper.h"
 #include "appClock.h"
 
-//App clock suncs when ticked, but otherwise does NOT advance
+//App clock syncs when ticked, but otherwise does NOT advance
 
 TEST_CASE("App clock start", "[Basic]"){
   auto clk = appClock();
@@ -39,20 +39,21 @@ TEST_CASE("App clock tick forced", "[Long]"){
 TEST_CASE("Time travel basic", "[Basic]"){
     auto clk = appClock();
     auto st = clk.now();
+    REQUIRE_FALSE(clk.travelling());
     clk.travelBy(timeWrapper::makeDuration(-10,0,0)); // Ten minutes ago
     clk.tick();
     auto end = clk.now();
     REQUIRE( std::abs((st - end) - 600) <= 1); // Allow one second of slip
+    REQUIRE(clk.travelling());
 
 }
 
 TEST_CASE("Time travel restore", "[Basic]"){
   auto clk = appClock();
-
   clk.travelBy(-100);
-  clk.travelBy(100);
+  REQUIRE(clk.travelling());
+  clk.restoreToNow();
   REQUIRE_FALSE(clk.travelling());
-
 }
 
 TEST_CASE("Clock strings", "[Basic]"){

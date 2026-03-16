@@ -104,7 +104,7 @@ class projectManager{
       if(isProject(id)){
         return projects[id].active;
       }else{
-        return false;
+        throw std::runtime_error("Cannot check active state - not a valid project");
       }
     }
 

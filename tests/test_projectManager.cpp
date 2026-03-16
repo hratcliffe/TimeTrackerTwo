@@ -519,10 +519,10 @@ TEST_CASE("Setting FTE for nonexistent project"){
 TEST_CASE("Setting frac for nonexistent subproject"){
   projectManager pm;
   SECTION("Subproject ID, but does not exist"){
-    REQUIRE_THROWS(pm.setFTE(uniqueIdGenerator().getNextId().tag(proIds::uidTag::sub), 0.5));
+    REQUIRE_THROWS(pm.setFrac(uniqueIdGenerator().getNextId().tag(proIds::uidTag::sub), 0.5));
   }
   SECTION("Is not even a subproject"){
-    REQUIRE_THROWS(pm.setFTE(uniqueIdGenerator().getNextId(), 0.5));
+    REQUIRE_THROWS(pm.setFrac(uniqueIdGenerator().getNextId(), 0.5));
   }
 }
 TEST_CASE("Setting FTE to invalid value", "[Basic]"){

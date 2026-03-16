@@ -399,11 +399,17 @@ TEST_CASE("Adding a project with insufficient FTE"){
   REQUIRE_THROWS(pm.addProject(pd2));
 }
 
-TEST_CASE("Adding a project with FTE > 100%"){
+TEST_CASE("Adding a project with invalid FTE values"){
   projectManager pm;
   auto pd = createProj();
-  pd.FTE = 1.2;
-  REQUIRE_THROWS(pm.addProject(pd));
+  SECTION("More than 100%"){
+    pd.FTE = 1.2;
+    REQUIRE_THROWS(pm.addProject(pd));
+  }
+  SECTION("Negative"){
+    pd.FTE = -0.2;
+    REQUIRE_THROWS(pm.addProject(pd));
+  }
 }
 
 TEST_CASE("Adding a subproject to bad parent"){
@@ -434,13 +440,19 @@ TEST_CASE("Adding a sub with insufficient frac"){
   REQUIRE_THROWS(pm.addSubproject(sd, pid));
 }
 // Or frac > 1.0
-TEST_CASE("Adding a sub with frac > 1"){
+TEST_CASE("Adding a sub with invalid fraction"){
   projectManager pm;
   auto pd = createProj();
   auto pid = pm.addProject(pd);
   auto sd = createSubProj();
-  sd.frac = 1.1;
-  REQUIRE_THROWS(pm.addSubproject(sd, pid));
+  SECTION("Greater than 1"){
+    sd.frac = 1.1;
+    REQUIRE_THROWS(pm.addSubproject(sd, pid));
+  }
+  SECTION("Negative"){
+    sd.frac = -0.1;
+    REQUIRE_THROWS(pm.addSubproject(sd, pid));
+  }
 }
 
 //Adding a sub to a project that does not exist

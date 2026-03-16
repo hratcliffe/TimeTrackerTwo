@@ -529,7 +529,12 @@ TEST_CASE("Setting FTE to invalid value", "[Basic]"){
   projectManager pm;
   auto pd = createProj();
   auto pid = pm.addProject(pd);
-  REQUIRE_THROWS(pm.setFTE(pid, 1.2));
+  SECTION("More than 100%"){
+    REQUIRE_THROWS(pm.setFTE(pid, 1.2));
+  }
+  SECTION("Negative"){
+    REQUIRE_THROWS(pm.setFTE(pid, -0.2));
+  }
 }
 TEST_CASE("Setting FTE higher than available", "[Basic]"){
   projectManager pm;
@@ -550,6 +555,9 @@ TEST_CASE("Setting frac wrongly", "[Basic]"){
   auto sid = pm.addSubproject(sd, pid);
   SECTION("Setting frac too high"){
     REQUIRE_THROWS(pm.setFrac(sid, 1.2));
+  }
+  SECTION("Setting frac -ve"){
+    REQUIRE_THROWS(pm.setFrac(sid, -0.2));
   }
   SECTION("Setting frac higher than available"){
     sd.name = "BB";

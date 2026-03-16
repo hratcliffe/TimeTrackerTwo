@@ -348,7 +348,68 @@ TEST_CASE("Updating sub frac", "[Basic]"){
 }
 
 //---------- Fetching Details -----------------------------------------------------
+TEST_CASE("Get project and sub Details"){
+  projectManager pm;
+  auto pd = createSubProj();
+  pd.frac = 0.74;
+  auto proj = createProj();
+  proj.name = "ABCVD";
+  auto pid = pm.addProject(proj);
+  proIds::Uuid sub = pm.addSubproject(pd, pid);
 
+  SECTION("Project details"){
+    auto details = pm.getDetails(pid);
+    REQUIRE(details.name == proj.name);
+    REQUIRE(details.active);
+    REQUIRE(details.FTE == proj.FTE);
+    REQUIRE(details.subprojectCount == 1);
+    REQUIRE_THAT(details.assignedSubprojFraction, WithinAbs(0.74, margin));
+    REQUIRE(details.subs[0].name == pd.name);
+    REQUIRE(details.uid == pid);
+  }
+  SECTION("Subproject details"){
+    auto details = pm.getSubDetails(sub);
+    REQUIRE(details.name == pd.name);
+    REQUIRE(details.frac == pd.frac);
+    REQUIRE(details.uid == sub);
+  }
+  SECTION("Matching two ways"){
+    auto details = pm.getSubDetails(sub);
+    auto details_from_p = pm.getDetails(pid).subs[0];
+    REQUIRE(details.name == details_from_p.name);
+    REQUIRE(details.frac == details_from_p.frac);
+    REQUIRE(details.uid == details_from_p.uid);
+  }
+}
+
+TEST_CASE("Fetching list of projects", "[Display]"){
+  projectManager pm;
+  auto pd = createSubProj();
+  pd.name = "Namey McName";
+  pd.frac = 0.81;
+  auto parent = createProj();
+  parent.name = "Another title";
+  parent.FTE = 0.2;
+  auto pid = pm.addProject(parent);
+  pm.addSubproject(pd, pid);
+
+  auto parent2 = createProj();
+  parent2.name = "Project Wonky Pineapple";
+  parent2.FTE = 0.4;
+  pm.addProject(parent2);
+
+  auto list = pm.getToplevelProjectList();
+  {// Find both parents in list
+    auto check = [parent](const selectableEntity & s){return s.name == parent.name;};
+    REQUIRE(std::find_if(list.begin(), list.end(), check) != list.end());
+  }
+  {auto check = [parent2](const selectableEntity & s){return s.name == parent2.name;};
+    REQUIRE(std::find_if(list.begin(), list.end(), check) != list.end());
+  }
+  {auto check = [pd](const selectableEntity & s){return s.name == pd.name;};
+    REQUIRE(std::find_if(list.begin(), list.end(), check) == list.end());
+  }
+}
 //----------- Summarising ---------------------------------------------------------
 TEST_CASE("Summarising a project", "[Display]"){
   projectManager pm;

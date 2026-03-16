@@ -73,6 +73,7 @@ class projectManager{
       return subproject(data, gen->getNextId(proIds::uidTag::sub), parentUid); 
     }
     proIds::Uuid addProject(const projectData & dat){
+      if(dat.FTE < 0.0) throw std::runtime_error("Cannot add project with -ve FTE");
       if(!checkFTE(dat.FTE)) throw std::runtime_error("Not enough FTE to add project");
       project tmp = createProject(dat); 
       projects[tmp.getUid()] = tmp;
@@ -80,6 +81,7 @@ class projectManager{
     }
 
     proIds::Uuid addSubproject(const subprojectData & dat, const proIds::Uuid & parentUid){
+      if(dat.frac < 0.0) throw std::runtime_error("Cannot add subproject with -ve fraction");
       if(parentUid.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Parent must not be a subproject");
       if(projects.count(parentUid) == 0) throw std::runtime_error("Parent is not a valid project");
       if(availableSubFrac(parentUid) < dat.frac) throw std::runtime_error("Fraction too large to add subproject");
@@ -112,6 +114,7 @@ class projectManager{
     void restoreProject(const fullProjectData & dat, timecode now){
       //Restore a project from e.g. file - i.e. one that already HAS a uid
       auto id = dat.uid;
+      if(id == proIds::NullUid) throw std::runtime_error("Cannot restore project with Null Uid");
       if(!id.isTaggedAs(proIds::uidTag::none)) throw std::runtime_error("Id is not for a project");
       project tmp = project(dat);
       bool active = true;
@@ -125,6 +128,7 @@ class projectManager{
       // Restore a subproject. Parent MUST exist already
       auto id = dat.uid;
       auto parentUid = dat.parentUid;
+      if(id == proIds::NullUid) throw std::runtime_error("Cannot restore subproject with Null Uid");
       if(parentUid.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Parent must not be a subproject");
       if(!id.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Id is not for a subproject");
       if(projects.count(parentUid) == 0 ) throw std::runtime_error("Parent project does not exist");

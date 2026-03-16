@@ -568,7 +568,7 @@ TEST_CASE("Getting parent ID for absent project", "[Basic]"){
 }
 TEST_CASE("Getting parent name for absent project", "[Basic]"){
   projectManager pm;
-  REQUIRE(pm.getParentNameForSub(uniqueIdGenerator().getNextId()) == "Not a subproject");
+  REQUIRE_THROWS(pm.getParentNameForSub(uniqueIdGenerator().getNextId()));
 }
 
 //Setting FTE or frac to invalid values
@@ -700,6 +700,27 @@ TEST_CASE("Restoring a subproject with no parent"){
     pd.parentUid = uniqueIdGenerator().getNextId();
     pd.parentUid.tag(proIds::uidTag::oneoff);
     REQUIRE_THROWS(pm.restoreSubproject(pd));
+  }
+}
+
+//Deleting a parent before its subs
+TEST_CASE("Deleting a Parent before subs"){
+  projectManager pm;
+  auto pd = createSubProj();
+  pd.name = "Namey McName";
+  pd.frac = 0.81;
+  auto parent = createProj();
+  parent.name = "Another title";
+  parent.FTE = 0.2;
+  auto pid = pm.addProject(parent);
+  pm.addSubproject(pd, pid);
+
+  auto parent2 = createProj();
+  parent2.name = "Project Wonky Pineapple";
+  parent2.FTE = 0.4;
+  pm.addProject(parent2);
+  SECTION("Deleting parent"){
+    REQUIRE_THROWS(pm.deleteProjectById(pid));
   }
 }
 

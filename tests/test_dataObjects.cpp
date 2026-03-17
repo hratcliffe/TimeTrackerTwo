@@ -103,12 +103,50 @@ TEST_CASE("Full Project", "[Stream]"){
   uniqueIdGenerator theGen;
   auto id = theGen.getNextId();
   fullProjectData fpd(id, pd);
+  fpd.useStart = false;
+  fpd.useEnd = false;
   std::stringstream ss, ss_tmp;
+
   ss_tmp<<id;
-  ss<<fpd;
-  REQUIRE(ss.str().find(ss_tmp.str()) != std::string::npos);
-  REQUIRE(ss.str().find(pd.name) != std::string::npos);
-  REQUIRE(ss.str().find("0.24") != std::string::npos);
+  std::string st, ed;
+  st = timeWrapper::formatTime(timeWrapper::fromSeconds(10));
+  ed = timeWrapper::formatTime(timeWrapper::fromSeconds(20));
+
+  SECTION("Neither start nor end"){
+    ss<<fpd;
+    REQUIRE(ss.str().find(ss_tmp.str()) != std::string::npos);
+    REQUIRE(ss.str().find(pd.name) != std::string::npos);
+    REQUIRE(ss.str().find("0.24") != std::string::npos);
+  }
+  SECTION("Start only"){
+    fpd.useStart = true;
+    fpd.start = 10;
+    ss<<fpd;
+    REQUIRE(ss.str().find(ss_tmp.str()) != std::string::npos);
+    REQUIRE(ss.str().find(pd.name) != std::string::npos);
+    REQUIRE(ss.str().find("0.24") != std::string::npos);
+    REQUIRE(ss.str().find(st+" -") != std::string::npos);
+  }
+  SECTION("End only"){
+    fpd.useEnd = true;
+    fpd.end = 20;
+    ss<<fpd;
+    REQUIRE(ss.str().find(ss_tmp.str()) != std::string::npos);
+    REQUIRE(ss.str().find(pd.name) != std::string::npos);
+    REQUIRE(ss.str().find("0.24") != std::string::npos);
+    REQUIRE(ss.str().find("- "+ed) != std::string::npos);
+  }
+  SECTION("Start and End"){
+    fpd.useStart = true;
+    fpd.start = 10;
+    fpd.useEnd = true;
+    fpd.end = 20;
+    ss<<fpd;
+    REQUIRE(ss.str().find(ss_tmp.str()) != std::string::npos);
+    REQUIRE(ss.str().find(pd.name) != std::string::npos);
+    REQUIRE(ss.str().find("0.24") != std::string::npos);
+    REQUIRE(ss.str().find(st+" - "+ed) != std::string::npos);
+  }
 
 }
 TEST_CASE("Full Sub", "[Stream]"){

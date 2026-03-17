@@ -142,6 +142,8 @@ class project : public projectLike{
     ~project()=default;
 
     float getFTE(){return FTE;}
+    void activate(){active = true;}
+    void deactivate(){active = false;}
     std::string describe()override{
       return !active ? "\nProject is inactive\n" : name+" "+ std::to_string((int)(FTE*100))+" % FTE\n "+ std::to_string(subprojects.size()) + " subprojects";
     }

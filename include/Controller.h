@@ -59,7 +59,7 @@ Q_OBJECT
     if(tmp > 0){
       digestCreationDelay = TW_duration{tmp};
     }else{
-      digestCreationDelay =  timeWrapper::makeDuration(0, 0, -100); // 100 days
+      digestCreationDelay =  timeWrapper::makeDuration(0, 0, 100); // 100 days
       currentData->writeState("digestCreationDelay", timeWrapper::toSeconds(digestCreationDelay));
     }
     // DIGEST strategy:

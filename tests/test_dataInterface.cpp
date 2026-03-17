@@ -42,8 +42,12 @@ TEST_CASE("Int -Bad File 2", "[Database]"){
 
 TEST_CASE("Int- Reference Time", "[Database]"){
   databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
-  theDB.writeReferenceTime(0);
-  REQUIRE((false)); // Not implemented function, test cannot be performed
+  // Try to read before writing
+  auto str = theDB.readReferenceTime();
+  REQUIRE(str == "Reference time not yet written");
+
+  theDB.writeReferenceTime();
+  REQUIRE(theDB.readReferenceTime() == timeWrapper::formatTime(timeWrapper::fromSeconds(0)));
 }
 
 // Projects -----------------------------------------------------------------------------

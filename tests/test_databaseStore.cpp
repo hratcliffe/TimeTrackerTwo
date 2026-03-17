@@ -605,6 +605,25 @@ TEST_CASE("Write State to Readonly", "[Database]"){
 
   REQUIRE_THROWS(theDB.writeItem<long long>("conf", 123));
 }
+
+TEST_CASE("Reading bad state", "[Database]"){
+  databaseStore theDB{"./Scratch/TestDatabase2.db", false};
+
+  SECTION("State"){
+    REQUIRE_THROWS_AS(theDB.readItem<long long>("dhlkfjg384i"), badLookup);
+  }
+  SECTION("Config"){
+    REQUIRE_THROWS_AS(theDB.readItem<std::string>("dhlkfjg384i"), badLookup);
+  }
+  SECTION("Check message"){
+    try{
+      theDB.readItem<std::string>("dhlkfjg384i");
+    }catch(badLookup & e){
+      REQUIRE( std::string{e.what()} == "Key not found");
+    }
+  }
+}
+
 // Write digest period + entry (i.e. first touch)
 TEST_CASE("Write Digest", "[Database]"){
   databaseStore theDB{"./Scratch/DigestDatabase.db", false};

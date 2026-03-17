@@ -497,7 +497,37 @@ TEST_CASE("Empty Data - Time summary", "[QTAware, Slots]"){
 }
 
 TEST_CASE("Known Data - Time summary with downtime", "[QTAware, Slots]"){
-  FAIL("Uptime is not total time on projects....");
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./InputData/KnownDatabaseWithDowntime.db")};
+  //TODO - refactor if we create a better way to check the stamps
+  //Check initial state
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::timeSummaryReady, &sig, &SignalCatcher::emitTimeSummary);
+
+  td.loadProjects(17000);
+  td.generateTimeSummary(timeSummaryUnit::debug);
+  std::vector<timeSummaryItem> summary;
+  summary = sig.stashPayloadForReturn(summary, false);
+
+  //Uptime
+  {auto check = [](timeSummaryItem & ts){return ts.text.find("14955.0 units") != std::string::npos;};
+  REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
+  //Alpha
+  {
+  auto check = [](timeSummaryItem & ts){return ts.text.find("Project Alpha") != std::string::npos;};
+  auto fst = std::find_if(summary.begin(), summary.end(), check);
+  fst++; // Next line : expect 8928
+  REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
+  }
+  // BETA
+  {
+  auto check = [](timeSummaryItem & ts){return ts.text.find("Project Beta") != std::string::npos;};
+  auto fst = std::find_if(summary.begin(), summary.end(), check);
+  fst++; // Next line : expect 5977
+  REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
+  REQUIRE(fst->text.find("5977.0 units") != std::string::npos);
+  }
 }
 
 TEST_CASE("OneOff Marks - Time Summary", "[QTAware, Slots]"){

@@ -134,7 +134,13 @@ Q_OBJECT
           // Project in progress. Place a mark
           reapplyTags(latest);
           //TODO - if it has been a long time, offer an option to place an end mark?
-          markProject(latest.projectUid, thePM.getName(latest.projectUid), now);
+          if(latest.projectUid.isTaggedAs(proIds::uidTag::oneoff)){
+            // Need to get the name for mark
+            auto proj = dataHandler->readOneOffProject(latest.projectUid);
+            markProject(latest.projectUid, proj.name, now);
+          }else{
+            markProject(latest.projectUid, thePM.getName(latest.projectUid), now);
+          }
         }
       }catch (const std::runtime_error &e){
         //Probably there is no timestamp entry - pass

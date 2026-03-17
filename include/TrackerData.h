@@ -381,6 +381,8 @@ Q_OBJECT
     void generateDailyDigest(TW_timePoint start_tp){
       //Generate the 'per-day' version of the timestamps for the GMT day starting at start
       // ALSO adds a special entry for the TOTAL duration covered under the NULL uuid
+      // TODO - total duration is sum of the rest - why store it?
+      //TODO - perhaps should also create a day-start and day-end entry somewhere?
       // TODO - timezones?
       // TODO If it exists already, it should be replaced
 

@@ -248,6 +248,7 @@ Q_OBJECT
         }else{
           t.projectName = thePM.getName(stamp.projectUid);
         }
+        list.push_back(t);
       }
       emit timeStampListReady(list);
     }

@@ -556,6 +556,20 @@ TEST_CASE("Known Data - Load projects with active project", "[QTAware]"){
   REQUIRE(str == "Testing");
 
 }
+TEST_CASE("Known Data - Load projects with active One-Off project", "[QTAware]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./Scratch/KnownDatabaseActiveO.db")};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectRunningUpdate, &sig, &SignalCatcher::emitString);
+
+  td.loadProjects(5800);
+
+  std::string str;
+  str = sig.stashPayloadForReturn(str, false);
+  REQUIRE(str == "Tuesday Coffee");
+
+}
 
 // ---------- Merging Projects ---------------------------------------------------------------------
 TEST_CASE("Merging project data", "[QTAware, Slots]"){

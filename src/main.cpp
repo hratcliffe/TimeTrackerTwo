@@ -38,6 +38,8 @@ NOTE: after a period (default 100 days), only summary info is available
 
 // TODO - some of the classes are HUGE. Cut them down
 
+//TODO - protect from writing two stamps at same second
+
 // TODO - add testing
 
 //TODO - available frac does not seem to get displayed? Nothing even calls availableSubFrac

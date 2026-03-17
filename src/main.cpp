@@ -20,6 +20,8 @@ NOTE: after a period (default 100 days), only summary info is available
 // TODO - csv and pdf? reporting
 // TODO - add a 'recent events' Tab and show recent start, stop etca
 // TODO - BETTER: stamp review tab which shows recent marks and allows to remove. Also should allow time travel to insert
+// TODO - if do this, might want to be able to promote 'one-off' to project also if it
+// turned out to be more
 
 // TODO - alter summary to allow specifying date range
 // TODO - add configuration update options (selected while running)

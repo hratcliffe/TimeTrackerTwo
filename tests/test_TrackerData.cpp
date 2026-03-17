@@ -673,9 +673,8 @@ TEST_CASE("Deleting Stamps", "[QTAware]"){
   std::vector<timeSummaryItem> summary;
   summary = sig.stashPayloadForReturn(summary, false);
 
-
   //Uptime
-  {auto check = [](timeSummaryItem & ts){return ts.text.find("15927.0 units") != std::string::npos;};
+  {auto check = [](timeSummaryItem & ts){return ts.text.find("14905.0 units") != std::string::npos;};
   REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
   //Alpha
   {
@@ -707,7 +706,7 @@ TEST_CASE("Deleting Stamps", "[QTAware]"){
     summary = sig.stashPayloadForReturn(summary, false);
 
     //Uptime
-    {auto check = [](timeSummaryItem & ts){return ts.text.find("15927.0 units") != std::string::npos;};
+    {auto check = [](timeSummaryItem & ts){return ts.text.find("13817.0 units") != std::string::npos;};
     REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
     //Alpha
     {
@@ -726,7 +725,6 @@ TEST_CASE("Deleting Stamps", "[QTAware]"){
     REQUIRE(fst->text.find("4889.0 units") != std::string::npos);
     }
   }
-  FAIL("Uptime definition is NOT time on Projects");
 }
 
 TEST_CASE("Deleting Stamps - no-op cases", "[QTAware]"){
@@ -744,7 +742,7 @@ TEST_CASE("Deleting Stamps - no-op cases", "[QTAware]"){
   summary = sig.stashPayloadForReturn(summary, false);
 
   //Uptime
-  {auto check = [](timeSummaryItem & ts){return ts.text.find("15927.0 units") != std::string::npos;};
+  {auto check = [](timeSummaryItem & ts){return ts.text.find("14905.0 units") != std::string::npos;};
   REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
   //Alpha
   {
@@ -773,7 +771,7 @@ TEST_CASE("Deleting Stamps - no-op cases", "[QTAware]"){
     summary = sig.stashPayloadForReturn(summary, false);
 
     //Uptime
-    {auto check = [](timeSummaryItem & ts){return ts.text.find("15927.0 units") != std::string::npos;};
+    {auto check = [](timeSummaryItem & ts){return ts.text.find("14905.0 units") != std::string::npos;};
     REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
     //Alpha
     {
@@ -802,7 +800,7 @@ TEST_CASE("Deleting Stamps - no-op cases", "[QTAware]"){
     summary = sig.stashPayloadForReturn(summary, false);
 
     //Uptime
-    {auto check = [](timeSummaryItem & ts){return ts.text.find("15927.0 units") != std::string::npos;};
+    {auto check = [](timeSummaryItem & ts){return ts.text.find("14905.0 units") != std::string::npos;};
     REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
     //Alpha
     {

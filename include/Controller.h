@@ -33,32 +33,48 @@ Q_OBJECT
     currentData->loadProjects(clock->now());
 
     //These are the internal parameters for how often we should check
-    auto tmp = currentData->readState("lastDigestCheckTime");
-    if(tmp > 0){
-      lastDigestCheckTime = timeWrapper::fromSeconds(tmp);
-    }else{
-      lastDigestCheckTime = timeWrapper::fromSeconds(1); // A very long time ago...
+    try{
+      auto tmp = currentData->readState("lastDigestCheckTime");
+      if(tmp > 0){
+        lastDigestCheckTime = timeWrapper::fromSeconds(tmp);
+      }else{
+        throw badLookup("Bad check time");
+      }
+    }catch(badLookup & e){
+        lastDigestCheckTime = timeWrapper::fromSeconds(1); // A very long time ago...
     }
-    tmp = currentData->readState("digestCheckPeriod");
-    if(tmp > 0){
-      digestCheckPeriod = TW_duration{tmp};
-    }else{
-      digestCheckPeriod = TW_duration{60*60}; // ~One hour
-      currentData->writeState("digestCheckPeriod", timeWrapper::toSeconds(digestCheckPeriod));
+    try{
+      auto tmp = currentData->readState("digestCheckPeriod");
+      if(tmp > 0){
+        digestCheckPeriod = TW_duration{tmp};
+      }else{
+        throw badLookup("Bad check period");
+      }
+    }catch(badLookup & e){
+        digestCheckPeriod = TW_duration{60*60}; // ~One hour
+        currentData->writeState("digestCheckPeriod", timeWrapper::toSeconds(digestCheckPeriod));
     }
 
+    try{
     //This is the lastTime for which we created a digest
-    tmp = currentData->readState("lastDigestCreationTime");
-    if(tmp > 0){
-      lastDigestCreationTime = timeWrapper::fromSeconds(tmp);
-    }else{
+      auto tmp = currentData->readState("lastDigestCreationTime");
+      if(tmp > 0){
+        lastDigestCreationTime = timeWrapper::fromSeconds(tmp);
+      }else{
+        throw badLookup("Bad creation time");
+      }
+    }catch(badLookup & e){
       lastDigestCreationTime = timeWrapper::fromSeconds(1); // A very long time ago...
     }
-    // This is how many seconds we keep the stamps before digesting
-    tmp = currentData->readState("digestCreationDelay");
-    if(tmp > 0){
-      digestCreationDelay = TW_duration{tmp};
-    }else{
+    try{
+      // This is how many seconds we keep the stamps before digesting
+      auto tmp = currentData->readState("digestCreationDelay");
+      if(tmp > 0){
+        digestCreationDelay = TW_duration{tmp};
+      }else{
+        throw badLookup("Bad creation delay");
+      }
+    }catch(badLookup & e){
       digestCreationDelay =  timeWrapper::makeDuration(0, 0, 100); // 100 days
       currentData->writeState("digestCreationDelay", timeWrapper::toSeconds(digestCreationDelay));
     }

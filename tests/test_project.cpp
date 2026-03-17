@@ -2,7 +2,7 @@
 
 #include "project.h"
 
-TEST_CASE("Project Creation", "[Basic]"){
+TEST_CASE("Project Creation and describe", "[Basic]"){
   fullProjectData pd;
   uniqueIdGenerator theGen;
   pd.name = "Test Proj";
@@ -12,13 +12,28 @@ TEST_CASE("Project Creation", "[Basic]"){
   pd.useEnd = false;
   project p{pd};
  
-  REQUIRE(p.getName() == pd.name);
-  REQUIRE(p.getUid() == pd.uid);
-  REQUIRE(p.getFTE() == pd.FTE);
-  std::string str = p.describe();
-  REQUIRE(str.find(pd.name) != std::string::npos);
-  REQUIRE(str.find("30 % FTE") != std::string::npos);
-  REQUIRE(str.find("0 subprojects") != std::string::npos);
+  SECTION("Checking creation"){
+    REQUIRE(p.getName() == pd.name);
+    REQUIRE(p.getUid() == pd.uid);
+    REQUIRE(p.getFTE() == pd.FTE);
+  }
+  SECTION("Describing"){
+    std::string str = p.describe();
+    REQUIRE(str.find(pd.name) != std::string::npos);
+    REQUIRE(str.find("30 % FTE") != std::string::npos);
+    REQUIRE(str.find("0 subprojects") != std::string::npos);
+  }
+  SECTION("Describing - inactive and active"){
+    p.deactivate();
+    std::string str = p.describe();
+    REQUIRE(str.find("inactive") != std::string::npos);
+    p.activate();
+    str = p.describe();
+    REQUIRE(str.find("inactive") == std::string::npos);
+    REQUIRE(str.find(pd.name) != std::string::npos);
+    REQUIRE(str.find("30 % FTE") != std::string::npos);
+    REQUIRE(str.find("0 subprojects") != std::string::npos);
+  }
 
 }
 

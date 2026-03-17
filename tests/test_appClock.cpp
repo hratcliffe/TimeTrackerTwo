@@ -56,6 +56,21 @@ TEST_CASE("Time travel restore", "[Basic]"){
   REQUIRE_FALSE(clk.travelling());
 }
 
+TEST_CASE("Travelling to now", "[Long]"){
+  auto clk = appClock();
+  clk.travelBy(-1);
+  auto now = timeWrapper::now();
+  clk.travelTo(now);
+  REQUIRE_FALSE(clk.travelling()); // Will fail in case we pass a second between these lines of code...
+  auto st = timeWrapper::toSeconds(timeWrapper::now());
+  auto end = timeWrapper::toSeconds(timeWrapper::now());
+  for(;end == st;){
+    end = timeWrapper::toSeconds(timeWrapper::now());
+  }
+  clk.travelTo(now);
+  REQUIRE_FALSE(clk.travelling()); // Will fail in case we pass a second between these lines of code...
+}
+
 TEST_CASE("Clock strings", "[Basic]"){
     auto clk = appClock();
     clk.travelTo(timeWrapper::parseTimeZoned("2000-01-01 11:23:01"));

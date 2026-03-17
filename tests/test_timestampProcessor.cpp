@@ -338,3 +338,9 @@ TEST_CASE("Window 3", "[Basic]"){
     auto window = proc::stampsToWindow(data, -1, 1800);
     REQUIRE(window == 868);
 }
+TEST_CASE("Window - No Stamps", "[Edge]"){
+    std::vector<timeStamp> data;
+    REQUIRE_NOTHROW(proc::stampsToWindow(data));
+    auto win = proc::stampsToWindow(data);
+    REQUIRE(win == 0);
+}

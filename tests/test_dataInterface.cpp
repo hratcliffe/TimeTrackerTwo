@@ -202,19 +202,18 @@ TEST_CASE("Int -List fetch - oneoff", "[Database]"){
 
 TEST_CASE("Int -List fetch - oneoff range", "[Database]"){
   databaseIO theDB{"./InputData/KnownDatabaseO.db", true};
-  auto id1 = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
-  auto id2 = proIds::Uuid("{d74a08d4-35b4-4b7a-b525-b5da00af6269}");
-  auto id3 = proIds::Uuid("{07e453ad-b698-47b8-aa52-c7ef2306731d}");
+  auto id1 = proIds::Uuid("{07e453ad-b698-47b8-aa52-c7ef2306731d}");
+  auto id2 = proIds::Uuid("{862725ba-2e09-4e34-8210-816fedc61598}");
 
   // NOTE: time-order guaranteed
   auto lst = theDB.fetchOneOffProjectsInTimeRange(8999, 9050);
   REQUIRE(lst.size() == 2);
   REQUIRE(lst[0].uid == id1);
-  REQUIRE(lst[1].uid == id3);
+  REQUIRE(lst[1].uid == id2);
 
-  auto lst2 = theDB.fetchOneOffProjectsInTimeRange(9001, 9050);
+  auto lst2 = theDB.fetchOneOffProjectsInTimeRange(9040, 9050);
   REQUIRE(lst2.size() == 1);
-  REQUIRE(lst2[0].uid == id3);
+  REQUIRE(lst2[0].uid == id2);
 
 }
 // Write

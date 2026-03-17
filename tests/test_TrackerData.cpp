@@ -591,6 +591,22 @@ TEST_CASE("Known Data - Time summary with downtime", "[QTAware, Slots]"){
 }
 
 TEST_CASE("OneOff Marks - Time Summary", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./Scratch/KnownDatabaseO3.db")};
+  //TODO - refactor if we create a better way to check the stamps
+  //Check initial state
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::timeSummaryReady, &sig, &SignalCatcher::emitTimeSummary);
+
+  td.loadProjects(17000);
+  td.generateTimeSummary(timeSummaryUnit::debug);
+  std::vector<timeSummaryItem> summary;
+  summary = sig.stashPayloadForReturn(summary, false);
+
+  auto check = [](timeSummaryItem & ts){return ts.text.find("One Off Projects") != std::string::npos;};
+  auto fst = std::find_if(summary.begin(), summary.end(), check);
+  REQUIRE(fst->text.find("7965 units") != std::string::npos);
 
 }
 

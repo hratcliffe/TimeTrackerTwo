@@ -87,7 +87,7 @@ inline std::ostream& operator<< (std::ostream& stream, const fullProjectData& da
 */
   stream << data.name <<", "<<data.uid<<", "<<data.FTE;
   if(data.useStart) stream<<" "<<timeWrapper::formatTime(timeWrapper::fromSeconds(data.start));
-  if(data.useStart or data.useEnd) stream<< " - ";
+  if(data.useStart or data.useEnd) stream<< " -";
   if(data.useEnd) stream<<" "<<timeWrapper::formatTime(timeWrapper::fromSeconds(data.end));
   return stream;
 };

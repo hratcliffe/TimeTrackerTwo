@@ -31,6 +31,20 @@ Q_OBJECT
   trackerTypes::projectStatus currentProjectStatus; /**< \brief Current project status*/
   dataIO * dataHandler = nullptr; /**< \brief Data handler for reading/writing data */
 
+  void reapplyTags(timeStamp & t){
+    // Timestamps come from DB without proper tags. Make sure they are in place
+    if(thePM.isSubProject(t.projectUid)){
+      t.projectUid.tag(proIds::uidTag::sub);
+    }else if(!thePM.isProject(t.projectUid)){
+      t.projectUid.tag(proIds::uidTag::oneoff);
+    }
+  }
+  void reapplyTags(std::vector<timeStamp> & tv){
+    for(auto & t: tv){
+      reapplyTags(t);
+    }
+  }
+
   public:
 
     TrackerData(appConfig config){
@@ -118,6 +132,7 @@ Q_OBJECT
         auto latest = dataHandler->fetchLatestTrackerEntry();
         if(latest.projectUid != proIds::NullUid){
           // Project in progress. Place a mark
+          reapplyTags(latest);
           //TODO - if it has been a long time, offer an option to place an end mark?
           markProject(latest.projectUid, thePM.getName(latest.projectUid), now);
         }

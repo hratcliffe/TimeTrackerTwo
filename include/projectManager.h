@@ -97,6 +97,7 @@ class projectManager{
       subprojects[s_id].parentUid = proIds::NullUid;
     }
 
+    //IMPORTANT - these do not expect Tagged Ids since we do not know what we have
     bool isProject(proIds::Uuid id ){return projects.count(id) > 0;};
     bool isSubProject(proIds::Uuid id ){return subprojects.count(id) > 0;};
     bool isActiveProject(proIds::Uuid id){

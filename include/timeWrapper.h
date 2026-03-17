@@ -2,6 +2,7 @@
 #define ____timeWrapper__
 
 #include <chrono>
+#include <iostream>
 #include <ctime> // Still need some C-style stuff for dates
 #include <iomanip>
 #include <sstream>

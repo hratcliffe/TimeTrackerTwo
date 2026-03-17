@@ -65,9 +65,6 @@ class projectManager{
         return 0.0;
       }
     }
-    bool checkFrac(const proIds::Uuid & proj){
-      return availableSubFrac(proj) > 0.0;
-    }
 
     project createProject(const projectData & data){
       return project(data, gen->getNextId());

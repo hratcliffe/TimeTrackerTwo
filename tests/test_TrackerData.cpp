@@ -258,15 +258,23 @@ TEST_CASE("Marking", "[QTAware, Slots]"){
     std::string name = "Project to be marked dfhkaeh";
     auto id = CreateProjectAndReturnId(td, name);
     subprojectData spd;
-    spd.name = "SubXYZ Created by Tracker Mk3";
+    std::string sub_name ="SubXYZ Created by Tracker Mk3";
+    spd.name = sub_name;
     spd.frac = 0.3;
-    td.createSubproject(spd, id);
 
-    //td.markProject(id, name, 123);
-    //Need to get the id back for marking...
+    //Awful round-about way to get the ID for a created project
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+    td.createSubproject(spd, id);
+    std::vector<selectableEntity> list;
+    list = sig.stashPayloadForReturn(list, false);
+    auto it = std::find_if(list.begin(), list.end(), [sub_name](const selectableEntity & e){return e.name == sub_name;});
+    REQUIRE(it != list.end());
+    auto sid = it->uid;
+    sid.tag(proIds::uidTag::sub);
+    td.markProject(sid, sub_name, 123);
     std::string str;
     str = sig.stashPayloadForReturn(str, false);
-    //REQUIRE(str == name);
+    REQUIRE(str == sub_name);
 
   }
 }

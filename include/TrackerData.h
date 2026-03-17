@@ -271,7 +271,7 @@ Q_OBJECT
 
       timecode uptime = 0, oneoffs = 0;
       for(auto & item : durations){
-        uptime += item.second;
+        if(item.first != proIds::NullUid) uptime += item.second;
         if(!thePM.isProject(item.first) && !thePM.isSubProject(item.first) && item.first != proIds::NullUid){
           oneoffs += item.second;
         } 

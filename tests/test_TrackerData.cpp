@@ -612,7 +612,33 @@ TEST_CASE("OneOff Marks - Time Summary", "[QTAware, Slots]"){
 
 // -------- Digest Generation ------------------------------------------------------------------------
 TEST_CASE("Generating Digests", "[QTAware, Slots]"){
-  // NOTE: need a known start DB, but will modify it
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./Scratch/KnownDatabaseForDigests.db")};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::timeDigestReady, &sig, &SignalCatcher::emitTimeDigestReady);
+
+  td.generateDailyDigest(timeWrapper::fromSeconds(86401));
+
+  std::vector<timeDigestEntry> dig;
+  dig = sig.stashPayloadForReturn(dig, false);
+
+  for(auto item: dig){
+    if(item.projectUid.to_string() == "{cc467402-acd5-494f-9c58-466f3aa6f117}"){
+      REQUIRE(item.duration == 737);
+    }else if(item.projectUid.to_string() == "{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}"){
+      REQUIRE(item.duration == 3046);
+    }else if(item.projectUid.to_string() == "{de58a6f8-d0bb-46c8-af18-aed15e92060c}"){
+      REQUIRE(item.duration == 6219);
+    }else if(item.projectUid.to_string() == "{07e453ad-b698-47b8-aa52-c7ef2306731d}"){
+      REQUIRE(item.duration == 69889);
+    }else if(item.projectUid.to_string() == "{8af5d44a-2921-4666-b33b-053459e2ced6}"){
+      REQUIRE(item.duration == 2801);
+    }else if(item.projectUid.to_string() == "{00000000-0000-0000-0000-000000000000}"){
+      // NOTE- this is the UPTIME:
+      REQUIRE(item.duration == 82692);
+    }
+  }
 }
 
 //----------- Loading Projects ----------------------------------------------------------------------

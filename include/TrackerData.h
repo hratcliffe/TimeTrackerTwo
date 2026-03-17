@@ -411,6 +411,7 @@ Q_OBJECT
       digest.push_back(timeDigestEntry{-1, total_dur, proIds::NullUid});
       timeDigestPeriod period{-1, start_of_day, end-start_of_day};
       dataHandler->writeDigestEntries(period, digest);
+      emit timeDigestReady(digest);
    }
 
     int checkForTimeStampsBefore(TW_timePoint end){
@@ -504,6 +505,7 @@ Q_OBJECT
       void projectTotalUpdateEvent(float usedFTE, float freeFTE);
       void projectSummaryReady(std::string summary); /**< \brief Signal emitted when a summary is ready, with the summary text */
       void timeSummaryReady(std::vector<timeSummaryItem> summary);
+      void timeDigestReady(std::vector<timeDigestEntry> digest);
       void timeStampListReady(std::vector<timeStampForDisplay> stamps);
       void projectRunningUpdate(std::string name); /**< \brief Signal emitted when a project is running, with the name of the project */
       void projectRunningFlash(std::string name); /**< \brief Signal emitted when requested showing if a project is running, with the name of the project, or empty if stopped/paused etc */

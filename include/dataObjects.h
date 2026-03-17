@@ -87,7 +87,7 @@ inline std::ostream& operator<< (std::ostream& stream, const fullProjectData& da
 */
   stream << data.name <<", "<<data.uid<<", "<<data.FTE;
   if(data.useStart) stream<<" "<<timeWrapper::formatTime(timeWrapper::fromSeconds(data.start));
-  if(data.useStart or data.useEnd) stream<< " - ";
+  if(data.useStart or data.useEnd) stream<< " -";
   if(data.useEnd) stream<<" "<<timeWrapper::formatTime(timeWrapper::fromSeconds(data.end));
   return stream;
 };
@@ -214,6 +214,20 @@ inline bool operator==(const timeStamp &lhs, const timecode &rhs){
 };
 inline bool operator!=(const timeStamp &lhs, const timecode &rhs){
   return !(lhs == rhs);
+};
+
+class timeStampForDisplay{
+    public:
+    timecode time;
+    std::string formattedTime;
+    proIds::Uuid projectUid;
+    std::string projectName;
+};
+inline std::ostream& operator<< (std::ostream& stream, const timeStampForDisplay& ts){
+/** \brief Stream operator for timeStampForDisplay
+*/
+  stream << "Time: " << ts.formattedTime <<" ("<<ts.time<< "), Project: " <<ts.projectName<<"("<< ts.projectUid<<")";
+  return stream;
 };
 
 // For display - time unit in use

@@ -64,6 +64,27 @@ TEST_CASE("TimeStamp Stream", "[Stream]"){
   REQUIRE(ss.str().find(ss_tmp.str()) != std::string::npos);
 
 }
+TEST_CASE("TimeStampForDisplay Stream", "[Stream]"){
+  timeStampForDisplay ts;
+  std::stringstream ss, ss_tmp;
+  ts.time = 1175;
+  ts.formattedTime = " 1175 as Formatted time string";
+  ts.projectUid = uniqueIdGenerator().getNextId();
+  ts.projectName = "NameyName";
+  ss<<ts;
+  ss_tmp<<ts.time;
+  REQUIRE(ss.str().find(ss_tmp.str()) != std::string::npos);
+  ss_tmp.str("");
+  ss_tmp<<ts.formattedTime;
+  REQUIRE(ss.str().find(ss_tmp.str()) != std::string::npos);
+  ss_tmp.str("");
+  ss_tmp<<ts.projectUid;
+  REQUIRE(ss.str().find(ss_tmp.str()) != std::string::npos);
+  ss_tmp.str("");
+  ss_tmp<<ts.projectName;
+  REQUIRE(ss.str().find(ss_tmp.str()) != std::string::npos);
+}
+
 
 TEST_CASE("Project and Sub", "[Stream]"){
   projectData pd;

@@ -239,7 +239,9 @@ Q_OBJECT
         timeStampForDisplay t;
         t.time = stamp.time; t.projectUid = stamp.projectUid;
         t.formattedTime = timeWrapper::formatTime(timeWrapper::fromSeconds(t.time));
-        if(stamp.projectUid.isTaggedAs(proIds::uidTag::oneoff)){
+        if(stamp.projectUid == proIds::NullUid){
+          t.projectName = "";
+        }else if(stamp.projectUid.isTaggedAs(proIds::uidTag::oneoff)){
           auto check = [stamp](const fullOneOffProjectData & o){return stamp.projectUid == o.uid;};
           auto it = std::find_if(oneOfflist.begin(), oneOfflist.end(), check);
           if(it != oneOfflist.end()){

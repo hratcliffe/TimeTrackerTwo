@@ -480,6 +480,58 @@ TEST_CASE("Known Data - Time summary", "[QTAware, Slots]"){
   REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
 
 }
+TEST_CASE("Known Data - Time stamps", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./Scratch/KnownDatabaseO2.db")};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::timeStampListReady, &sig, &SignalCatcher::emitTimeStampList);
+
+  td.loadProjects(10000);
+  td.fetchTimestamps(timeWrapper::fromSeconds(0), timeWrapper::fromSeconds(10001));
+
+  std::vector<timeStampForDisplay> summary;
+  summary = sig.stashPayloadForReturn(summary, false);
+  REQUIRE(summary.size() == 8);
+  //check for one main, one sub and a one-off, plus a null
+  {
+    auto find_stamp = [](timeStampForDisplay & ts){return ts.projectUid.to_string() =="{cc467402-acd5-494f-9c58-466f3aa6f117}";};
+    auto it = std::find_if(summary.begin(), summary.end(), find_stamp);
+    REQUIRE(it != summary.end());
+    REQUIRE(it->time == 73);
+    REQUIRE(it->projectName =="Project Alpha");
+    REQUIRE(it->formattedTime == timeWrapper::formatTime(timeWrapper::fromSeconds(73)));
+    REQUIRE(it->projectUid.isTaggedAs(proIds::uidTag::none));
+  }
+  {
+    auto find_stamp = [](timeStampForDisplay & ts){return ts.projectUid.to_string() =="{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}";};
+    auto it = std::find_if(summary.begin(), summary.end(), find_stamp);
+    REQUIRE(it != summary.end());
+    REQUIRE(it->time == 689);
+    REQUIRE(it->projectName =="Documentation");
+    REQUIRE(it->formattedTime == timeWrapper::formatTime(timeWrapper::fromSeconds(689)));
+    REQUIRE(it->projectUid.isTaggedAs(proIds::uidTag::sub));
+  }
+  {
+    auto find_stamp = [](timeStampForDisplay & ts){return ts.projectUid.to_string() =="{00000000-0000-0000-0000-000000000000}";};
+    auto it = std::find_if(summary.begin(), summary.end(), find_stamp);
+    REQUIRE(it != summary.end());
+    REQUIRE(it->time == 8001);
+    REQUIRE(it->projectName =="");
+    REQUIRE(it->formattedTime == timeWrapper::formatTime(timeWrapper::fromSeconds(8001)));
+    //REQUIRE(it->projectUid.isTaggedAs(proIds::uidTag::sub));
+  }
+  {
+    auto find_stamp = [](timeStampForDisplay & ts){return ts.projectUid.to_string() =="{07e453ad-b698-47b8-aa52-c7ef2306731d}";};
+    auto it = std::find_if(summary.begin(), summary.end(), find_stamp);
+    REQUIRE(it != summary.end());
+    REQUIRE(it->time == 9035);
+    REQUIRE(it->projectName =="Consulting");
+    REQUIRE(it->formattedTime == timeWrapper::formatTime(timeWrapper::fromSeconds(9035)));
+    REQUIRE(it->projectUid.isTaggedAs(proIds::uidTag::oneoff));
+  }
+}
+
 TEST_CASE("Empty Data - Time summary", "[QTAware, Slots]"){
   auto app = dummyApp();
   TrackerData td{basicConfig("./Scratch/Empty_dfkhawf.db")};

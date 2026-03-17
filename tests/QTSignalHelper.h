@@ -1,7 +1,8 @@
 #include <QWidget>
 
-#include <idGenerators.h>
-#include <project.h>
+#include "idGenerators.h"
+#include "dataObjects.h"
+#include "project.h"
 //Add slots as required by the program...
 class SignalCatcher : public QWidget{
 Q_OBJECT
@@ -45,6 +46,7 @@ public slots:
 
   void emitOrderedProjectList(std::vector<selectableEntity> p){stashPayloadForReturn(p);}
   void emitTimeSummary(std::vector<timeSummaryItem> s){stashPayloadForReturn(s);}
+  void emitTimeStampList(std::vector<timeStampForDisplay> l){stashPayloadForReturn(l);}
 
   // Payload-less or ambiguous slots - here use a tag string and a tag instead
   void emitStopped(){stashPayloadForReturn<bool, SignalCatcher::stop>(true);}

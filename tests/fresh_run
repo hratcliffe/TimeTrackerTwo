@@ -3,7 +3,10 @@ chmod u-r ./InputData/UnreadableFile.db
 chmod u-w ./InputData/ReadOnlyFile.db
 cp ./InputData/KnownDatabaseActive.db ./Scratch
 cp ./InputData/KnownDatabaseActiveO.db ./Scratch
+cp ./InputData/KnownDatabaseO.db ./Scratch/KnownDatabaseO2.db
+cp ./InputData/KnownDatabaseO.db ./Scratch
 cp ./InputData/KnownDatabaseForDelete.db ./Scratch
 cp ./InputData/KnownDatabaseForDelete.db ./Scratch/KnownDatabaseForDelete2.db
+cp ./InputData/KnownDatabaseForDigests.db ./Scratch
 ./ttt_tests.app/Contents/MacOS/ttt_tests --order rand --warn NoAssertions
 chmod u+r ./InputData/UnreadableFile.db

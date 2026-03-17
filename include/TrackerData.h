@@ -229,6 +229,30 @@ Q_OBJECT
 
     }
 
+    void fetchTimestamps(TW_timePoint start, TW_timePoint end){
+      // Fetching a list of time, (tagged) uid, name, suitable for e.g. display
+      auto stamps = dataHandler->fetchTrackerEntries(timeWrapper::toSeconds(start), timeWrapper::toSeconds(end));
+      reapplyTags(stamps);
+      std::vector<timeStampForDisplay> list;
+      auto oneOfflist = dataHandler->fetchOneOffProjectsInTimeRange(timeWrapper::toSeconds(start), timeWrapper::toSeconds(end));
+      for(const auto & stamp: stamps){
+        timeStampForDisplay t;
+        t.time = stamp.time; t.projectUid = stamp.projectUid;
+        t.formattedTime = timeWrapper::formatTime(timeWrapper::fromSeconds(t.time));
+        if(stamp.projectUid.isTaggedAs(proIds::uidTag::oneoff)){
+          auto check = [stamp](const fullOneOffProjectData & o){return stamp.projectUid == o.uid;};
+          auto it = std::find_if(oneOfflist.begin(), oneOfflist.end(), check);
+          if(it != oneOfflist.end()){
+            t.projectName = it->name;
+          }
+        }else{
+          t.projectName = thePM.getName(stamp.projectUid);
+        }
+        list.push_back(t);
+      }
+      emit timeStampListReady(list);
+    }
+
     void generateTimeSummary(timeSummaryUnit units){
       std::vector<timeSummaryItem> summary;
       // A vector of items to be displayed in order - expect display to add newlines between items
@@ -478,6 +502,7 @@ Q_OBJECT
       void projectTotalUpdateEvent(float usedFTE, float freeFTE);
       void projectSummaryReady(std::string summary); /**< \brief Signal emitted when a summary is ready, with the summary text */
       void timeSummaryReady(std::vector<timeSummaryItem> summary);
+      void timeStampListReady(std::vector<timeStampForDisplay> stamps);
       void projectRunningUpdate(std::string name); /**< \brief Signal emitted when a project is running, with the name of the project */
       void projectRunningFlash(std::string name); /**< \brief Signal emitted when requested showing if a project is running, with the name of the project, or empty if stopped/paused etc */
       void projectPaused(std::string name); /**< \brief Signal emitted when a project is paused, with the name of the project */

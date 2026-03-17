@@ -16,7 +16,8 @@ class dataIO{
     dataIO(const dataIO &other) = delete;
     virtual ~dataIO()=default;
 
-    virtual void writeReferenceTime(timecode time) = 0; /**< \brief Write a reference time for verification later*/
+    virtual void writeReferenceTime() = 0; /**< \brief Write a reference time for verification later*/
+    virtual std::string readReferenceTime() = 0; /**< \brief Get the reference time string */
 
     virtual void writeAppState(std::string key, long long value) = 0;/**< \brief Write a state value */
     virtual long long readAppState(std::string key) = 0;/**< \brief Read a state value */
@@ -80,9 +81,23 @@ class databaseIO : public dataIO{
     databaseIO(std::string fileName, bool readOnly): dbStore(fileName, readOnly){;}; /**< \brief Constructor with file name */
     ~databaseIO(){;};
     void closeDB(){dbStore.closeDB();}
-    void writeReferenceTime(timecode time) override {
-      // Implementation for writing reference time to database
-      std::cerr<<"Writing reference time not implemented yet."<<std::endl;
+    void writeReferenceTime() override {
+      // Writing a formatted time string
+      // Cross-check since we work in time-codes
+      try{
+        auto ref = readAppConfig("ZeroTime");
+      }catch(badLookup & e){
+        //Ref time does not exist, write it
+        writeAppConfig("ZeroTime", timeWrapper::formatTime(timeWrapper::fromSeconds(0)));
+      }
+    }
+    std::string readReferenceTime() override {
+      try{
+        auto ref = readAppConfig("ZeroTime");
+        return ref;
+      }catch(badLookup & e){
+        return "Reference time not yet written";
+      }
     }
 
     void writeAppState(std::string key, long long value) override{

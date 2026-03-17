@@ -1,6 +1,7 @@
 #ifndef DATABASESTORE_H
 #define DATABASESTORE_H
 
+#include <stdexcept>
 #include <iostream>
 #include <string>
 #include <type_traits>
@@ -10,6 +11,11 @@
 #include "dataObjects.h"
 #include "idGenerators.h"
 //TODO - configurable error logging!
+
+class badLookup : public std::runtime_error{
+  public:
+  badLookup(const char * msg):runtime_error(msg){;};
+};
 
 class databaseStore{
 
@@ -179,22 +185,24 @@ class databaseStore{
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_text(prep_cmd, 1, key.c_str(), key.length(), SQLITE_STATIC);
         if((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
-           item = sqlite3_column_int64(prep_cmd, 0);
+          item = sqlite3_column_int64(prep_cmd, 0);
+          sqlite3_finalize(prep_cmd);
         }else{
-            item = 0; // TODO - what to do for bad key?
+           sqlite3_finalize(prep_cmd);
+            throw badLookup("Key not found");
         }
-        sqlite3_finalize(prep_cmd);
-      }else if constexpr(std::is_same<T, std::string>::value){
+     }else if constexpr(std::is_same<T, std::string>::value){
         std::string cmd = "SELECT value FROM app_data WHERE key = ?;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_text(prep_cmd, 1, key.c_str(), key.length(), SQLITE_STATIC);
         if((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
           item = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0));
+          sqlite3_finalize(prep_cmd);
         }else{
-            item = ""; // TODO - what to do for bad key?
+          sqlite3_finalize(prep_cmd);
+          throw badLookup("Key not found");
         }
-        sqlite3_finalize(prep_cmd);
       }else{
         assert(false);
       }

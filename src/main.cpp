@@ -56,6 +56,8 @@ int main(int argc, char *argv[]) {
     appConfig config;
     config.dataFileName = "data.db"; // Default data file name
     config.backend = dataBackendType::database; // Default backend type
+    config.digestConfig.disableDigests = true;
+
     Controller cc(config);
     return app.exec();
 }

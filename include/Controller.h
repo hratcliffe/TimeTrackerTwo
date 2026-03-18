@@ -15,6 +15,7 @@ Q_OBJECT
   TrackerData * currentData;
   appClock * clock;
   QTimer * clockTicker;
+  bool disableDigests = false;
   TW_timePoint lastDigestCheckTime;
   TW_duration digestCheckPeriod;
   TW_timePoint lastDigestCreationTime;
@@ -32,6 +33,7 @@ Q_OBJECT
 
     currentData->loadProjects(clock->now());
 
+    disableDigests = config.digestConfig.disableDigests;
     //These are the internal parameters for how often we should check
     try{
       auto tmp = currentData->readState("lastDigestCheckTime");
@@ -184,7 +186,7 @@ Q_OBJECT
     // Create Daily Digests for any data which is between lastDigestCreationTime
     // and now - digestCreationDelay.
     // IF system clock is being changed, then the days are best tracked in 'user timezone' anyway
-    if( timeWrapper::toSeconds(now) >  timeWrapper::toSeconds(lastDigestCheckTime + digestCheckPeriod)){
+    if(!disableDigests && timeWrapper::toSeconds(now) >  timeWrapper::toSeconds(lastDigestCheckTime + digestCheckPeriod)){
       //Time to check if we need to digest anything
       std::cout<<"Time to check for digests!"<<std::endl;
 

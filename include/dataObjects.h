@@ -16,10 +16,6 @@
 #include "idGenerators.h"
 #include "timeWrapper.h"
 
-using timecode = long long; /**< \brief Type for timecodes, representing seconds since epoch. SIGNED to allow -1 for sentinel below*/
-
-inline const timecode timecodeNull = -1; /**< \brief Sentinel for null time * * Need a sentinel - do not rely on this value, use the named constant */
-
 
 /** \brief Initialisation data for project
 *

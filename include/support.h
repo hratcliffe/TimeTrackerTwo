@@ -18,6 +18,11 @@
 #include <sstream>
 #include <iomanip>
 
+using timecode = long long; /**< \brief Type for timecodes, representing seconds since epoch. SIGNED to allow -1 for sentinel below*/
+
+inline const timecode timecodeNull = -1; /**< \brief Sentinel for null time * * Need a sentinel - do not rely on this value, use the named constant */
+
+
 const std::string appVersion = "0.2.0";
 const std::string appName = "Time Tracker Two";
 
@@ -43,10 +48,17 @@ enum class dataBackendType{
   database /**< \brief Database data backend */
 };
 
+struct appDigestConfig{
+  timecode digestCheckPeriod =-1;
+  timecode digestCreationDelay = -1;
+  bool disableDigests = false;
+};
+
 struct appConfig{
   bool read_only = false; /**< \brief App backend should be opened in read-only mode (Many operations will fail) */
   std::string dataFileName = "";
   dataBackendType backend = dataBackendType::database; /**< \brief Type of data backend to use */
+  appDigestConfig digestConfig;
 };
 
 inline std::string displayFloat(float value, int dp=2){

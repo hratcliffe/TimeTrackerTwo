@@ -31,7 +31,7 @@ NOTE: after a period (default 100 days), only summary info is available
 
 // TODO add an 'ooops' button which goes back to the time of last close to add a stop mark ?
 
-// TODO - replace 'delete' project button with 'merge', implement
+// TODO - FINISH: replace 'delete' project button with 'merge', implement
 // TODO Put in start/end dates in : summary view, project fetch/display, implement deactivate, refresh projects periodically
 
 // TODO both FTE and frac seem to cut off 1 tick too early at 99
@@ -40,12 +40,7 @@ NOTE: after a period (default 100 days), only summary info is available
 
 //TODO - protect from writing two stamps at same second
 
-// TODO - add testing
-
 //TODO - available frac does not seem to get displayed? Nothing even calls availableSubFrac
-// TODO - fix the case of subProject -> subproject
-
-//TODO - OneOff projects should have unique names?
 
 //TODO - Should Projects and subs have unique names?
 // TODO - what about one-offs? Maybe Name+day?

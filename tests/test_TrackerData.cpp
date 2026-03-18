@@ -953,6 +953,36 @@ TEST_CASE("Deleting Stamps - no-op cases", "[QTAware]"){
   }
 }
 
+TEST_CASE("Deleting Stamps - by list", "[Failing]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./Scratch/KnownDatabaseForDelete3.db")};
+
+  //Fetch timestamps
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::timeStampListReady, &sig, &SignalCatcher::emitTimeStampList);
+
+  td.loadProjects(10000);
+  td.fetchTimestamps(timeWrapper::fromSeconds(0), timeWrapper::fromSeconds(10001));
+
+  std::vector<timeStampForDisplay> summary, summary2;
+  summary = sig.stashPayloadForReturn(summary, false);
+
+  CHECK(summary.size() == 6);
+  //Delete some
+  std::vector<timeStamp> lst;
+  for(size_t i : {0,4}){
+    lst.push_back({summary[i].time, summary[i].projectUid});
+  }
+  td.deleteTimeStampList(lst);
+  //Fetch again....
+
+  td.fetchTimestamps(timeWrapper::fromSeconds(0), timeWrapper::fromSeconds(10001));
+
+  summary2 = sig.stashPayloadForReturn(summary2, false);
+  REQUIRE(summary2.size() == 4);
+  REQUIRE(summary[1] == summary2[0]);
+  REQUIRE(summary[2] == summary2[1]);
+}
 //Failure case - marking something that does not exist in PM
 TEST_CASE("Marking Nonexistent Project", "[QTAware, Slots]"){
   auto app = dummyApp();

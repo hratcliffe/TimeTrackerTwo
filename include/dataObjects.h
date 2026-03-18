@@ -225,6 +225,12 @@ inline std::ostream& operator<< (std::ostream& stream, const timeStampForDisplay
   stream << "Time: " << ts.formattedTime <<" ("<<ts.time<< "), Project: " <<ts.projectName<<"("<< ts.projectUid<<")";
   return stream;
 };
+inline bool operator ==(const timeStampForDisplay &lhs, timeStampForDisplay &rhs){
+  return lhs.time == rhs.time && lhs.formattedTime == rhs.formattedTime && lhs.projectUid == rhs.projectUid && lhs.projectName == rhs.projectName;
+};
+inline bool operator !=(const timeStampForDisplay &lhs, timeStampForDisplay &rhs){
+  return !(lhs==rhs);
+}
 
 // For display - time unit in use
 enum class timeSummaryUnit{hour, minute, debug};

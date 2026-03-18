@@ -502,6 +502,15 @@ Q_OBJECT
         generateProjectSummary(target); // Effectively, a refresh
       }
 
+    void deleteTimeStampList(std::vector<timeStamp> & stmps){
+      // Delete a list of timestamps
+      //This MIGHT be able to be batched down to dataIO level, but unlikely, so just loop
+      for(auto stmp: stmps){
+        dataHandler->deleteTrackerEntry(stmp);
+      }
+      emit timeStampListUpdateEvent();
+    }
+
     signals:
       void projectListUpdateEvent(std::vector<selectableEntity> const & newList);
       void projectTotalUpdateEvent(float usedFTE, float freeFTE);
@@ -509,6 +518,7 @@ Q_OBJECT
       void timeSummaryReady(std::vector<timeSummaryItem> summary);
       void timeDigestReady(std::vector<timeDigestEntry> digest);
       void timeStampListReady(std::vector<timeStampForDisplay> stamps);
+      void timeStampListUpdateEvent(); /**< \brief Indicate that anything showing a list of stamps needs to refresh */
       void projectRunningUpdate(std::string name); /**< \brief Signal emitted when a project is running, with the name of the project */
       void projectRunningFlash(std::string name); /**< \brief Signal emitted when requested showing if a project is running, with the name of the project, or empty if stopped/paused etc */
       void projectPaused(std::string name); /**< \brief Signal emitted when a project is paused, with the name of the project */

@@ -32,6 +32,8 @@ NOTE: after a period (default 100 days), only summary info is available
 // TODO add an 'ooops' button which goes back to the time of last close to add a stop mark ?
 
 // TODO - FINISH: replace 'delete' project button with 'merge', implement
+// TODO - allow actual delete of project with NO stamps
+
 // TODO Put in start/end dates in : summary view, project fetch/display, implement deactivate, refresh projects periodically
 
 // TODO both FTE and frac seem to cut off 1 tick too early at 99

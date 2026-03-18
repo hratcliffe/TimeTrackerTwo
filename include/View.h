@@ -52,6 +52,30 @@ struct viewProperties{
 
 };
 
+namespace QLocalShortcuts{
+  inline void deleteLayoutItems(QLayout *layout) {
+    QLayoutItem *item;
+    while ((item = layout->takeAt(0)) != nullptr) {
+      if (auto w = item->widget()) {
+        delete w;
+      } else if (auto l = item->layout()) {
+        deleteLayoutItems(l);
+        delete l;
+      }
+      delete item;
+    }
+  };
+  inline void deleteLayoutWidgets(QLayout *layout){
+    //Delete ONLY direct children
+    QLayoutItem * item;
+    while ((item = layout->takeAt(0)) != nullptr) {
+      if (auto w = item->widget()) {
+        delete w;
+      }
+      delete item;
+    }
+  };
+};
 
 class View: public QWidget{
 Q_OBJECT
@@ -439,11 +463,7 @@ Q_OBJECT
       if (ui->s_summary_items->layout() == nullptr) {
         std::cerr << "Error: s_summary_items layout is null." << std::endl;
       }else{
-        QLayoutItem *child;
-        while ((child = ui->s_summary_items->layout()->takeAt(0)) != nullptr) {
-          delete child->widget();
-          delete child;
-        }
+        QLocalShortcuts::deleteLayoutItems(layout);
       }
 
       for(auto & item : summary){
@@ -503,11 +523,9 @@ Q_OBJECT
       if (ui->t_project_buttons->layout() == nullptr) {
         std::cerr << "Error: t_project_buttons layout is null." << std::endl;
       }else{
-        QLayoutItem *child;
-        while ((child = ui->t_project_buttons->layout()->takeAt(0)) != nullptr) {
-          delete child->widget();
-          delete child;
-        }
+        auto layout = ui->t_project_buttons->layout();
+        // For this one, only Delete from the core layout
+        QLocalShortcuts::deleteLayoutWidgets(layout);
         for (auto & proj : newList){
           projectButton * button = new projectButton();
           button->projectId = proj.uid;
@@ -520,7 +538,7 @@ Q_OBJECT
           }
           button->setFixedWidth(150);
           connect(button, &projectButton::clicked, this, [this, button](){this->trackProjectClicked(button);});
-          ui->t_project_buttons->layout()->addWidget(button);
+          layout->addWidget(button);
         }
         //Adding the 'one off' button - note this will 'waste' uids by getting a new one
         // with every added project but that is best alternative
@@ -531,7 +549,7 @@ Q_OBJECT
         oneOffTrackerButton->setStyleSheet("background-color: blue;"); 
         oneOffTrackerButton->setFixedWidth(150);
         connect(oneOffTrackerButton, &projectButton::clicked, this, [this](){this->showOneOffDialog(this->oneOffTrackerButton->projectId);}); // TODO - have this pop up the name entry form instead....
-        ui->t_project_buttons->layout()->addWidget(oneOffTrackerButton);
+        layout->addWidget(oneOffTrackerButton);
         emit oneOffIdRequired();
 
       }
@@ -546,11 +564,8 @@ Q_OBJECT
       if(ui->p_project_layout->layout() == nullptr) {
         std::cerr << "Error: p_project_layout layout is null." << std::endl;
       }else{
-        QLayoutItem *child;
-        while ((child = ui->p_project_layout->layout()->takeAt(0)) != nullptr) {
-          delete child->widget();
-          delete child; // Clear existing buttons
-        }
+        auto layout = ui->p_project_layout->layout();
+        QLocalShortcuts::deleteLayoutItems(layout);
         for (auto & proj : newList){ 
           if(proj.uid.isTaggedAs(proIds::uidTag::oneoff) || proj.uid.isTaggedAs(proIds::uidTag::sub)) continue; //Skips one-offs and subprojects
           
@@ -560,56 +575,56 @@ Q_OBJECT
           button->setText(QString::fromStdString(proj.name));
           button->setFixedWidth(100);
           connect(button, &projectButton::clicked, this, [this, button](){this->viewProjectClicked(button);});
-          ui->p_project_layout->layout()->addWidget(button);
+          layout->addWidget(button);
         }
         //Adding hline
         auto line = new QFrame();
         line->setFrameShape(QFrame::HLine);
         line->setFrameShadow(QFrame::Sunken);
-        ui->p_project_layout->layout()->addWidget(line);
+        layout->addWidget(line);
 
         QPushButton * addButton = new QPushButton();
         addButton->setText("Summary");
         addButton->setFixedWidth(100);
         connect(addButton, &QPushButton::clicked, this, &View::toplevelSummarySelected);
-        ui->p_project_layout->layout()->addWidget(addButton);
+        layout->addWidget(addButton);
 
         addButton = new QPushButton();
         addButton->setText("One Offs"); //TODO allow selecting an interval to list these from?
         addButton->setFixedWidth(100);
         connect(addButton, &QPushButton::clicked, this, &View::oneoffSummarySelected);
-        ui->p_project_layout->layout()->addWidget(addButton);
+        layout->addWidget(addButton);
 
         line = new QFrame();
         line->setFrameShape(QFrame::HLine);
         line->setFrameShadow(QFrame::Sunken);
-        ui->p_project_layout->layout()->addWidget(line);
+        layout->addWidget(line);
 
         addButton = new QPushButton();
         addButton->setText("Add");
         addButton->setFixedWidth(100);
         connect(addButton, &QPushButton::clicked, this, &View::showAddDialog);
-        ui->p_project_layout->layout()->addWidget(addButton);
+        layout->addWidget(addButton);
 
         addButton = new QPushButton();
         addButton->setText("Add Sub");
         addButton->setFixedWidth(100);
         connect(addButton, &QPushButton::clicked, this, &View::showAddSubDialog);
-        ui->p_project_layout->layout()->addWidget(addButton);
+        layout->addWidget(addButton);
 
         addButton = new QPushButton();
         addButton->setText("Merge"); //Merge into another - to remove choose to merge with 'inactive'
         addButton->setToolTip("Merge this project with another, or remove it altogether");
         addButton->setFixedWidth(100);
         connect(addButton, &QPushButton::clicked, this, &View::showMergeDialog);
-        ui->p_project_layout->layout()->addWidget(addButton);
+        layout->addWidget(addButton);
 
         addButton = new QPushButton();
         addButton->setText("Deactivate"); //Remove from selections, leave data intact
         addButton->setFixedWidth(100);
         //connect(addButton, &QPushButton::clicked, this, &View::???);
         addButton->setDisabled(1); //TODO - implement.... - note depends on project start/end date feature
-        ui->p_project_layout->layout()->addWidget(addButton);
+        layout->addWidget(addButton);
 
 
       }

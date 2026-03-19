@@ -23,6 +23,7 @@
 #include "QLocalShortcuts.h"
 // ---- Tab contents classes
 #include "TrackerBody.h"
+#include "ProjectTabUI.h"
 
 // ----- Other headers
 #include "support.h"
@@ -67,6 +68,7 @@ Q_OBJECT
     Ui::main_window * ui;
     QMainWindow * main;
     TrackerTabContent *  trackerTab;
+    ProjectTabUI * projectTab;
 
     float usedFTE = 0.0, freeFTE=0.0; //Tracks FTE fractions
     viewProperties prop; //TODO - should there be any way to alter this? - maybe settings and some presets?
@@ -78,6 +80,12 @@ Q_OBJECT
     ui = new Ui::main_window();
     ui->setupUi(main);
 
+    //NOTE: This class acts as a switch-yard between the UI functions and the wider app
+    // Some cases connect fron the tab bodies directly via the controller, others come through
+    // here to get re-raised
+    // In particular, anything which needs a Dialog comes via this class
+
+    // Tab for tracking functions
     trackerTab = new TrackerTabContent();
     ui->track_target_layout->addWidget(trackerTab);
     
@@ -93,6 +101,14 @@ Q_OBJECT
     
     //Need to collect the time from backend before showing the dialog
     connect(trackerTab->ui.t_ttravel_button, &QPushButton::clicked, [this](){emit fetchTimeTravelInfo();});
+
+    // Tab for Project functions
+    projectTab = new ProjectTabUI();
+    ui->project_target_layout->addWidget(projectTab);
+    //Connect between the buttons in the tab to the required actions
+    connect(projectTab, &ProjectTabUI::addProjectRequested, this, &mainWindow::showAddDialog);
+    connect(projectTab, &ProjectTabUI::addSubprojectRequested, this, &mainWindow::showAddSubDialog);
+    connect(projectTab, &ProjectTabUI::mergeProjectRequested, this, &mainWindow::showMergeDialog);
 
     //Connecting Tab bar to refresh actions
     connect(ui->tabWidget, &QTabWidget::currentChanged, [this](int index){if(index == 1) emit timeSummaryRequested(timeSummaryUnit::minute); if(index == 3) this->reportSelected();});
@@ -116,6 +132,8 @@ Q_OBJECT
   ~mainWindow(){
     delete ui;
     delete main;
+    delete trackerTab;
+    delete projectTab;
   }
 
   auto trunc(std::string inp, size_t maxLength = 30){
@@ -133,12 +151,6 @@ Q_OBJECT
   void trackProjectClicked(projectButton * button){
     //Re-raise signal with the uid. We could raise it directly, but this gives us a chance to do something else with the button
     emit projectSelectedTrack(button->projectId, button->fullName);
-  }
-
-  void viewProjectClicked(projectButton * button){
-    //Re-raise signal with the uid. We could raise it directly, but this gives us a chance to do something else with the button
-    this->selected = button->projectId; // Save what is selected
-    emit projectSelectedView(button->projectId, button->fullName);
   }
 
   void updateAvailableActions(bool active, bool paused=false){
@@ -336,17 +348,11 @@ Q_OBJECT
     void projectListUpdated(std::vector<selectableEntity> const & newList){
 
       trackerTab->updateButtons(newList);
-      updatePButtons(newList);
+      projectTab->updatePButtons(newList);
      
     }
 
     void projectTimeUpdated(float usedFTE, float freeFTE){this->usedFTE = usedFTE; this->freeFTE = freeFTE;}
-
-    void summaryDisplayUpdated(std::string summary){
-      // Update the project summary display
-      // TODO swap from single string to vector of items?
-      ui->p_project_info->setText(QString::fromStdString(summary));
-    }
 
     void updateRunningProjectDisplay(std::string name){
       updateLFooter(name);
@@ -477,9 +483,6 @@ Q_OBJECT
   signals:
     void projectSelectedTrack(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project button is clicked */
     void projectOneOffAdd(const proIds::Uuid &, const std::string &, const std::string &);
-    void projectSelectedView(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project view button is clicked to view details */
-    void toplevelSummarySelected();
-    void oneoffSummarySelected();
     void timeSummaryRequested(timeSummaryUnit unit);
     void pauseRequested(); /**< \brief Signal emitted when the pause button is clicked */
     void resumeRequested(); /**< \brief Signal emitted when the resume button is clicked */
@@ -498,80 +501,7 @@ Q_OBJECT
 
   private:
 
-    /** \brief Clear and replace Project pane buttons
-     * 
-     * Places projects from the given list (expected in order) and adds special function buttons at the end
-     */
-    void updatePButtons(std::vector<selectableEntity> const & newList){
-      //Adding just top-level projects to the Projects tab sidebar
-      if(ui->p_project_layout->layout() == nullptr) {
-        std::cerr << "Error: p_project_layout layout is null." << std::endl;
-      }else{
-        auto layout = ui->p_project_layout->layout();
-        QLocalShortcuts::deleteLayoutItems(layout);
-        for (auto & proj : newList){ 
-          if(proj.uid.isTaggedAs(proIds::uidTag::oneoff) || proj.uid.isTaggedAs(proIds::uidTag::sub)) continue; //Skips one-offs and subprojects
-          
-          projectButton * button = new projectButton();
-          button->projectId = proj.uid;
-          button->fullName = proj.name;
-          button->setText(QString::fromStdString(proj.name));
-          button->setFixedWidth(100);
-          connect(button, &projectButton::clicked, this, [this, button](){this->viewProjectClicked(button);});
-          layout->addWidget(button);
-        }
-        //Adding hline
-        auto line = new QFrame();
-        line->setFrameShape(QFrame::HLine);
-        line->setFrameShadow(QFrame::Sunken);
-        layout->addWidget(line);
 
-        QPushButton * addButton = new QPushButton();
-        addButton->setText("Summary");
-        addButton->setFixedWidth(100);
-        connect(addButton, &QPushButton::clicked, this, &mainWindow::toplevelSummarySelected);
-        layout->addWidget(addButton);
-
-        addButton = new QPushButton();
-        addButton->setText("One Offs"); //TODO allow selecting an interval to list these from?
-        addButton->setFixedWidth(100);
-        connect(addButton, &QPushButton::clicked, this, &mainWindow::oneoffSummarySelected);
-        layout->addWidget(addButton);
-
-        line = new QFrame();
-        line->setFrameShape(QFrame::HLine);
-        line->setFrameShadow(QFrame::Sunken);
-        layout->addWidget(line);
-
-        addButton = new QPushButton();
-        addButton->setText("Add");
-        addButton->setFixedWidth(100);
-        connect(addButton, &QPushButton::clicked, this, &mainWindow::showAddDialog);
-        layout->addWidget(addButton);
-
-        addButton = new QPushButton();
-        addButton->setText("Add Sub");
-        addButton->setFixedWidth(100);
-        connect(addButton, &QPushButton::clicked, this, &mainWindow::showAddSubDialog);
-        layout->addWidget(addButton);
-
-        addButton = new QPushButton();
-        addButton->setText("Merge"); //Merge into another - to remove choose to merge with 'inactive'
-        addButton->setToolTip("Merge this project with another, or remove it altogether");
-        addButton->setFixedWidth(100);
-        connect(addButton, &QPushButton::clicked, this, &mainWindow::showMergeDialog);
-        layout->addWidget(addButton);
-
-        addButton = new QPushButton();
-        addButton->setText("Deactivate"); //Remove from selections, leave data intact
-        addButton->setFixedWidth(100);
-        //connect(addButton, &QPushButton::clicked, this, &mainWindow::???);
-        addButton->setDisabled(1); //TODO - implement.... - note depends on project start/end date feature
-        layout->addWidget(addButton);
-
-
-      }
-    }
 
     // Check given string is valid as a name - currently not blank nor all whitespace
     bool isValidNameString(std::string name)const{

@@ -18,6 +18,7 @@ DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs depr
 # Input
 FORMS += GUI/Main.ui \
          GUI/TrackTabContent.ui \
+         GUI/ProjectTabContent.ui \
          GUI/AddProjectDialog.ui \
          GUI/AddSubprojectDialog.ui \
          GUI/AddOneOffDialog.ui \
@@ -29,6 +30,7 @@ HEADERS += include/Controller.h \
            include/QLocalShortcuts.h \
            include/mainWindow.h \
            include/TrackerBody.h \
+           include/ProjectTabUI.h \
            include/dataObjects.h \
            include/idGenerators.h \
            include/project.h \

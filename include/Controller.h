@@ -145,11 +145,11 @@ Q_OBJECT
     connect(currentData, &TrackerData::projectStopped, themainWindow, &mainWindow::updateStoppedProjectDisplay);
 
     //Project information tab events
-    connect(themainWindow, &mainWindow::projectSelectedView, currentData, &TrackerData::generateProjectSummary);
-    connect(themainWindow, &mainWindow::toplevelSummarySelected, currentData, &TrackerData::generateToplevelSummary);
-    connect(themainWindow, &mainWindow::oneoffSummarySelected, currentData, &TrackerData::generateOneOffSummary);
+    connect(themainWindow->projectTab, &ProjectTabUI::projectSelectedView, currentData, &TrackerData::generateProjectSummary);
+    connect(themainWindow->projectTab, &ProjectTabUI::toplevelSummarySelected, currentData, &TrackerData::generateToplevelSummary);
+    connect(themainWindow->projectTab, &ProjectTabUI::oneoffSummarySelected, currentData, &TrackerData::generateOneOffSummary);
    //All cases update the view the same way
-    connect(currentData, &TrackerData::projectSummaryReady, themainWindow, &mainWindow::summaryDisplayUpdated);
+    connect(currentData, &TrackerData::projectSummaryReady, themainWindow->projectTab, &ProjectTabUI::summaryDisplayUpdated);
 
     //Adding project and sub
     connect(themainWindow, &mainWindow::projectAddRequested, currentData, &TrackerData::createProject);

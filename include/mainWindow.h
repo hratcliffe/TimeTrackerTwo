@@ -13,14 +13,18 @@
 #include <QLegendMarker>
 
 #include "ui_Main.h"
+// ---- Dialogs
 #include "ui_AddProjectDialog.h"
 #include "ui_AddSubprojectDialog.h"
 #include "ui_MergeProjectDialog.h"
 #include "ui_AddOneOffDialog.h"
 #include "ui_TimeTravelDialog.h"
+// ---- Helper functions
 #include "QLocalShortcuts.h"
+// ---- Tab contents classes
 #include "TrackerBody.h"
 
+// ----- Other headers
 #include "support.h"
 #include "idGenerators.h"
 #include "project.h"
@@ -55,7 +59,8 @@ struct viewProperties{
 };
 
 
-class View: public QWidget{
+// TODO - show Time Travel state in clock display
+class mainWindow: public QWidget{
 Q_OBJECT
   public:
 
@@ -67,7 +72,7 @@ Q_OBJECT
     viewProperties prop; //TODO - should there be any way to alter this? - maybe settings and some presets?
     proIds::Uuid selected = proIds::NullUid;
 
-  View(){
+  mainWindow(){
 
     main = new QMainWindow(); //Pointer so it lives after this exits...
     ui = new Ui::main_window();
@@ -108,7 +113,7 @@ Q_OBJECT
     event->ignore();
   }
 
-  ~View(){
+  ~mainWindow(){
     delete ui;
     delete main;
   }
@@ -138,7 +143,7 @@ Q_OBJECT
 
   void updateAvailableActions(bool active, bool paused=false){
     // Enable/disable buttons based on project state
-    // TODO should this be done in the trackerbody class? View is what knows about active and paused state
+    // TODO should this be done in the trackerbody class? MainWindow is what knows about active and paused state
     // but tracker knows about its own buttons
     trackerTab->ui.t_pause_button->setEnabled(active && !paused);
     trackerTab->ui.t_resume_button->setEnabled(paused);
@@ -285,7 +290,7 @@ Q_OBJECT
       }
   }
 
-  using projectDetailsArgCallbackType = decltype(makeCallback(&View::showAddSubDialogImpl));
+  using projectDetailsArgCallbackType = decltype(makeCallback(&mainWindow::showAddSubDialogImpl));
 
   void fillReportsImpl(std::map<proIds::Uuid, projectDetails> details){
 
@@ -396,12 +401,12 @@ Q_OBJECT
 
     void showAddSubDialog(){
       //Can't show dialog yet - need the details
-      emit projectDetailsRequiredAll(makeCallback(&View::showAddSubDialogImpl));
+      emit projectDetailsRequiredAll(makeCallback(&mainWindow::showAddSubDialogImpl));
     }
 
     void showMergeDialog(){
       //Can't show dialog yet - need the details
-      emit projectDetailsRequiredAll(makeCallback(&View::showMergeDialogImpl));
+      emit projectDetailsRequiredAll(makeCallback(&mainWindow::showMergeDialogImpl));
     }
 
     void showOneOffDialog(proIds::Uuid id){
@@ -465,7 +470,7 @@ Q_OBJECT
 
     void reportSelected(){
       //Need project details
-      emit projectDetailsRequiredAll(makeCallback(&View::fillReportsImpl));
+      emit projectDetailsRequiredAll(makeCallback(&mainWindow::fillReportsImpl));
 
     }
 
@@ -524,13 +529,13 @@ Q_OBJECT
         QPushButton * addButton = new QPushButton();
         addButton->setText("Summary");
         addButton->setFixedWidth(100);
-        connect(addButton, &QPushButton::clicked, this, &View::toplevelSummarySelected);
+        connect(addButton, &QPushButton::clicked, this, &mainWindow::toplevelSummarySelected);
         layout->addWidget(addButton);
 
         addButton = new QPushButton();
         addButton->setText("One Offs"); //TODO allow selecting an interval to list these from?
         addButton->setFixedWidth(100);
-        connect(addButton, &QPushButton::clicked, this, &View::oneoffSummarySelected);
+        connect(addButton, &QPushButton::clicked, this, &mainWindow::oneoffSummarySelected);
         layout->addWidget(addButton);
 
         line = new QFrame();
@@ -541,26 +546,26 @@ Q_OBJECT
         addButton = new QPushButton();
         addButton->setText("Add");
         addButton->setFixedWidth(100);
-        connect(addButton, &QPushButton::clicked, this, &View::showAddDialog);
+        connect(addButton, &QPushButton::clicked, this, &mainWindow::showAddDialog);
         layout->addWidget(addButton);
 
         addButton = new QPushButton();
         addButton->setText("Add Sub");
         addButton->setFixedWidth(100);
-        connect(addButton, &QPushButton::clicked, this, &View::showAddSubDialog);
+        connect(addButton, &QPushButton::clicked, this, &mainWindow::showAddSubDialog);
         layout->addWidget(addButton);
 
         addButton = new QPushButton();
         addButton->setText("Merge"); //Merge into another - to remove choose to merge with 'inactive'
         addButton->setToolTip("Merge this project with another, or remove it altogether");
         addButton->setFixedWidth(100);
-        connect(addButton, &QPushButton::clicked, this, &View::showMergeDialog);
+        connect(addButton, &QPushButton::clicked, this, &mainWindow::showMergeDialog);
         layout->addWidget(addButton);
 
         addButton = new QPushButton();
         addButton->setText("Deactivate"); //Remove from selections, leave data intact
         addButton->setFixedWidth(100);
-        //connect(addButton, &QPushButton::clicked, this, &View::???);
+        //connect(addButton, &QPushButton::clicked, this, &mainWindow::???);
         addButton->setDisabled(1); //TODO - implement.... - note depends on project start/end date feature
         layout->addWidget(addButton);
 

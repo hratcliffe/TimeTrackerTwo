@@ -27,7 +27,7 @@ SOURCES += src/main.cpp
 
 HEADERS += include/Controller.h \
            include/QLocalShortcuts.h \
-           include/View.h \
+           include/mainWindow.h \
            include/TrackerBody.h \
            include/dataObjects.h \
            include/idGenerators.h \

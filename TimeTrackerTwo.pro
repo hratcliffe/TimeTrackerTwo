@@ -29,7 +29,7 @@ SOURCES += src/main.cpp
 HEADERS += include/Controller.h \
            include/QLocalShortcuts.h \
            include/mainWindow.h \
-           include/TrackerBody.h \
+           include/TrackerTabUI.h \
            include/ProjectTabUI.h \
            include/dataObjects.h \
            include/idGenerators.h \

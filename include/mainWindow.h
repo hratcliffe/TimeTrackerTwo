@@ -22,7 +22,7 @@
 // ---- Helper functions
 #include "QLocalShortcuts.h"
 // ---- Tab contents classes
-#include "TrackerBody.h"
+#include "TrackerTabUI.h"
 #include "ProjectTabUI.h"
 
 // ----- Other headers

@@ -121,13 +121,15 @@ Q_OBJECT
     connect(currentData, &TrackerData::projectTotalUpdateEvent, theView, &View::projectTimeUpdated);
 
     // Connect the project selection to the TrackerData to mark projects
+    // Also connects the View, which can mark as a result of Dialogs
     connect(theView, &View::projectSelectedTrack, [this](proIds::Uuid uid, std::string name){currentData->markProject(uid, name, this->clock->now());});
+    connect(theView->trackerTab, &TrackerTabContent::projectSelectedTrack, [this](proIds::Uuid uid, std::string name){currentData->markProject(uid, name, this->clock->now());});
     // And back, to show status
     connect(currentData, &TrackerData::projectRunningUpdate, theView, &View::updateRunningProjectDisplay);
 
     //Connect updates to 'next One Off id'
-    connect(theView, &View::oneOffIdRequired, currentData, &TrackerData::oneOffIdRequired);
-    connect(currentData, &TrackerData::oneOffIdUpdate, theView, &View::updateOneOffId);
+    connect(theView->trackerTab, &TrackerTabContent::oneOffIdRequired, currentData, &TrackerData::oneOffIdRequired);
+    connect(currentData, &TrackerData::oneOffIdUpdate, theView->trackerTab, &TrackerTabContent::updateOneOffId);
 
     //To add a subproject, view needs an up-to-date list of projects - gather this and then call the provided callback
     connect(theView, &View::projectDetailsRequiredAll, [this](auto functor){functor(theView, currentData->projectDetailsRequired());});

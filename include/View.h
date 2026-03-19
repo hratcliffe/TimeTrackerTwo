@@ -18,6 +18,8 @@
 #include "ui_MergeProjectDialog.h"
 #include "ui_AddOneOffDialog.h"
 #include "ui_TimeTravelDialog.h"
+#include "QLocalShortcuts.h"
+#include "TrackerBody.h"
 
 #include "support.h"
 #include "idGenerators.h"
@@ -52,30 +54,6 @@ struct viewProperties{
 
 };
 
-namespace QLocalShortcuts{
-  inline void deleteLayoutItems(QLayout *layout) {
-    QLayoutItem *item;
-    while ((item = layout->takeAt(0)) != nullptr) {
-      if (auto w = item->widget()) {
-        delete w;
-      } else if (auto l = item->layout()) {
-        deleteLayoutItems(l);
-        delete l;
-      }
-      delete item;
-    }
-  };
-  inline void deleteLayoutWidgets(QLayout *layout){
-    //Delete ONLY direct children
-    QLayoutItem * item;
-    while ((item = layout->takeAt(0)) != nullptr) {
-      if (auto w = item->widget()) {
-        delete w;
-      }
-      delete item;
-    }
-  };
-};
 
 class View: public QWidget{
 Q_OBJECT
@@ -83,9 +61,10 @@ Q_OBJECT
 
     Ui::main_window * ui;
     QMainWindow * main;
+    TrackerTabContent *  trackerTab;
+
     float usedFTE = 0.0, freeFTE=0.0; //Tracks FTE fractions
     viewProperties prop; //TODO - should there be any way to alter this? - maybe settings and some presets?
-    projectButton * oneOffTrackerButton = nullptr; // Tracker button for special entries
     proIds::Uuid selected = proIds::NullUid;
 
   View(){
@@ -93,16 +72,22 @@ Q_OBJECT
     main = new QMainWindow(); //Pointer so it lives after this exits...
     ui = new Ui::main_window();
     ui->setupUi(main);
+
+    trackerTab = new TrackerTabContent();
+    ui->track_target_layout->addWidget(trackerTab);
     
+    connect(trackerTab, &TrackerTabContent::oneOffDialogNeeded, this, [this](){this->showOneOffDialog(this->trackerTab->oneOffTrackerButton->projectId);}); // TODO - have this pop up the name entry form instead....
+ 
+    // TODO - perhaps should move this into the tracker class?
     //Connecting buttons to downstream functions for controller to connect to
-    connect(ui->t_close_button, &QPushButton::clicked, [this](){emit closeRequested(false);});
-    connect(ui->t_silent_button, &QPushButton::clicked, [this](){emit closeRequested(true);});
-    connect(ui->t_pause_button, &QPushButton::clicked, [this](){emit pauseRequested();});
-    connect(ui->t_resume_button, &QPushButton::clicked, [this](){emit resumeRequested();});
-    connect(ui->t_stop_button, &QPushButton::clicked, [this](){emit stopRequested();});
+    connect(trackerTab->ui.t_close_button, &QPushButton::clicked, [this](){emit closeRequested(false);});
+    connect(trackerTab->ui.t_silent_button, &QPushButton::clicked, [this](){emit closeRequested(true);});
+    connect(trackerTab->ui.t_pause_button, &QPushButton::clicked, [this](){emit pauseRequested();});
+    connect(trackerTab->ui.t_resume_button, &QPushButton::clicked, [this](){emit resumeRequested();});
+    connect(trackerTab->ui.t_stop_button, &QPushButton::clicked, [this](){emit stopRequested();});
     
     //Need to collect the time from backend before showing the dialog
-    connect(ui->t_ttravel_button, &QPushButton::clicked, [this](){emit fetchTimeTravelInfo();});
+    connect(trackerTab->ui.t_ttravel_button, &QPushButton::clicked, [this](){emit fetchTimeTravelInfo();});
 
     //Connecting Tab bar to refresh actions
     connect(ui->tabWidget, &QTabWidget::currentChanged, [this](int index){if(index == 1) emit timeSummaryRequested(timeSummaryUnit::minute); if(index == 3) this->reportSelected();});
@@ -153,9 +138,11 @@ Q_OBJECT
 
   void updateAvailableActions(bool active, bool paused=false){
     // Enable/disable buttons based on project state
-    ui->t_pause_button->setEnabled(active && !paused);
-    ui->t_resume_button->setEnabled(paused);
-    ui->t_stop_button->setEnabled(active || paused);
+    // TODO should this be done in the trackerbody class? View is what knows about active and paused state
+    // but tracker knows about its own buttons
+    trackerTab->ui.t_pause_button->setEnabled(active && !paused);
+    trackerTab->ui.t_resume_button->setEnabled(paused);
+    trackerTab->ui.t_stop_button->setEnabled(active || paused);
   }
 
   void showAddSubDialogImpl(std::map<proIds::Uuid, projectDetails> details){
@@ -341,16 +328,9 @@ Q_OBJECT
       QApplication::quit();
     }
 
-    void updateOneOffId(proIds::Uuid next){
-      //Storing Id ready for future click
-      if(oneOffTrackerButton){
-        oneOffTrackerButton->projectId = next;
-      }
-    }
-
     void projectListUpdated(std::vector<selectableEntity> const & newList){
 
-      updateTButtons(newList);
+      trackerTab->updateButtons(newList);
       updatePButtons(newList);
      
     }
@@ -504,7 +484,6 @@ Q_OBJECT
     void projectAddRequested(const projectData & data);
     void subprojectAddRequested(const subprojectData & data, const proIds::Uuid & parent);
     void mergeRequested(const proIds::Uuid & selection, const proIds::Uuid & sub_selection, const proIds::Uuid & target, const proIds::Uuid & sub_target);
-    void oneOffIdRequired();
     void projectDetailsRequiredAll(projectDetailsArgCallbackType);
     void projectDetailsRequired(const proIds::Uuid & proj);
 
@@ -513,47 +492,6 @@ Q_OBJECT
 
 
   private:
-
-    /** \brief Clear and replace Tracker pane buttons
-     * 
-     * Places projects and subprojects from the given list (expected in order) and adds a 'One Off' button at the end
-     */
-    void updateTButtons(std::vector<selectableEntity> const & newList){
-      // Clear existing buttons
-      if (ui->t_project_buttons->layout() == nullptr) {
-        std::cerr << "Error: t_project_buttons layout is null." << std::endl;
-      }else{
-        auto layout = ui->t_project_buttons->layout();
-        // For this one, only Delete from the core layout
-        QLocalShortcuts::deleteLayoutWidgets(layout);
-        for (auto & proj : newList){
-          projectButton * button = new projectButton();
-          button->projectId = proj.uid;
-          button->fullName = proj.name;
-          button->setText(QString::fromStdString(proj.name));
-          if(proj.level == 0){
-            button->setStyleSheet("background-color: lightblue;"); // Top level projects 
-          }else if(proj.level == 1){
-            button->setStyleSheet("background-color: lightgreen;"); // Subprojects
-          }
-          button->setFixedWidth(150);
-          connect(button, &projectButton::clicked, this, [this, button](){this->trackProjectClicked(button);});
-          layout->addWidget(button);
-        }
-        //Adding the 'one off' button - note this will 'waste' uids by getting a new one
-        // with every added project but that is best alternative
-        oneOffTrackerButton = new projectButton();
-        oneOffTrackerButton->projectId = proIds::NullUid; //Temporary
-        oneOffTrackerButton->fullName = "One Off";
-        oneOffTrackerButton->setText("One Off");
-        oneOffTrackerButton->setStyleSheet("background-color: blue;"); 
-        oneOffTrackerButton->setFixedWidth(150);
-        connect(oneOffTrackerButton, &projectButton::clicked, this, [this](){this->showOneOffDialog(this->oneOffTrackerButton->projectId);}); // TODO - have this pop up the name entry form instead....
-        layout->addWidget(oneOffTrackerButton);
-        emit oneOffIdRequired();
-
-      }
-    }
 
     /** \brief Clear and replace Project pane buttons
      * 

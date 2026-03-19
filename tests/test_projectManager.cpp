@@ -678,6 +678,10 @@ TEST_CASE("Restoring a project using invalid id"){
     pd.uid = proIds::NullUid;
     REQUIRE_THROWS(pm.restoreProject(pd, 10));
   }
+  SECTION("Restoring twice (id taken)"){
+    pm.restoreProject(pd, 10);
+    REQUIRE_THROWS(pm.restoreProject(pd, 10));
+  }
 }
 TEST_CASE("Restoring a subproject using invalid id"){
   projectManager pm;
@@ -729,6 +733,31 @@ TEST_CASE("Restoring a subproject with no parent"){
     pd.parentUid = uniqueIdGenerator().getNextId();
     pd.parentUid.tag(proIds::uidTag::oneoff);
     REQUIRE_THROWS(pm.restoreSubproject(pd));
+  }
+}
+TEST_CASE("Restoring a subproject repeatedly"){
+  projectManager pm;
+  auto pd = createProj();
+  proIds::Uuid proj = pm.addProject(pd);
+  pd.name = "Another Project Name";
+  proIds::Uuid proj2 = pm.addProject(pd);
+
+  fullSubProjectData sd;
+  sd.name = "Subproject from file";
+  sd.frac = 0.7;
+  sd.uid = uniqueIdGenerator().getNextId();
+  sd.uid.tag(proIds::uidTag::sub);
+
+  SECTION("Restoring subproject twice"){
+    sd.parentUid = proj;
+    pm.restoreSubproject(sd);
+    REQUIRE_THROWS(pm.restoreSubproject(sd));
+  }
+  SECTION("Restoring but under a second parent"){
+    sd.parentUid = proj;
+    pm.restoreSubproject(sd);
+    sd.parentUid = proj2;
+    REQUIRE_THROWS(pm.restoreSubproject(sd));
   }
 }
 

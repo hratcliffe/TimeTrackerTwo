@@ -117,6 +117,7 @@ class projectManager{
       auto id = dat.uid;
       if(id == proIds::NullUid) throw std::runtime_error("Cannot restore project with Null Uid");
       if(!id.isTaggedAs(proIds::uidTag::none)) throw std::runtime_error("Id is not for a project");
+      if(projects.count(id) > 0) throw std::runtime_error("Project already exists, not restoring");
       project tmp = project(dat);
       bool active = true;
       if(tmp.hasStart && tmp.start > now) active = false;
@@ -133,8 +134,9 @@ class projectManager{
       if(parentUid.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Parent must not be a subproject");
       if(!id.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Id is not for a subproject");
       if(projects.count(parentUid) == 0 ) throw std::runtime_error("Parent project does not exist");
+      if(subprojects.count(id) > 0) throw std::runtime_error("Subproject already exists, not restoring");
       subprojects[id] = subproject(dat);
-      projects[parentUid].addSubproject(id); // TODO - check if sub already associated?
+      projects[parentUid].addSubproject(id);
     }
 
     /** \brief Get list of projects

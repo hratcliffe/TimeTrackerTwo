@@ -64,6 +64,40 @@ TEST_CASE("TimeStamp Stream", "[Stream]"){
   REQUIRE(ss.str().find(ss_tmp.str()) != std::string::npos);
 
 }
+
+TEST_CASE("TimeStampForDisplay Comparators", "[Basic]"){
+  timeStampForDisplay ts, ts2;
+  ts.time = 1175;
+  ts.formattedTime = " 1175 as Formatted time string";
+  ts.projectUid = uniqueIdGenerator().getNextId();
+  ts.projectName = "NameyName";
+
+  ts2.time = 83;
+  ts2.formattedTime = " 83 as a time string";
+  ts2.projectUid = uniqueIdGenerator().getNextId();
+  ts2.projectName = "A.N.Other";
+
+  SECTION("Time"){
+    REQUIRE(ts != ts2);
+    ts2.time = ts.time;
+    REQUIRE(ts2 != ts);
+  }
+  SECTION("Formatted Time"){
+    REQUIRE(ts != ts2);
+    ts2.formattedTime = ts.formattedTime;
+    REQUIRE(ts2 != ts);
+  }
+  SECTION("ID"){
+    REQUIRE(ts != ts2);
+    ts2.projectUid = ts.projectUid;
+    REQUIRE(ts2 != ts);
+  }
+  SECTION("Name"){
+    REQUIRE(ts != ts2);
+    ts2.projectName = ts.projectName;
+    REQUIRE(ts2 != ts);
+  }
+}
 TEST_CASE("TimeStampForDisplay Stream", "[Stream]"){
   timeStampForDisplay ts;
   std::stringstream ss, ss_tmp;

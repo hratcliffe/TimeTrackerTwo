@@ -5,13 +5,13 @@
 #include "support.h"
 
 #include "appClock.h"
-#include "View.h"
+#include "mainWindow.h"
 #include "TrackerData.h"
 #include "projectbutton.h"
 
 class Controller : public QWidget{
 Q_OBJECT
-  View * theView;
+  mainWindow * themainWindow;
   TrackerData * currentData;
   appClock * clock;
   QTimer * clockTicker;
@@ -24,7 +24,7 @@ Q_OBJECT
   public:
   Controller(appConfig config){
 
-    theView = new View();
+    themainWindow = new mainWindow();
 
     currentData = new TrackerData(config);
     connectSignals();
@@ -109,64 +109,69 @@ Q_OBJECT
   }
 
   void connectSignals(){
-    // Collect all the connections from View to Model (TrackerData)
+    // Collect all the connections from mainWindow to Model (TrackerData)
 
     // Close, and silent close. Close will mark current project as stopped. Silent close will not...
-    connect(theView, &View::closeRequested, [this](bool silent){this->writeState(); currentData->handleCloseRequest(silent, this->clock->now());}); // TODO - is there a tiny race where a digest could trigger during this process?
+    connect(themainWindow, &mainWindow::closeRequested, [this](bool silent){this->writeState(); currentData->handleCloseRequest(silent, this->clock->now());}); // TODO - is there a tiny race where a digest could trigger during this process?
 
-    connect(currentData, &TrackerData::readyToClose, theView, &View::exitApp);
+    connect(currentData, &TrackerData::readyToClose, themainWindow, &mainWindow::exitApp);
 
     // Update the view when the project list changes
-    connect(currentData, &TrackerData::projectListUpdateEvent, theView, &View::projectListUpdated);
-    connect(currentData, &TrackerData::projectTotalUpdateEvent, theView, &View::projectTimeUpdated);
+    connect(currentData, &TrackerData::projectListUpdateEvent, themainWindow, &mainWindow::projectListUpdated);
+    connect(currentData, &TrackerData::projectTotalUpdateEvent, themainWindow, &mainWindow::projectTimeUpdated);
 
     // Connect the project selection to the TrackerData to mark projects
-    connect(theView, &View::projectSelectedTrack, [this](proIds::Uuid uid, std::string name){currentData->markProject(uid, name, this->clock->now());});
+    // Also connects the mainWindow, which can mark as a result of Dialogs
+    connect(themainWindow, &mainWindow::projectSelectedTrack, [this](proIds::Uuid uid, std::string name){currentData->markProject(uid, name, this->clock->now());});
+    connect(themainWindow->trackerTab, &TrackerTabContent::projectSelectedTrack, [this](proIds::Uuid uid, std::string name){currentData->markProject(uid, name, this->clock->now());});
     // And back, to show status
-    connect(currentData, &TrackerData::projectRunningUpdate, theView, &View::updateRunningProjectDisplay);
+    connect(currentData, &TrackerData::projectRunningUpdate, themainWindow, &mainWindow::updateRunningProjectDisplay);
 
     //Connect updates to 'next One Off id'
-    connect(theView, &View::oneOffIdRequired, currentData, &TrackerData::oneOffIdRequired);
-    connect(currentData, &TrackerData::oneOffIdUpdate, theView, &View::updateOneOffId);
+    connect(themainWindow->trackerTab, &TrackerTabContent::oneOffIdRequired, currentData, &TrackerData::oneOffIdRequired);
+    connect(currentData, &TrackerData::oneOffIdUpdate, themainWindow->trackerTab, &TrackerTabContent::updateOneOffId);
 
     //To add a subproject, view needs an up-to-date list of projects - gather this and then call the provided callback
-    connect(theView, &View::projectDetailsRequiredAll, [this](auto functor){functor(theView, currentData->projectDetailsRequired());});
+    connect(themainWindow, &mainWindow::projectDetailsRequiredAll, [this](auto functor){functor(themainWindow, currentData->projectDetailsRequired());});
 
     //Pausing a project:
-    connect(theView, &View::pauseRequested, [this](){currentData->pauseProject(this->clock->now());});
-    connect(currentData, &TrackerData::projectPaused, theView, &View::updatePausedProjectDisplay);
+    connect(themainWindow, &mainWindow::pauseRequested, [this](){currentData->pauseProject(this->clock->now());});
+    connect(currentData, &TrackerData::projectPaused, themainWindow, &mainWindow::updatePausedProjectDisplay);
     // Resuming a project
-    connect(theView, &View::resumeRequested, [this](){currentData->resumeProject(this->clock->now());});
-    connect(currentData, &TrackerData::projectRunningUpdate, theView, &View::updateRunningProjectDisplay);
+    connect(themainWindow, &mainWindow::resumeRequested, [this](){currentData->resumeProject(this->clock->now());});
+    connect(currentData, &TrackerData::projectRunningUpdate, themainWindow, &mainWindow::updateRunningProjectDisplay);
     // Stopping a project
-    connect(theView, &View::stopRequested, [this](){currentData->stopProject(this->clock->now());});
-    connect(currentData, &TrackerData::projectStopped, theView, &View::updateStoppedProjectDisplay);
+    connect(themainWindow, &mainWindow::stopRequested, [this](){currentData->stopProject(this->clock->now());});
+    connect(currentData, &TrackerData::projectStopped, themainWindow, &mainWindow::updateStoppedProjectDisplay);
 
     //Project information tab events
-    connect(theView, &View::projectSelectedView, currentData, &TrackerData::generateProjectSummary);
-    connect(theView, &View::toplevelSummarySelected, currentData, &TrackerData::generateToplevelSummary);
-    connect(theView, &View::oneoffSummarySelected, currentData, &TrackerData::generateOneOffSummary);
+    connect(themainWindow->projectTab, &ProjectTabUI::projectSelectedView, currentData, &TrackerData::generateProjectSummary);
+    connect(themainWindow->projectTab, &ProjectTabUI::toplevelSummarySelected, currentData, &TrackerData::generateToplevelSummary);
+    connect(themainWindow->projectTab, &ProjectTabUI::oneoffSummarySelected, currentData, &TrackerData::generateOneOffSummary);
    //All cases update the view the same way
-    connect(currentData, &TrackerData::projectSummaryReady, theView, &View::summaryDisplayUpdated);
+    connect(currentData, &TrackerData::projectSummaryReady, themainWindow->projectTab, &ProjectTabUI::summaryDisplayUpdated);
 
     //Adding project and sub
-    connect(theView, &View::projectAddRequested, currentData, &TrackerData::createProject);
-    connect(theView, &View::subprojectAddRequested, currentData, &TrackerData::createSubproject);
-    connect(theView, &View::projectOneOffAdd, currentData, &TrackerData::createOneOff);
+    connect(themainWindow, &mainWindow::projectAddRequested, currentData, &TrackerData::createProject);
+    connect(themainWindow, &mainWindow::subprojectAddRequested, currentData, &TrackerData::createSubproject);
+    connect(themainWindow, &mainWindow::projectOneOffAdd, currentData, &TrackerData::createOneOff);
 
     //Making changes to projects etc
-    connect(theView, &View::mergeRequested, currentData, &TrackerData::mergeProject);
+    connect(themainWindow, &mainWindow::mergeRequested, currentData, &TrackerData::mergeProject);
 
     //Time summary view
-    connect(theView, &View::timeSummaryRequested, currentData, &TrackerData::generateTimeSummary);
-    connect(currentData, &TrackerData::timeSummaryReady, theView, &View::timeSummaryUpdated);
+    connect(themainWindow, &mainWindow::timeSummaryRequested, currentData, &TrackerData::generateTimeSummary);
+    connect(currentData, &TrackerData::timeSummaryReady, themainWindow->summaryTab, &SummaryTabUI::timeSummaryUpdated);
 
-
+    //Review view
+    connect(themainWindow, &mainWindow::reviewRequested, [this](){currentData->generateReviewData(this->clock->now());});
+    connect(currentData, &TrackerData::timeStampListReady, themainWindow->reviewTab, &ReviewTabUI::reviewDisplayUpdated);
+ 
     //Clock ticking
     clockTicker = new QTimer();
     clockTicker->start(1000);
     connect(clockTicker, &QTimer::timeout, [this](){this->clock->tick(); emit clockUpdated(this->clock->shortTimeString());});
-    connect(this, &Controller::clockUpdated, theView, &View::updateClockDisplay);
+    connect(this, &Controller::clockUpdated, themainWindow, &mainWindow::updateClockDisplay);
 
     //Since clock is already updating every second we can use this to trigger timed events with sufficient fidelity
     //Connecting to 'midnight' rollovers
@@ -174,8 +179,8 @@ Q_OBJECT
 
     //Time traveling:
     //To show a dialog, view needs to know the time now:
-    connect(theView, &View::fetchTimeTravelInfo, [this](){theView->showTimeTravelDialog(this->clock->shortTimeString(), QDateTime::currentDateTime());});
-    connect(theView, &View::timeTravelRequested, [this](QDateTime time){this->clock->travelTo(fromQDateTime(time));});
+    connect(themainWindow, &mainWindow::fetchTimeTravelInfo, [this](){themainWindow->showTimeTravelDialog(this->clock->shortTimeString(), QDateTime::currentDateTime());});
+    connect(themainWindow, &mainWindow::timeTravelRequested, [this](QDateTime time){this->clock->travelTo(fromQDateTime(time));});
 
   }
 

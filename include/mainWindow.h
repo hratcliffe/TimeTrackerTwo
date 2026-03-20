@@ -7,18 +7,23 @@
 #include <QFrame>
 #include <QMessageBox>
 #include <QLineEdit>
-#include <QChart>
-#include <QChartView>
-#include <QPieSeries>
-#include <QLegendMarker>
-
 #include "ui_Main.h"
+// ---- Dialogs
 #include "ui_AddProjectDialog.h"
 #include "ui_AddSubprojectDialog.h"
 #include "ui_MergeProjectDialog.h"
 #include "ui_AddOneOffDialog.h"
 #include "ui_TimeTravelDialog.h"
+// ---- Helper functions
+#include "QLocalShortcuts.h"
+// ---- Tab contents classes
+#include "TrackerTabUI.h"
+#include "ProjectTabUI.h"
+#include "SummaryTabUI.h"
+#include "ReviewTabUI.h"
+#include "ReportTabUI.h"
 
+// ----- Other headers
 #include "support.h"
 #include "idGenerators.h"
 #include "project.h"
@@ -26,86 +31,76 @@
 #include "timeWrapper.h"
 
 
-inline TW_timePoint fromQDateTime(QDateTime time){
-  //Convert from QT time to app time, going via a string
-  // Format  "%Y-%m-%d %H:%M:%S"
-  std::string time_str;
-  time_str = time.toString("yyyy-MM-dd hh:mm:ss").toStdString();
-  return timeWrapper::parseTimeZoned(time_str);
-}
-
-inline QDateTime toQDateTime(TW_timePoint time){
-  //Convert to QT time from app time, going via a string
-  // Format  "%Y-%m-%d %H:%M:%S"
-  std::string time_str;
-  time_str = timeWrapper::formatTime(time);
-  return QDateTime::fromString(QString::fromStdString(time_str),"yyyy-MM-dd hh:mm:ss");
-}
-
-
-struct viewProperties{
-
-  std::string overTargetEffects = "QLabel { color : purple; }";
-  std::string onTargetEffects = "QLabel { color : green; }";
-  std::string underTargetEffects = "QLabel { color : red; }";
-  std::string errorEffects = "QLabel {color: red; font-weight: bold;}";
-
-};
-
-namespace QLocalShortcuts{
-  inline void deleteLayoutItems(QLayout *layout) {
-    QLayoutItem *item;
-    while ((item = layout->takeAt(0)) != nullptr) {
-      if (auto w = item->widget()) {
-        delete w;
-      } else if (auto l = item->layout()) {
-        deleteLayoutItems(l);
-        delete l;
-      }
-      delete item;
-    }
-  };
-  inline void deleteLayoutWidgets(QLayout *layout){
-    //Delete ONLY direct children
-    QLayoutItem * item;
-    while ((item = layout->takeAt(0)) != nullptr) {
-      if (auto w = item->widget()) {
-        delete w;
-      }
-      delete item;
-    }
-  };
-};
-
-class View: public QWidget{
+// TODO - show Time Travel state in clock display
+class mainWindow: public QWidget{
 Q_OBJECT
   public:
 
     Ui::main_window * ui;
     QMainWindow * main;
+    TrackerTabContent *  trackerTab;
+    ProjectTabUI * projectTab;
+    SummaryTabUI * summaryTab;
+    ReportTabUI * reportTab;
+    ReviewTabUI * reviewTab;
+
     float usedFTE = 0.0, freeFTE=0.0; //Tracks FTE fractions
     viewProperties prop; //TODO - should there be any way to alter this? - maybe settings and some presets?
-    projectButton * oneOffTrackerButton = nullptr; // Tracker button for special entries
     proIds::Uuid selected = proIds::NullUid;
 
-  View(){
+  mainWindow(){
 
     main = new QMainWindow(); //Pointer so it lives after this exits...
     ui = new Ui::main_window();
     ui->setupUi(main);
+
+    //NOTE: This class acts as a switch-yard between the UI functions and the wider app
+    // Some cases connect fron the tab bodies directly via the controller, others come through
+    // here to get re-raised
+    // In particular, anything which needs a Dialog comes via this class
+
+    // Tab for tracking functions
+    trackerTab = new TrackerTabContent();
+    ui->track_target_layout->addWidget(trackerTab);
     
+    connect(trackerTab, &TrackerTabContent::oneOffDialogNeeded, this, [this](){this->showOneOffDialog(this->trackerTab->oneOffTrackerButton->projectId);}); // TODO - have this pop up the name entry form instead....
+ 
+    // TODO - perhaps should move this into the tracker class?
     //Connecting buttons to downstream functions for controller to connect to
-    connect(ui->t_close_button, &QPushButton::clicked, [this](){emit closeRequested(false);});
-    connect(ui->t_silent_button, &QPushButton::clicked, [this](){emit closeRequested(true);});
-    connect(ui->t_pause_button, &QPushButton::clicked, [this](){emit pauseRequested();});
-    connect(ui->t_resume_button, &QPushButton::clicked, [this](){emit resumeRequested();});
-    connect(ui->t_stop_button, &QPushButton::clicked, [this](){emit stopRequested();});
+    connect(trackerTab->ui.t_close_button, &QPushButton::clicked, [this](){emit closeRequested(false);});
+    connect(trackerTab->ui.t_silent_button, &QPushButton::clicked, [this](){emit closeRequested(true);});
+    connect(trackerTab->ui.t_pause_button, &QPushButton::clicked, [this](){emit pauseRequested();});
+    connect(trackerTab->ui.t_resume_button, &QPushButton::clicked, [this](){emit resumeRequested();});
+    connect(trackerTab->ui.t_stop_button, &QPushButton::clicked, [this](){emit stopRequested();});
     
     //Need to collect the time from backend before showing the dialog
-    connect(ui->t_ttravel_button, &QPushButton::clicked, [this](){emit fetchTimeTravelInfo();});
+    connect(trackerTab->ui.t_ttravel_button, &QPushButton::clicked, [this](){emit fetchTimeTravelInfo();});
+
+    // Tab for Project functions
+    projectTab = new ProjectTabUI();
+    ui->project_target_layout->addWidget(projectTab);
+    //Connect between the buttons in the tab to the required actions
+    connect(projectTab, &ProjectTabUI::addProjectRequested, this, &mainWindow::showAddDialog);
+    connect(projectTab, &ProjectTabUI::addSubprojectRequested, this, &mainWindow::showAddSubDialog);
+    connect(projectTab, &ProjectTabUI::mergeProjectRequested, this, &mainWindow::showMergeDialog);
+
+    summaryTab = new SummaryTabUI();
+    summaryTab->updateProperties(prop);
+    ui->summary_target_layout->addWidget(summaryTab);
+
+    reviewTab = new ReviewTabUI();
+    ui->review_target_layout->addWidget(reviewTab);
+
+    reportTab = new ReportTabUI(this, ui->report_target_layout);
+    ui->report_target_layout->addWidget(reportTab);
 
     //Connecting Tab bar to refresh actions
-    connect(ui->tabWidget, &QTabWidget::currentChanged, [this](int index){if(index == 1) emit timeSummaryRequested(timeSummaryUnit::minute); if(index == 3) this->reportSelected();});
+    auto tabRefresh =  [this](int index){
+      if(index == 1) emit timeSummaryRequested(timeSummaryUnit::minute);
+      else if(index == 2) emit reviewRequested();
+      else if(index == 4) this->reportSelected();
+    };
+    connect(ui->tabWidget, &QTabWidget::currentChanged, tabRefresh);
     //TODO - minutes for dev, -> hours for real
     //TODO - add summary filtering dialog
 
@@ -123,9 +118,11 @@ Q_OBJECT
     event->ignore();
   }
 
-  ~View(){
+  ~mainWindow(){
     delete ui;
     delete main;
+    delete trackerTab;
+    delete projectTab;
   }
 
   auto trunc(std::string inp, size_t maxLength = 30){
@@ -145,17 +142,13 @@ Q_OBJECT
     emit projectSelectedTrack(button->projectId, button->fullName);
   }
 
-  void viewProjectClicked(projectButton * button){
-    //Re-raise signal with the uid. We could raise it directly, but this gives us a chance to do something else with the button
-    this->selected = button->projectId; // Save what is selected
-    emit projectSelectedView(button->projectId, button->fullName);
-  }
-
   void updateAvailableActions(bool active, bool paused=false){
     // Enable/disable buttons based on project state
-    ui->t_pause_button->setEnabled(active && !paused);
-    ui->t_resume_button->setEnabled(paused);
-    ui->t_stop_button->setEnabled(active || paused);
+    // TODO should this be done in the trackerbody class? MainWindow is what knows about active and paused state
+    // but tracker knows about its own buttons
+    trackerTab->ui.t_pause_button->setEnabled(active && !paused);
+    trackerTab->ui.t_resume_button->setEnabled(paused);
+    trackerTab->ui.t_stop_button->setEnabled(active || paused);
   }
 
   void showAddSubDialogImpl(std::map<proIds::Uuid, projectDetails> details){
@@ -298,42 +291,9 @@ Q_OBJECT
       }
   }
 
-  using projectDetailsArgCallbackType = decltype(makeCallback(&View::showAddSubDialogImpl));
+  using projectDetailsArgCallbackType = decltype(makeCallback(&mainWindow::showAddSubDialogImpl));
 
-  void fillReportsImpl(std::map<proIds::Uuid, projectDetails> details){
-
-    QPieSeries *series = new QPieSeries();
-    int i=0;
-    std::vector<std::string> labels, legendText;
-    for(auto & item : details){
-      if(item.second.FTE > 0.0){
-        series->append(item.second.name.c_str(), item.second.FTE*100);
-        labels.push_back(displayFloat(item.second.FTE*100)+" %");
-        legendText.push_back(item.second.name);
-        //auto & slice = series->at(qsizetype(i));
-        //slice.setLabel((displayFloat(item.second.FTE*100)+" %").c_str());
-      }
-    }
-    series->setLabelsVisible();
-    series->setLabelsPosition(QPieSlice::LabelInsideHorizontal);
-    for(auto & slice : series->slices()){
-      slice->setLabel(labels[i].c_str());
-      i++;
-    }
-
-    QChart *chart = new QChart();
-    chart->addSeries(series);
-    chart->setTitle("Project FTE Breakdown");
-    i=0;
-    for(auto &item : chart->legend()->markers()){
-      item->setLabel(legendText[i].c_str());
-      i++;
-    }
-
-    QChartView *chartview = new QChartView(chart);
-    ui->r_report_layout->addWidget(chartview);
-
-  }
+  void fillReportsImpl(std::map<proIds::Uuid, projectDetails> details){reportTab->fillReports(details);}
 
   public slots:
     void exitApp(){
@@ -341,27 +301,14 @@ Q_OBJECT
       QApplication::quit();
     }
 
-    void updateOneOffId(proIds::Uuid next){
-      //Storing Id ready for future click
-      if(oneOffTrackerButton){
-        oneOffTrackerButton->projectId = next;
-      }
-    }
-
     void projectListUpdated(std::vector<selectableEntity> const & newList){
 
-      updateTButtons(newList);
-      updatePButtons(newList);
+      trackerTab->updateButtons(newList);
+      projectTab->updatePButtons(newList);
      
     }
 
     void projectTimeUpdated(float usedFTE, float freeFTE){this->usedFTE = usedFTE; this->freeFTE = freeFTE;}
-
-    void summaryDisplayUpdated(std::string summary){
-      // Update the project summary display
-      // TODO swap from single string to vector of items?
-      ui->p_project_info->setText(QString::fromStdString(summary));
-    }
 
     void updateRunningProjectDisplay(std::string name){
       updateLFooter(name);
@@ -416,12 +363,12 @@ Q_OBJECT
 
     void showAddSubDialog(){
       //Can't show dialog yet - need the details
-      emit projectDetailsRequiredAll(makeCallback(&View::showAddSubDialogImpl));
+      emit projectDetailsRequiredAll(makeCallback(&mainWindow::showAddSubDialogImpl));
     }
 
     void showMergeDialog(){
       //Can't show dialog yet - need the details
-      emit projectDetailsRequiredAll(makeCallback(&View::showMergeDialogImpl));
+      emit projectDetailsRequiredAll(makeCallback(&mainWindow::showMergeDialogImpl));
     }
 
     void showOneOffDialog(proIds::Uuid id){
@@ -456,45 +403,15 @@ Q_OBJECT
       }
     }
 
-    void timeSummaryUpdated(std::vector<timeSummaryItem> summary){
-      
-      auto layout = ui->s_summary_items;
-
-      if (ui->s_summary_items->layout() == nullptr) {
-        std::cerr << "Error: s_summary_items layout is null." << std::endl;
-      }else{
-        QLocalShortcuts::deleteLayoutItems(layout);
-      }
-
-      for(auto & item : summary){
-        auto label = new QLabel(this);
-        label->setText(item.text.c_str());
-        if(item.stat == timeSummaryStatus::onTarget){
-          label->setStyleSheet(prop.onTargetEffects.c_str());
-        }else if(item.stat == timeSummaryStatus::overTarget){
-          label->setStyleSheet(prop.overTargetEffects.c_str());
-         }else if(item.stat == timeSummaryStatus::underTarget){
-          label->setStyleSheet(prop.underTargetEffects.c_str());
-        }else if(item.stat == timeSummaryStatus::error){
-          label->setStyleSheet(prop.errorEffects.c_str());
-        }
-        layout->addWidget(label);
-      }
-
-    }
-
     void reportSelected(){
       //Need project details
-      emit projectDetailsRequiredAll(makeCallback(&View::fillReportsImpl));
+      emit projectDetailsRequiredAll(makeCallback(&mainWindow::fillReportsImpl));
 
     }
 
   signals:
     void projectSelectedTrack(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project button is clicked */
     void projectOneOffAdd(const proIds::Uuid &, const std::string &, const std::string &);
-    void projectSelectedView(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project view button is clicked to view details */
-    void toplevelSummarySelected();
-    void oneoffSummarySelected();
     void timeSummaryRequested(timeSummaryUnit unit);
     void pauseRequested(); /**< \brief Signal emitted when the pause button is clicked */
     void resumeRequested(); /**< \brief Signal emitted when the resume button is clicked */
@@ -504,131 +421,17 @@ Q_OBJECT
     void projectAddRequested(const projectData & data);
     void subprojectAddRequested(const subprojectData & data, const proIds::Uuid & parent);
     void mergeRequested(const proIds::Uuid & selection, const proIds::Uuid & sub_selection, const proIds::Uuid & target, const proIds::Uuid & sub_target);
-    void oneOffIdRequired();
     void projectDetailsRequiredAll(projectDetailsArgCallbackType);
     void projectDetailsRequired(const proIds::Uuid & proj);
 
     void fetchTimeTravelInfo();
     void timeTravelRequested(QDateTime time);
 
+    void reviewRequested();
 
   private:
 
-    /** \brief Clear and replace Tracker pane buttons
-     * 
-     * Places projects and subprojects from the given list (expected in order) and adds a 'One Off' button at the end
-     */
-    void updateTButtons(std::vector<selectableEntity> const & newList){
-      // Clear existing buttons
-      if (ui->t_project_buttons->layout() == nullptr) {
-        std::cerr << "Error: t_project_buttons layout is null." << std::endl;
-      }else{
-        auto layout = ui->t_project_buttons->layout();
-        // For this one, only Delete from the core layout
-        QLocalShortcuts::deleteLayoutWidgets(layout);
-        for (auto & proj : newList){
-          projectButton * button = new projectButton();
-          button->projectId = proj.uid;
-          button->fullName = proj.name;
-          button->setText(QString::fromStdString(proj.name));
-          if(proj.level == 0){
-            button->setStyleSheet("background-color: lightblue;"); // Top level projects 
-          }else if(proj.level == 1){
-            button->setStyleSheet("background-color: lightgreen;"); // Subprojects
-          }
-          button->setFixedWidth(150);
-          connect(button, &projectButton::clicked, this, [this, button](){this->trackProjectClicked(button);});
-          layout->addWidget(button);
-        }
-        //Adding the 'one off' button - note this will 'waste' uids by getting a new one
-        // with every added project but that is best alternative
-        oneOffTrackerButton = new projectButton();
-        oneOffTrackerButton->projectId = proIds::NullUid; //Temporary
-        oneOffTrackerButton->fullName = "One Off";
-        oneOffTrackerButton->setText("One Off");
-        oneOffTrackerButton->setStyleSheet("background-color: blue;"); 
-        oneOffTrackerButton->setFixedWidth(150);
-        connect(oneOffTrackerButton, &projectButton::clicked, this, [this](){this->showOneOffDialog(this->oneOffTrackerButton->projectId);}); // TODO - have this pop up the name entry form instead....
-        layout->addWidget(oneOffTrackerButton);
-        emit oneOffIdRequired();
 
-      }
-    }
-
-    /** \brief Clear and replace Project pane buttons
-     * 
-     * Places projects from the given list (expected in order) and adds special function buttons at the end
-     */
-    void updatePButtons(std::vector<selectableEntity> const & newList){
-      //Adding just top-level projects to the Projects tab sidebar
-      if(ui->p_project_layout->layout() == nullptr) {
-        std::cerr << "Error: p_project_layout layout is null." << std::endl;
-      }else{
-        auto layout = ui->p_project_layout->layout();
-        QLocalShortcuts::deleteLayoutItems(layout);
-        for (auto & proj : newList){ 
-          if(proj.uid.isTaggedAs(proIds::uidTag::oneoff) || proj.uid.isTaggedAs(proIds::uidTag::sub)) continue; //Skips one-offs and subprojects
-          
-          projectButton * button = new projectButton();
-          button->projectId = proj.uid;
-          button->fullName = proj.name;
-          button->setText(QString::fromStdString(proj.name));
-          button->setFixedWidth(100);
-          connect(button, &projectButton::clicked, this, [this, button](){this->viewProjectClicked(button);});
-          layout->addWidget(button);
-        }
-        //Adding hline
-        auto line = new QFrame();
-        line->setFrameShape(QFrame::HLine);
-        line->setFrameShadow(QFrame::Sunken);
-        layout->addWidget(line);
-
-        QPushButton * addButton = new QPushButton();
-        addButton->setText("Summary");
-        addButton->setFixedWidth(100);
-        connect(addButton, &QPushButton::clicked, this, &View::toplevelSummarySelected);
-        layout->addWidget(addButton);
-
-        addButton = new QPushButton();
-        addButton->setText("One Offs"); //TODO allow selecting an interval to list these from?
-        addButton->setFixedWidth(100);
-        connect(addButton, &QPushButton::clicked, this, &View::oneoffSummarySelected);
-        layout->addWidget(addButton);
-
-        line = new QFrame();
-        line->setFrameShape(QFrame::HLine);
-        line->setFrameShadow(QFrame::Sunken);
-        layout->addWidget(line);
-
-        addButton = new QPushButton();
-        addButton->setText("Add");
-        addButton->setFixedWidth(100);
-        connect(addButton, &QPushButton::clicked, this, &View::showAddDialog);
-        layout->addWidget(addButton);
-
-        addButton = new QPushButton();
-        addButton->setText("Add Sub");
-        addButton->setFixedWidth(100);
-        connect(addButton, &QPushButton::clicked, this, &View::showAddSubDialog);
-        layout->addWidget(addButton);
-
-        addButton = new QPushButton();
-        addButton->setText("Merge"); //Merge into another - to remove choose to merge with 'inactive'
-        addButton->setToolTip("Merge this project with another, or remove it altogether");
-        addButton->setFixedWidth(100);
-        connect(addButton, &QPushButton::clicked, this, &View::showMergeDialog);
-        layout->addWidget(addButton);
-
-        addButton = new QPushButton();
-        addButton->setText("Deactivate"); //Remove from selections, leave data intact
-        addButton->setFixedWidth(100);
-        //connect(addButton, &QPushButton::clicked, this, &View::???);
-        addButton->setDisabled(1); //TODO - implement.... - note depends on project start/end date feature
-        layout->addWidget(addButton);
-
-
-      }
-    }
 
     // Check given string is valid as a name - currently not blank nor all whitespace
     bool isValidNameString(std::string name)const{

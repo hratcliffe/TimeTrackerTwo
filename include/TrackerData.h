@@ -255,6 +255,12 @@ Q_OBJECT
       emit timeStampListReady(list);
     }
 
+    void generateReviewData(timecode now){
+      auto end = timeWrapper::fromSeconds(now);
+      auto start = timeWrapper::addDuration(end, 0,0,-100);
+      fetchTimestamps(start, end);
+    }
+ 
     void generateTimeSummary(timeSummaryUnit units){
       std::vector<timeSummaryItem> summary;
       // A vector of items to be displayed in order - expect display to add newlines between items

@@ -20,6 +20,7 @@
 #include "TrackerTabUI.h"
 #include "ProjectTabUI.h"
 #include "SummaryTabUI.h"
+#include "ReviewTabUI.h"
 #include "ReportTabUI.h"
 
 // ----- Other headers
@@ -41,6 +42,7 @@ Q_OBJECT
     ProjectTabUI * projectTab;
     SummaryTabUI * summaryTab;
     ReportTabUI * reportTab;
+    ReviewTabUI * reviewTab;
 
     float usedFTE = 0.0, freeFTE=0.0; //Tracks FTE fractions
     viewProperties prop; //TODO - should there be any way to alter this? - maybe settings and some presets?
@@ -86,11 +88,19 @@ Q_OBJECT
     summaryTab->updateProperties(prop);
     ui->summary_target_layout->addWidget(summaryTab);
 
+    reviewTab = new ReviewTabUI();
+    ui->review_target_layout->addWidget(reviewTab);
+
     reportTab = new ReportTabUI(this, ui->report_target_layout);
     ui->report_target_layout->addWidget(reportTab);
 
     //Connecting Tab bar to refresh actions
-    connect(ui->tabWidget, &QTabWidget::currentChanged, [this](int index){if(index == 1) emit timeSummaryRequested(timeSummaryUnit::minute); if(index == 3) this->reportSelected();});
+    auto tabRefresh =  [this](int index){
+      if(index == 1) emit timeSummaryRequested(timeSummaryUnit::minute);
+      else if(index == 2) emit reviewRequested();
+      else if(index == 4) this->reportSelected();
+    };
+    connect(ui->tabWidget, &QTabWidget::currentChanged, tabRefresh);
     //TODO - minutes for dev, -> hours for real
     //TODO - add summary filtering dialog
 
@@ -417,6 +427,7 @@ Q_OBJECT
     void fetchTimeTravelInfo();
     void timeTravelRequested(QDateTime time);
 
+    void reviewRequested();
 
   private:
 

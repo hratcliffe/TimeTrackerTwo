@@ -163,7 +163,10 @@ Q_OBJECT
     connect(themainWindow, &mainWindow::timeSummaryRequested, currentData, &TrackerData::generateTimeSummary);
     connect(currentData, &TrackerData::timeSummaryReady, themainWindow->summaryTab, &SummaryTabUI::timeSummaryUpdated);
 
-
+    //Review view
+    connect(themainWindow, &mainWindow::reviewRequested, [this](){currentData->generateReviewData(this->clock->now());});
+    connect(currentData, &TrackerData::timeStampListReady, themainWindow->reviewTab, &ReviewTabUI::reviewDisplayUpdated);
+ 
     //Clock ticking
     clockTicker = new QTimer();
     clockTicker->start(1000);

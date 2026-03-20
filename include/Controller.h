@@ -161,7 +161,7 @@ Q_OBJECT
 
     //Time summary view
     connect(themainWindow, &mainWindow::timeSummaryRequested, currentData, &TrackerData::generateTimeSummary);
-    connect(currentData, &TrackerData::timeSummaryReady, themainWindow, &mainWindow::timeSummaryUpdated);
+    connect(currentData, &TrackerData::timeSummaryReady, themainWindow->summaryTab, &SummaryTabUI::timeSummaryUpdated);
 
 
     //Clock ticking

@@ -24,6 +24,7 @@
 // ---- Tab contents classes
 #include "TrackerTabUI.h"
 #include "ProjectTabUI.h"
+#include "SummaryTabUI.h"
 
 // ----- Other headers
 #include "support.h"
@@ -31,33 +32,6 @@
 #include "project.h"
 #include "projectbutton.h"
 #include "timeWrapper.h"
-
-
-inline TW_timePoint fromQDateTime(QDateTime time){
-  //Convert from QT time to app time, going via a string
-  // Format  "%Y-%m-%d %H:%M:%S"
-  std::string time_str;
-  time_str = time.toString("yyyy-MM-dd hh:mm:ss").toStdString();
-  return timeWrapper::parseTimeZoned(time_str);
-}
-
-inline QDateTime toQDateTime(TW_timePoint time){
-  //Convert to QT time from app time, going via a string
-  // Format  "%Y-%m-%d %H:%M:%S"
-  std::string time_str;
-  time_str = timeWrapper::formatTime(time);
-  return QDateTime::fromString(QString::fromStdString(time_str),"yyyy-MM-dd hh:mm:ss");
-}
-
-
-struct viewProperties{
-
-  std::string overTargetEffects = "QLabel { color : purple; }";
-  std::string onTargetEffects = "QLabel { color : green; }";
-  std::string underTargetEffects = "QLabel { color : red; }";
-  std::string errorEffects = "QLabel {color: red; font-weight: bold;}";
-
-};
 
 
 // TODO - show Time Travel state in clock display
@@ -69,6 +43,7 @@ Q_OBJECT
     QMainWindow * main;
     TrackerTabContent *  trackerTab;
     ProjectTabUI * projectTab;
+    SummaryTabUI * summaryTab;
 
     float usedFTE = 0.0, freeFTE=0.0; //Tracks FTE fractions
     viewProperties prop; //TODO - should there be any way to alter this? - maybe settings and some presets?
@@ -109,6 +84,10 @@ Q_OBJECT
     connect(projectTab, &ProjectTabUI::addProjectRequested, this, &mainWindow::showAddDialog);
     connect(projectTab, &ProjectTabUI::addSubprojectRequested, this, &mainWindow::showAddSubDialog);
     connect(projectTab, &ProjectTabUI::mergeProjectRequested, this, &mainWindow::showMergeDialog);
+
+    summaryTab = new SummaryTabUI();
+    summaryTab->updateProperties(prop);
+    ui->summary_target_layout->addWidget(summaryTab);
 
     //Connecting Tab bar to refresh actions
     connect(ui->tabWidget, &QTabWidget::currentChanged, [this](int index){if(index == 1) emit timeSummaryRequested(timeSummaryUnit::minute); if(index == 3) this->reportSelected();});
@@ -445,33 +424,6 @@ Q_OBJECT
       if(result){
         emit timeTravelRequested(ttUi.dateTimeEdit->dateTime());
       }
-    }
-
-    void timeSummaryUpdated(std::vector<timeSummaryItem> summary){
-      
-      auto layout = ui->s_summary_items;
-
-      if (ui->s_summary_items->layout() == nullptr) {
-        std::cerr << "Error: s_summary_items layout is null." << std::endl;
-      }else{
-        QLocalShortcuts::deleteLayoutItems(layout);
-      }
-
-      for(auto & item : summary){
-        auto label = new QLabel(this);
-        label->setText(item.text.c_str());
-        if(item.stat == timeSummaryStatus::onTarget){
-          label->setStyleSheet(prop.onTargetEffects.c_str());
-        }else if(item.stat == timeSummaryStatus::overTarget){
-          label->setStyleSheet(prop.overTargetEffects.c_str());
-         }else if(item.stat == timeSummaryStatus::underTarget){
-          label->setStyleSheet(prop.underTargetEffects.c_str());
-        }else if(item.stat == timeSummaryStatus::error){
-          label->setStyleSheet(prop.errorEffects.c_str());
-        }
-        layout->addWidget(label);
-      }
-
     }
 
     void reportSelected(){

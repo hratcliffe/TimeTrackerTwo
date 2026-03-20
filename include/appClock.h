@@ -30,6 +30,9 @@ class appClock{
     std::string shortTimeString(){
         return timeWrapper::formatTimeAsClock(appTime);
     }
+    std::string displayTimeString(){
+        return (travelling() ? "App: " : "") + shortTimeString();
+    }
 
     bool travelling(){return travelTimeTarget != travelTimeZero;}
     void travelTo(TW_timePoint time){

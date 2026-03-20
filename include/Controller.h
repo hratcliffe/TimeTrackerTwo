@@ -170,7 +170,7 @@ Q_OBJECT
     //Clock ticking
     clockTicker = new QTimer();
     clockTicker->start(1000);
-    connect(clockTicker, &QTimer::timeout, [this](){this->clock->tick(); emit clockUpdated(this->clock->shortTimeString());});
+    connect(clockTicker, &QTimer::timeout, [this](){this->clock->tick(); emit clockUpdated(this->clock->displayTimeString());});
     connect(this, &Controller::clockUpdated, themainWindow, &mainWindow::updateClockDisplay);
 
     //Since clock is already updating every second we can use this to trigger timed events with sufficient fidelity

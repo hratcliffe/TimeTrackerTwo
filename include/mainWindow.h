@@ -31,7 +31,6 @@
 #include "timeWrapper.h"
 
 
-// TODO - show Time Travel state in clock display
 class mainWindow: public QWidget{
 Q_OBJECT
   public:

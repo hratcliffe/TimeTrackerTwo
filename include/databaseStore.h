@@ -31,7 +31,7 @@ class databaseStore{
         std::string cmd = "SELECT name FROM sqlite_master WHERE type='table';";
         sqlite3_stmt *stmt;
         int ret = sqlite3_prepare_v2(DB, cmd.c_str(), -1, &stmt, nullptr);
-        int count = 0;
+        size_t count = 0;
         while((ret = sqlite3_step(stmt)) == SQLITE_ROW){
             std::string name_in_db = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
             if(verbose) std::cout << "Table in DB: " << name_in_db << std::endl;
@@ -522,7 +522,7 @@ class databaseStore{
 
         // Create a suitable COUNT of ids subclauses with '?' placeholder
         std::stringstream ss;
-        for(int i = 0; i<ids.size()-1 ; i++) ss<<" parent_id == ? OR";
+        for(size_t i = 0; i<ids.size()-1 ; i++) ss<<" parent_id == ? OR";
         if(ids.size() > 0) ss<<" parent_id == ? "; // Last one has no 'OR' - if only one supplied, only this clause applies
 
         // Patch together complete command
@@ -530,7 +530,7 @@ class databaseStore{
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
 
         //Bind the actual ids
-        for(int i = 0; i < ids.size(); i++){
+        for(size_t i = 0; i < ids.size(); i++){
             std::string id = ids[i].to_string();
             sqlite3_bind_text(prep_cmd, i+1, id.c_str(), id.length(), SQLITE_TRANSIENT); // id string has scope of loop iteration, so use TRANSIENT to prolong
         }

@@ -257,7 +257,10 @@ Q_OBJECT
 
     void generateReviewData(timecode now){
       auto end = timeWrapper::fromSeconds(now);
-      auto start = timeWrapper::addDuration(end, 0,0,-100);
+      auto start_cand = timeWrapper::addDuration(end, 0,0,-100);
+      // Make CERTAIN that this is not negative. For current implementation that would be the 70s, but
+      // best to check
+      auto start = timeWrapper::toSeconds(start_cand) > 0 ? start_cand : timeWrapper::fromSeconds(1);
       fetchTimestamps(start, end);
     }
  

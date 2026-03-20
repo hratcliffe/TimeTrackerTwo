@@ -610,6 +610,40 @@ TEST_CASE("OneOff Marks - Time Summary", "[QTAware, Slots]"){
 
 }
 
+TEST_CASE("Stamp review data", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./InputData/KnownDatabase.db")};
+
+  //Loading project data
+  td.loadProjects(10000);
+  //Connecting
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::timeStampListReady, &sig, &SignalCatcher::emitTimeStampList);
+
+  //Request review data
+  td.generateReviewData(10000);
+  std::vector<timeStampForDisplay> lst;
+  lst = sig.stashPayloadForReturn(lst, false);
+  REQUIRE(lst.size() ==4);
+
+  REQUIRE(lst[0].time == 73);
+  REQUIRE(lst[0].projectUid.to_string() == "{cc467402-acd5-494f-9c58-466f3aa6f117}");
+  REQUIRE(lst[0].projectName == "Project Alpha");
+
+  REQUIRE(lst[1].time == 689);
+  REQUIRE(lst[1].projectUid.to_string() == "{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
+  REQUIRE(lst[1].projectName == "Documentation");
+
+  REQUIRE(lst[2].time == 3609);
+  REQUIRE(lst[2].projectUid.to_string() == "{de58a6f8-d0bb-46c8-af18-aed15e92060c}");
+  REQUIRE(lst[2].projectName == "Testing");
+
+  REQUIRE(lst[3].time == 8001);
+  REQUIRE(lst[3].projectUid.to_string() == "{00000000-0000-0000-0000-000000000000}");
+  REQUIRE(lst[3].projectName == "");
+
+}
+
 // -------- Digest Generation ------------------------------------------------------------------------
 TEST_CASE("Generating Digests", "[QTAware, Slots]"){
   auto app = dummyApp();

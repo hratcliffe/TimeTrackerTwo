@@ -7,11 +7,6 @@
 #include <QFrame>
 #include <QMessageBox>
 #include <QLineEdit>
-#include <QChart>
-#include <QChartView>
-#include <QPieSeries>
-#include <QLegendMarker>
-
 #include "ui_Main.h"
 // ---- Dialogs
 #include "ui_AddProjectDialog.h"
@@ -25,6 +20,7 @@
 #include "TrackerTabUI.h"
 #include "ProjectTabUI.h"
 #include "SummaryTabUI.h"
+#include "ReportTabUI.h"
 
 // ----- Other headers
 #include "support.h"
@@ -44,6 +40,7 @@ Q_OBJECT
     TrackerTabContent *  trackerTab;
     ProjectTabUI * projectTab;
     SummaryTabUI * summaryTab;
+    ReportTabUI * reportTab;
 
     float usedFTE = 0.0, freeFTE=0.0; //Tracks FTE fractions
     viewProperties prop; //TODO - should there be any way to alter this? - maybe settings and some presets?
@@ -88,6 +85,9 @@ Q_OBJECT
     summaryTab = new SummaryTabUI();
     summaryTab->updateProperties(prop);
     ui->summary_target_layout->addWidget(summaryTab);
+
+    reportTab = new ReportTabUI(this, ui->report_target_layout);
+    ui->report_target_layout->addWidget(reportTab);
 
     //Connecting Tab bar to refresh actions
     connect(ui->tabWidget, &QTabWidget::currentChanged, [this](int index){if(index == 1) emit timeSummaryRequested(timeSummaryUnit::minute); if(index == 3) this->reportSelected();});
@@ -283,40 +283,7 @@ Q_OBJECT
 
   using projectDetailsArgCallbackType = decltype(makeCallback(&mainWindow::showAddSubDialogImpl));
 
-  void fillReportsImpl(std::map<proIds::Uuid, projectDetails> details){
-
-    QPieSeries *series = new QPieSeries();
-    int i=0;
-    std::vector<std::string> labels, legendText;
-    for(auto & item : details){
-      if(item.second.FTE > 0.0){
-        series->append(item.second.name.c_str(), item.second.FTE*100);
-        labels.push_back(displayFloat(item.second.FTE*100)+" %");
-        legendText.push_back(item.second.name);
-        //auto & slice = series->at(qsizetype(i));
-        //slice.setLabel((displayFloat(item.second.FTE*100)+" %").c_str());
-      }
-    }
-    series->setLabelsVisible();
-    series->setLabelsPosition(QPieSlice::LabelInsideHorizontal);
-    for(auto & slice : series->slices()){
-      slice->setLabel(labels[i].c_str());
-      i++;
-    }
-
-    QChart *chart = new QChart();
-    chart->addSeries(series);
-    chart->setTitle("Project FTE Breakdown");
-    i=0;
-    for(auto &item : chart->legend()->markers()){
-      item->setLabel(legendText[i].c_str());
-      i++;
-    }
-
-    QChartView *chartview = new QChartView(chart);
-    ui->r_report_layout->addWidget(chartview);
-
-  }
+  void fillReportsImpl(std::map<proIds::Uuid, projectDetails> details){reportTab->fillReports(details);}
 
   public slots:
     void exitApp(){

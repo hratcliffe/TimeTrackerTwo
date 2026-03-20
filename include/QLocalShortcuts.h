@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QDateTime>
+#include <QLayout>
 #include "timeWrapper.h"
 
 struct viewProperties{

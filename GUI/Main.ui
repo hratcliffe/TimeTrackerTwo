@@ -168,7 +168,7 @@
              <height>491</height>
             </rect>
            </property>
-           <layout class="QGridLayout" name="r_report_layout"/>
+           <layout class="QGridLayout" name="report_target_layout"/>
           </widget>
          </widget>
         </widget>

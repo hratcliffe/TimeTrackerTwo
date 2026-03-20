@@ -33,6 +33,7 @@ HEADERS += include/Controller.h \
            include/TrackerTabUI.h \
            include/ProjectTabUI.h \
            include/SummaryTabUI.h \
+           include/ReportTabUI.h \
            include/dataObjects.h \
            include/idGenerators.h \
            include/project.h \

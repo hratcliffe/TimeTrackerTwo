@@ -54,6 +54,10 @@ TEST_CASE("Bad File 2", "[Database]"){
   REQUIRE_THROWS(theDB.tablesReady());
 }
 
+TEST_CASE("Readonly db without necessary tables", "[Database]"){
+  auto init = [](){databaseStore theDB{"./InputData/BlankDatabase.db", true};};
+  REQUIRE_THROWS(init());
+}
 // Projects -----------------------------------------------------------------------------
 
 TEST_CASE("Reading Known Data - Project", "[Database]"){
@@ -622,10 +626,14 @@ TEST_CASE("Round trip Config", "[Database]"){
   //theDB.writeItem<double>("zbc", 2.0);
 
 }
-TEST_CASE("Write State to Readonly", "[Database]"){
-  databaseStore theDB{"./InputData/BlankDatabase.db", true};
-
-  REQUIRE_THROWS(theDB.writeItem<long long>("conf", 123));
+TEST_CASE("Write Params to Readonly", "[Database]"){
+  databaseStore theDB{"./InputData/KnownDatabase.db", true};
+  SECTION("State"){
+    REQUIRE_THROWS(theDB.writeItem<long long>("conf", 123));
+  }
+  SECTION("Config"){
+    REQUIRE_THROWS(theDB.writeItem<std::string>("conf", "sdhjrt"));
+  }
 }
 
 TEST_CASE("Reading bad state", "[Database]"){
@@ -847,4 +855,26 @@ TEST_CASE("Update Digests", "[Database]"){
   auto check2 = [tpid, time](timeDigestEntry te){return te.projectUid == tpid && te.duration == time;};
   REQUIRE(std::find_if(entries_in.begin(), entries_in.end(), check2) == entries_in.end());
 
+}
+
+// Error cases:
+TEST_CASE("Writing data to ReadOnly"){
+  databaseStore theDB{"./InputData/KnownDatabase.db", true};
+
+  SECTION("Project"){
+    fullProjectData pd;
+    REQUIRE_THROWS(theDB.writeProject(pd));
+  }
+  SECTION("Subproject"){
+    fullSubProjectData pd;
+    REQUIRE_THROWS(theDB.writeSubproject(pd));
+  }
+  SECTION("One Off"){
+    fullOneOffProjectData pd;
+    REQUIRE_THROWS(theDB.writeOneOff(pd));
+  }
+  SECTION("Timestamp"){
+    timeStamp td;
+    REQUIRE_THROWS(theDB.writeTrackerEntry(td));
+  }
 }

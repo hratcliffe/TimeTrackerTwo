@@ -164,7 +164,7 @@ class databaseStore{
             err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
             sqlite3_bind_text(prep_cmd, 2, value.c_str(), value.length(), SQLITE_STATIC);
         }else{
-            assert(false);
+            static_assert(false);
         }
         sqlite3_bind_text(prep_cmd, 1, key.c_str(), key.length(), SQLITE_STATIC);
         err = sqlite3_step(prep_cmd);
@@ -191,7 +191,7 @@ class databaseStore{
            sqlite3_finalize(prep_cmd);
             throw badLookup("Key not found");
         }
-     }else if constexpr(std::is_same<T, std::string>::value){
+      }else if constexpr(std::is_same<T, std::string>::value){
         std::string cmd = "SELECT value FROM app_data WHERE key = ?;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
@@ -204,7 +204,7 @@ class databaseStore{
           throw badLookup("Key not found");
         }
       }else{
-        assert(false);
+        static_assert(false);
       }
       return item;
     }

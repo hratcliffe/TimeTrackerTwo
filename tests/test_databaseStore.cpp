@@ -191,8 +191,6 @@ TEST_CASE("List fetch - subprojects by multiple parent", "[Database]"){
   databaseStore theDB{"./InputData/KnownDatabase.db", true};
   auto pid = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
   auto pid2 = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
-  auto id  = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
-  auto id2 = proIds::Uuid("{de58a6f8-d0bb-46c8-af18-aed15e92060c}");
 
   auto lst1 = theDB.fetchSubprojectListForParents({pid});
   auto lst2 = theDB.fetchSubprojectListForParents({pid2});
@@ -442,7 +440,6 @@ TEST_CASE("Reading Known Data - Tracker", "[Database]"){
 
 TEST_CASE("Reading Known Data - Tracker with Range", "[Database]"){
   databaseStore theDB{"./InputData/KnownDatabase.db", true};
-  auto pid = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
   auto sid1 = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
   auto sid2 = proIds::Uuid("{de58a6f8-d0bb-46c8-af18-aed15e92060c}");
   auto stamps = theDB.fetchTrackerEntries(80, 4000);
@@ -785,7 +782,7 @@ TEST_CASE("Update Digests", "[Database]"){
   std::vector<long> times{15, 201, 73};
   std::vector<proIds::Uuid> pids {theGen.getNextId(), theGen.getNextId(), theGen.getNextId()};
   std::vector<timeDigestEntry> entries;
-  for(int i=0; i< times.size(); i++){
+  for(size_t i=0; i< times.size(); i++){
     timeDigestEntry te;
     te.projectUid = pids[i];
     te.duration = times[i];
@@ -801,7 +798,7 @@ TEST_CASE("Update Digests", "[Database]"){
   tp2.id = 2;
   std::vector<long> times2{11, 34, 91};
   std::vector<timeDigestEntry> entries2;
-  for(int i=0; i< times.size(); i++){
+  for(size_t i=0; i< times.size(); i++){
     timeDigestEntry te;
     te.projectUid = pids[i];
     te.duration = times2[i];

@@ -413,7 +413,6 @@ TEST_CASE("Int -Reading Known Data - Tracker", "[Database]"){
 
 TEST_CASE("Int -Reading Known Data - Tracker with Range", "[Database]"){
   databaseIO theDB{"./InputData/KnownDatabase.db", true};
-  auto pid = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
   auto sid1 = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
   auto sid2 = proIds::Uuid("{de58a6f8-d0bb-46c8-af18-aed15e92060c}");
   auto stamps = theDB.fetchTrackerEntries(80, 4000);
@@ -704,7 +703,7 @@ TEST_CASE("Int- Update Tracker+Digests ", "[Database]"){
 
   std::vector<long> durations{15, 201, 73, 11, 24};
   std::vector<timeDigestEntry> entries;
-  for(int i=0; i< times.size(); i++){
+  for(size_t i=0; i< times.size(); i++){
     timeDigestEntry te;
     te.projectUid = pids[i];
     te.duration = times[i];

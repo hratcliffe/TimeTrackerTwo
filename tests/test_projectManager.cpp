@@ -49,7 +49,7 @@ TEST_CASE("Creating project", "[Basic]"){
 TEST_CASE("Adding project", "[Basic]"){
   projectManager pm;
   auto pd = createProj();
-  proIds::Uuid proj = pm.addProject(pd);
+  pm.addProject(pd);
   REQUIRE(pm.projectCount() == 1);
 }
 TEST_CASE("Verifying a project", "[Basic]"){
@@ -86,7 +86,7 @@ TEST_CASE("Adding subproject", "[Basic]"){
   projectManager pm;
   auto pd = createSubProj();
   auto pid = pm.addProject(createProj());
-  proIds::Uuid proj = pm.addSubproject(pd, pid);
+  pm.addSubproject(pd, pid);
   REQUIRE(pm.subprojectCount() == 1);
 }
 TEST_CASE("Verifying a subproject", "[Basic]"){
@@ -107,7 +107,7 @@ TEST_CASE("Used and Available FTE", "[Basic]"){
   projectManager pm;
   auto pd = createProj();
   pd.FTE = 0.3;
-  proIds::Uuid proj = pm.addProject(pd);
+  pm.addProject(pd);
   auto avail = pm.availableFTE();
   auto used = pm.allocatedFTE();
   //Default is sum to 1.0
@@ -116,7 +116,7 @@ TEST_CASE("Used and Available FTE", "[Basic]"){
 
   //Adding another
   pd.FTE = 0.35;
-  proIds::Uuid proj2 = pm.addProject(pd);
+  pm.addProject(pd);
   avail = pm.availableFTE();
   used = pm.allocatedFTE();
 
@@ -142,7 +142,7 @@ TEST_CASE("Checking counts - no projects", "[Basic]"){
 }
 TEST_CASE("Checking counts - nonexistent project", "[Basic]"){
   projectManager pm;
-  auto pid = pm.addProject(createProj());
+  pm.addProject(createProj());
   REQUIRE(pm.subprojectCount() == 0);
   REQUIRE(pm.subprojectCount(proIds::NullUid) == 0);
 }
@@ -157,7 +157,7 @@ TEST_CASE("Checking sub frac - no projects", "[Basic]"){
 }
 TEST_CASE("Checking sub frac - nonexistent project", "[Basic]"){
   projectManager pm;
-  auto pid = pm.addProject(createProj());
+  pm.addProject(createProj());
   REQUIRE_THAT(pm.availableSubFrac(proIds::NullUid), WithinAbs(0.0, margin));
 }
 TEST_CASE("Getting Project name and FTE", "[Basic]"){
@@ -354,7 +354,7 @@ TEST_CASE("Updating Project FTE", "[Basic]"){
   proIds::Uuid proj = pm.addProject(pd);
   //Adding another
   pd.FTE = 0.35;
-  proIds::Uuid proj2 = pm.addProject(pd);
+  pm.addProject(pd);
 
   //Modifying the first one
   pm.setFTE(proj, 0.25);
@@ -459,7 +459,7 @@ TEST_CASE("Summaring a project with subs", "[Display]"){
   parent.name = "Another title";
   parent.FTE = 0.2;
   auto pid = pm.addProject(parent);
-  proIds::Uuid proj = pm.addSubproject(pd, pid);
+  pm.addSubproject(pd, pid);
 
   std::string summ = pm.summariseProject(pid);
   REQUIRE(summ.find(pd.name) != std::string::npos);
@@ -651,7 +651,7 @@ TEST_CASE("Setting frac wrongly", "[Basic]"){
   }
   SECTION("Setting frac higher than available"){
     sd.name = "BB";
-    auto sid2 = pm.addSubproject(sd, pid);
+    pm.addSubproject(sd, pid);
     REQUIRE_THROWS(pm.setFrac(sid, 0.8));
   }
 }

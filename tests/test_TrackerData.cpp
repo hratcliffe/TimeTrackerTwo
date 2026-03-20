@@ -425,8 +425,8 @@ TEST_CASE("Overall Summary", "[QTAware, Slots]"){
 
   std::string name = "Project for Summarisation B";
   std::string name2 = "Project for Summarisation ZZAlpha";
-  auto pid = CreateProjectAndReturnId(td, name, 0.3);
-  auto pid2 = CreateProjectAndReturnId(td, name, 0.4);
+  CreateProjectAndReturnId(td, name, 0.3);
+  CreateProjectAndReturnId(td, name, 0.4);
 
   td.generateToplevelSummary();
   std::string descr;

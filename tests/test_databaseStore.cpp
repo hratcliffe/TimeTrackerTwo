@@ -183,6 +183,28 @@ TEST_CASE("List fetch - subprojects by parent", "[Database]"){
   }
 
 }
+TEST_CASE("List fetch - subprojects by multiple parent", "[Database]"){
+  databaseStore theDB{"./InputData/KnownDatabase.db", true};
+  auto pid = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+  auto pid2 = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+  auto id  = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
+  auto id2 = proIds::Uuid("{de58a6f8-d0bb-46c8-af18-aed15e92060c}");
+
+  auto lst1 = theDB.fetchSubprojectListForParents({pid});
+  auto lst2 = theDB.fetchSubprojectListForParents({pid2});
+  REQUIRE(lst1.size() == 2);
+  REQUIRE(lst2.size() == 1);
+  auto lst3 = theDB.fetchSubprojectListForParents({pid, pid2});
+  REQUIRE(lst3.size() == lst1.size() + lst2.size());
+
+  for(const auto & item: lst1){
+    REQUIRE(std::find(lst3.begin(), lst3.end(), item) != lst3.end());
+  }
+  for(const auto & item: lst2){
+    REQUIRE(std::find(lst3.begin(), lst3.end(), item) != lst3.end());
+  }
+}
+
 
 TEST_CASE("List fetch - oneoff", "[Database]"){
   databaseStore theDB{"./InputData/KnownDatabase.db", true};

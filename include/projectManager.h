@@ -236,6 +236,7 @@ class projectManager{
         if(projects.find(parentUid) != projects.end()){
           return projects[parentUid].getName();
         }else{
+          // This should not be able to happen:
           throw std::runtime_error("No parent found for sub");
         }
       }else{

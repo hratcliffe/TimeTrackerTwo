@@ -62,7 +62,7 @@ Q_OBJECT
     trackerTab = new TrackerTabContent();
     ui->track_target_layout->addWidget(trackerTab);
     
-    connect(trackerTab, &TrackerTabContent::oneOffDialogNeeded, this, [this](){this->showOneOffDialog(this->trackerTab->oneOffTrackerButton->projectId);}); // TODO - have this pop up the name entry form instead....
+    connect(trackerTab, &TrackerTabContent::oneOffDialogNeeded, this, [this](){this->showOneOffDialog(this->trackerTab->oneOffTrackerButton->projectId);});
  
     // TODO - perhaps should move this into the tracker class?
     //Connecting buttons to downstream functions for controller to connect to

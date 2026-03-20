@@ -4,7 +4,226 @@
 #include "idGenerators.h"
 #include <sstream>
 
-// Mostly stream operators....
+// Mostly stream operators and equality ops
+TEST_CASE("Project data comparators", "[Basic]"){
+  projectData pd;
+  float fte = 0.24;
+  pd.name = "Wibble";
+  pd.FTE = fte;
+  pd.useEnd = false;
+  pd.useStart = false;
+  projectData pdd = pd;
+
+  projectData pd2;
+  pd2.FTE = 0.71;
+  pd2.name = "Llama";
+  pd2.useEnd = true;
+  pd2.useStart = true;
+  pd2.start = 72;
+  pd2.end = 90;
+
+  REQUIRE(pd == pdd);
+  REQUIRE(pd2 != pd);
+  SECTION("Name"){
+    pd2.name = pd.name;
+    REQUIRE(pd2 != pd);
+    pdd.name = "ABC";
+    REQUIRE(pd != pdd);
+  }
+  SECTION("FTE"){
+    pd2.FTE = pd.FTE;
+    REQUIRE(pd2 != pd);
+    pdd.FTE = 0.11;
+    REQUIRE(pd != pdd);
+  }
+  SECTION("Start"){
+    pd2.useStart = false;
+    pd2.start = pd.start;
+    REQUIRE(pd2 != pd);
+    pdd.useStart = true;
+    pdd.start = 90;
+    REQUIRE(pd != pdd);
+  }
+  SECTION("End"){
+    pd2.useEnd = false;
+    pd2.end = pd.end;
+    REQUIRE(pd2 != pd);
+    pdd.useEnd = true;
+    pdd.end = 90;
+    REQUIRE(pd != pdd);
+  }
+}
+TEST_CASE("Full project data comparators", "[Basic]"){
+  fullProjectData pd;
+  float fte = 0.24;
+  pd.name = "Wibble";
+  pd.FTE = fte;
+  pd.useEnd = false;
+  pd.useStart = false;
+  pd.uid = uniqueIdGenerator().getNextId();
+  fullProjectData pdd = pd;
+  fullProjectData pd2;
+  pd2.FTE = 0.71;
+  pd2.name = "Llama";
+  pd2.useEnd = true;
+  pd2.useStart = true;
+  pd2.start = 72;
+  pd2.end = 90;
+  pd2.uid = uniqueIdGenerator().getNextId();
+
+  REQUIRE(pd == pdd);
+  REQUIRE(pd2 != pd);
+  SECTION("UID"){
+    pd2.uid = pd.uid;
+    REQUIRE(pd2 != pd);
+    pdd.uid = uniqueIdGenerator().getNextId();
+    REQUIRE(pdd != pd);
+  }
+  SECTION("Name"){
+    pd2.name = pd.name;
+    REQUIRE(pd2 != pd);
+    pdd.name = "ABC";
+    REQUIRE(pd != pdd);
+  }
+  SECTION("FTE"){
+    pd2.FTE = pd.FTE;
+    REQUIRE(pd2 != pd);
+    pdd.FTE = 0.11;
+    REQUIRE(pd != pdd);
+  }
+  SECTION("Start"){
+    pd2.useStart = false;
+    pd2.start = pd.start;
+    REQUIRE(pd2 != pd);
+    pdd.useStart = true;
+    pdd.start = 90;
+    REQUIRE(pd != pdd);
+  }
+  SECTION("End"){
+    pd2.useEnd = false;
+    pd2.end = pd.end;
+    REQUIRE(pd2 != pd);
+    pdd.useEnd = true;
+    pdd.end = 90;
+    REQUIRE(pd != pdd);
+  }
+}
+
+TEST_CASE("Subproject data comparators", "[Basic]"){
+  subprojectData pd;
+  float frac = 0.24;
+  pd.name = "Wibble";
+  pd.frac = frac;
+  subprojectData pdd = pd;
+  subprojectData pd2;
+  pd2.frac = 0.71;
+  pd2.name = "Llama";
+
+  REQUIRE(pd == pdd);
+  REQUIRE(pd2 != pd);
+  SECTION("Name"){
+    pd2.name = pd.name;
+    REQUIRE(pd2 != pd);
+    pdd.name = "ABC";
+    REQUIRE(pd != pdd);
+  }
+  SECTION("FTE"){
+    pd2.frac = pd.frac;
+    REQUIRE(pd2 != pd);
+    pdd.frac = 0.11;
+    REQUIRE(pd != pdd);
+  }
+}
+TEST_CASE("Full Subproject data comparators", "[Basic]"){
+  fullSubProjectData pd;
+  float frac = 0.24;
+  pd.name = "Wibble";
+  pd.frac = frac;
+  pd.uid = uniqueIdGenerator().getNextId().tag(proIds::uidTag::sub);
+  fullSubProjectData pdd = pd;
+  fullSubProjectData pd2;
+  pd2.frac = 0.71;
+  pd2.name = "Llama";
+  pd2.uid = uniqueIdGenerator().getNextId().tag(proIds::uidTag::sub);
+
+  REQUIRE(pd == pdd);
+  REQUIRE(pd2 != pd);
+  SECTION("UID"){
+    pd2.uid = pd.uid;
+    REQUIRE(pd2 != pd);
+    pdd.uid = uniqueIdGenerator().getNextId().tag(proIds::uidTag::sub);
+    REQUIRE(pdd != pd);
+  }
+  SECTION("Name"){
+    pd2.name = pd.name;
+    REQUIRE(pd2 != pd);
+    pdd.name = "ABC";
+    REQUIRE(pd != pdd);
+  }
+  SECTION("FTE"){
+    pd2.frac = pd.frac;
+    REQUIRE(pd2 != pd);
+    pdd.frac = 0.11;
+    REQUIRE(pd != pdd);
+  }
+}
+
+TEST_CASE("OneOff project data comparators", "[Basic]"){
+  oneOffProjectData pd;
+  pd.name = "Wibble";
+  pd.description = "String goes here";
+  oneOffProjectData pdd = pd;
+  oneOffProjectData pd2;
+  pd2.description = "A creative description";
+  pd2.name = "Llama";
+
+  REQUIRE(pd == pdd);
+  REQUIRE(pd2 != pd);
+  SECTION("Name"){
+    pd2.name = pd.name;
+    REQUIRE(pd2 != pd);
+    pdd.name = "ABC";
+    REQUIRE(pd != pdd);
+  }
+  SECTION("Description"){
+    pd2.description = pd.description;
+    REQUIRE(pd2 != pd);
+    pdd.description = "This is not a description of the project";
+    REQUIRE(pd != pdd);
+  }
+}
+TEST_CASE("Full OneOff project data comparators", "[Basic]"){
+  fullOneOffProjectData pd;
+  pd.name = "Wibble";
+  pd.description = "String goes here";
+  pd.uid = uniqueIdGenerator().getNextId().tag(proIds::uidTag::oneoff);
+  fullOneOffProjectData pdd = pd;
+  fullOneOffProjectData pd2;
+  pd2.uid = uniqueIdGenerator().getNextId().tag(proIds::uidTag::oneoff);
+  pd2.description = "A creative description";
+  pd2.name = "Llama";
+
+  REQUIRE(pd == pdd);
+  REQUIRE(pd2 != pd);
+  SECTION("UID"){
+    pd2.uid = pd.uid;
+    REQUIRE(pd2 != pd);
+    pdd.uid = uniqueIdGenerator().getNextId().tag(proIds::uidTag::oneoff);
+    REQUIRE(pdd != pd);
+  }
+  SECTION("Name"){
+    pd2.name = pd.name;
+    REQUIRE(pd2 != pd);
+    pdd.name = "ABC";
+    REQUIRE(pd != pdd);
+  }
+  SECTION("Description"){
+    pd2.description = pd.description;
+    REQUIRE(pd2 != pd);
+    pdd.description = "This is not a description of the project";
+    REQUIRE(pd != pdd);
+  }
+}
 
 TEST_CASE("TimeStamp Comparators", "[Basic]"){
 

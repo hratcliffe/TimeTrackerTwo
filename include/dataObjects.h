@@ -25,8 +25,8 @@ struct projectData{
 
   std::string name;/**< \brief Name of project */
   float FTE;/**< \brief Fraction of FTE this uses */
-  timecode start, end;
-  bool useStart, useEnd;
+  timecode start=-1, end=-1;
+  bool useStart=false, useEnd=false;
 };
 
 inline std::ostream& operator<< (std::ostream& stream, const projectData& data){
@@ -35,14 +35,20 @@ inline std::ostream& operator<< (std::ostream& stream, const projectData& data){
   stream << data.name <<" "<<(int)(data.FTE*100)<<"%";
   return stream;
 }
+inline bool operator==(const projectData &lhs, const projectData &rhs){
+  return lhs.name == rhs.name && lhs.FTE == rhs.FTE && (lhs.useStart == rhs.useStart && lhs.start == rhs.start) && (lhs.useEnd == rhs.useEnd && lhs.end == rhs.end);
+}
+inline bool operator!=(const projectData &lhs, const projectData &rhs){
+  return !(lhs == rhs);
+}
 /** \brief Initialisation data for subproject
 *
 *
 */
 struct subprojectData{
 
-  std::string name;/**< \brief Name of project */
-  float frac;/**< \brief Fraction of parent this uses */
+  std::string name="";/**< \brief Name of project */
+  float frac=0.0;/**< \brief Fraction of parent this uses */
 };
 
 inline std::ostream& operator<< (std::ostream& stream, const subprojectData& data){
@@ -52,10 +58,16 @@ inline std::ostream& operator<< (std::ostream& stream, const subprojectData& dat
   stream << data.name <<" "<<(int)(data.frac*100)<<"%";
   return stream;
 }
+inline bool operator==(const subprojectData &lhs, const subprojectData &rhs){
+  return lhs.name == rhs.name && lhs.frac == rhs.frac;
+}
+inline bool operator!=(const subprojectData &lhs, const subprojectData &rhs){
+  return !(lhs == rhs);
+}
 struct oneOffProjectData{
 
-  std::string name;/**< \brief Name of project */
-  std::string description;
+  std::string name="";/**< \brief Name of project */
+  std::string description="";
 };
 
 inline std::ostream& operator<< (std::ostream& stream, const oneOffProjectData& data){
@@ -64,15 +76,20 @@ inline std::ostream& operator<< (std::ostream& stream, const oneOffProjectData& 
   stream << data.name <<" "<<data.description;
   return stream;
 }
-
+inline bool operator==(const oneOffProjectData &lhs, const oneOffProjectData &rhs){
+  return lhs.name == rhs.name && lhs.description == rhs.description;
+}
+inline bool operator!=(const oneOffProjectData &lhs, const oneOffProjectData &rhs){
+  return !(lhs == rhs);
+}
 //NOTE: data on project BUT does NOT contain list of subs!
 class fullProjectData{
     public:
-    proIds::Uuid uid; /**< \brief Unique identifier for the project */
-    std::string name; /**< \brief Name of the project */
-    float FTE; /**< \brief Fraction of Full-Time Equivalent this project uses */
-    timecode start, end;
-    bool useStart, useEnd;
+    proIds::Uuid uid=proIds::NullUid; /**< \brief Unique identifier for the project */
+    std::string name=""; /**< \brief Name of the project */
+    float FTE=0.0; /**< \brief Fraction of Full-Time Equivalent this project uses */
+    timecode start=-1, end=-1;
+    bool useStart=false, useEnd=false;
 
     fullProjectData() = default;
     fullProjectData(proIds::Uuid id, projectData const &data)
@@ -87,13 +104,18 @@ inline std::ostream& operator<< (std::ostream& stream, const fullProjectData& da
   if(data.useEnd) stream<<" "<<timeWrapper::formatTime(timeWrapper::fromSeconds(data.end));
   return stream;
 };
-
+inline bool operator==(const fullProjectData &lhs, const fullProjectData &rhs){
+  return lhs.uid == rhs.uid && lhs.name == rhs.name && lhs.FTE == rhs.FTE && lhs.useStart == rhs.useStart && lhs.start == rhs.start && lhs.useEnd == rhs.useEnd && lhs.end == rhs.end;
+}
+inline bool operator!=(const fullProjectData &lhs, const fullProjectData &rhs){
+  return !(lhs == rhs);
+}
 class fullSubProjectData{
     public:
-    proIds::Uuid uid; /**< \brief Unique identifier for the subproject */
-    std::string name; /**< \brief Name of the subproject */
-    float frac; /**< \brief Fraction of the parent project this subproject uses */
-    proIds::Uuid parentUid; /**< \brief Unique identifier for the parent project */
+    proIds::Uuid uid=proIds::NullUid; /**< \brief Unique identifier for the subproject */
+    std::string name=""; /**< \brief Name of the subproject */
+    float frac=0.0; /**< \brief Fraction of the parent project this subproject uses */
+    proIds::Uuid parentUid=proIds::NullUid; /**< \brief Unique identifier for the parent project */
 
     fullSubProjectData() = default;
     fullSubProjectData(proIds::Uuid id, subprojectData const &data, proIds::Uuid parentId)
@@ -105,12 +127,17 @@ inline std::ostream& operator<< (std::ostream& stream, const fullSubProjectData&
   stream << data.name <<", "<<data.uid<<", "<<data.frac<<", Parent: "<<data.parentUid;
   return stream;
 };
-
+inline bool operator==(const fullSubProjectData &lhs, const fullSubProjectData &rhs){
+  return lhs.uid == rhs.uid && lhs.name == rhs.name && lhs.frac ==rhs.frac && lhs.parentUid == rhs.parentUid;
+}
+inline bool operator!=(const fullSubProjectData &lhs, const fullSubProjectData &rhs){
+  return !(lhs == rhs);
+}
 class fullOneOffProjectData{
     public:
-    proIds::Uuid uid; // For consistency - note should be 
-    std::string name; /**< \brief Name of the project */
-    std::string description; /**< \brief Short description */
+    proIds::Uuid uid=proIds::NullUid; // For consistency - note should be 
+    std::string name=""; /**< \brief Name of the project */
+    std::string description=""; /**< \brief Short description */
 
     fullOneOffProjectData() = default;
     fullOneOffProjectData(proIds::Uuid id, std::string const &name, std::string const & descr)
@@ -122,7 +149,12 @@ inline std::ostream& operator<< (std::ostream& stream, const fullOneOffProjectDa
   stream << data.name<<", "<<data.uid <<" ("<<data.description<<")";
   return stream;
 };
-
+inline bool operator==(const fullOneOffProjectData &lhs, const fullOneOffProjectData &rhs){
+  return lhs.uid == rhs.uid && lhs.name == rhs.name && lhs.description == rhs.description;
+}
+inline bool operator!=(const fullOneOffProjectData &lhs, const fullOneOffProjectData &rhs){
+  return !(lhs == rhs);
+}
 
 // All the stuff needed to assess/invite user actions on a project
 struct subprojectDetails{

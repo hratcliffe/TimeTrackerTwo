@@ -13,13 +13,13 @@
 // Connecting and setup -----------------------------------------------------------------
 
 TEST_CASE("Connect", "[Database]"){
-  databaseStore theDB{"./Scratch/TestDatabase.db", false};
+  databaseStore theDB{getScratchFileName(), false};
 
   REQUIRE(theDB.isConnected());
   REQUIRE(theDB.tablesReady(false));
 }
 TEST_CASE("Clear", "[Database]"){
-  databaseStore theDB{"./Scratch/TestDatabase.db", false};
+  databaseStore theDB{getScratchFileName(), false};
   REQUIRE_THROWS(theDB.clearDB());
   theDB.clearDB();
   REQUIRE_FALSE(theDB.tablesReady(false));
@@ -50,7 +50,7 @@ TEST_CASE("Read Only File", "[Database]"){
   REQUIRE_THROWS(init());
 }
 TEST_CASE("Bad File 2", "[Database]"){
-  databaseStore theDB{"./Scratch/TestDatabase2.db", false};
+  databaseStore theDB{getScratchFileName(), false};
   REQUIRE_THROWS(theDB.closeDB());
 
   REQUIRE_THROWS(theDB.tablesReady());
@@ -263,7 +263,7 @@ fullProjectData writeProj(databaseStore & theDB, proIds::Uuid & pid){
   return pd;
 }
 TEST_CASE("Writing Project", "[Database]"){
-  databaseStore theDB{"./Scratch/TestDatabase2.db", false};
+  databaseStore theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -279,7 +279,7 @@ TEST_CASE("Writing Project", "[Database]"){
 }
 
 TEST_CASE("Writing Sub Project", "[Database]"){
-  databaseStore theDB{"./Scratch/TestDatabase2.db", false};
+  databaseStore theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   auto id = theGen.getNextId();
@@ -303,7 +303,7 @@ TEST_CASE("Writing Sub Project", "[Database]"){
   REQUIRE(sd.parentUid == sd_in.parentUid);
 }
 TEST_CASE("Writing One Off", "[Database]"){
-  databaseStore theDB{"./Scratch/TestDatabase2.db", false};
+  databaseStore theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -323,7 +323,7 @@ TEST_CASE("Writing One Off", "[Database]"){
 //Delete
 
 TEST_CASE("Deleting Project", "[Database]"){
-  databaseStore theDB{"./Scratch/TestDatabase2.db", false};
+  databaseStore theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -336,7 +336,7 @@ TEST_CASE("Deleting Project", "[Database]"){
 }
 
 TEST_CASE("Deleting Sub Project", "[Database]"){
-  databaseStore theDB{"./Scratch/TestDatabase2.db", false};
+  databaseStore theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   auto id = theGen.getNextId();
@@ -357,7 +357,7 @@ TEST_CASE("Deleting Sub Project", "[Database]"){
 
 }
 TEST_CASE("Deleting One Off", "[Database]"){
-  databaseStore theDB{"./Scratch/TestDatabase2.db", false};
+  databaseStore theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -373,7 +373,7 @@ TEST_CASE("Deleting One Off", "[Database]"){
 
 //Edit (uses write)
 TEST_CASE("Edit project", "[Database]"){
-  databaseStore theDB{"./Scratch/TestDatabase2.db", false};
+  databaseStore theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -393,7 +393,7 @@ TEST_CASE("Edit project", "[Database]"){
 }
 
 TEST_CASE("Edit subproject", "[Database]"){
-  databaseStore theDB{"./Scratch/TestDatabase2.db", false};
+  databaseStore theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -484,7 +484,7 @@ TEST_CASE("Reading Known Data - Tracker Entry Exists", "[Database]"){
   REQUIRE_FALSE(theDB.checkTrackerTimeMarked(689+5, 2));
 }
 TEST_CASE("Tracker Entry Exists", "[Database]"){
-  databaseStore theDB{"./Scratch/asbge.db", false};
+  databaseStore theDB{getScratchFileName(), false};
 
   theDB.writeTrackerEntry({111, proIds::NullUid});
   REQUIRE_THROWS(theDB.writeTrackerEntry({111, proIds::NullUid}));
@@ -492,7 +492,7 @@ TEST_CASE("Tracker Entry Exists", "[Database]"){
 
 //Write tracker
 TEST_CASE("Writing Tracker" "[Database]"){
-  databaseStore theDB{"./Scratch/TestDatabase2.db", false};
+  databaseStore theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -507,7 +507,7 @@ TEST_CASE("Writing Tracker" "[Database]"){
 
 //Delete tracker
 TEST_CASE("Delete Tracker By ID" "[Database]"){
-  databaseStore theDB{"./Scratch/TestDatabase3.db", false};
+  databaseStore theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -534,7 +534,7 @@ TEST_CASE("Delete Tracker By ID" "[Database]"){
 
 //Delete tracker in interval
 TEST_CASE("Delete Tracker in Interval", "[Database]"){
-  databaseStore theDB{"./Scratch/TestDatabase4.db", false};
+  databaseStore theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   std::vector<long> times{112, 1093, 1345, 1780};
@@ -587,8 +587,8 @@ TEST_CASE("Getting a free stamp with known data", "[Database]"){
   }
 }
 TEST_CASE("Getting a free stamp with inserted data", "[Database]"){
-  databaseStore theDB{"./Scratch/stamp2plusish.db", false};
-
+  databaseStore theDB{getScratchFileName(), false};
+ 
   // 3 consecutive filled
   theDB.writeTrackerEntry({11, proIds::NullUid});
   theDB.writeTrackerEntry({12, proIds::NullUid});
@@ -600,7 +600,7 @@ TEST_CASE("Getting a free stamp with inserted data", "[Database]"){
 }
 
 TEST_CASE("Failing to get a free stamp", "[Database]"){
-  databaseStore theDB{"./Scratch/stamp100plusish.db", false};
+  databaseStore theDB{getScratchFileName(), false};
 
   for(long i=0; i< 102; i++){
     theDB.writeTrackerEntry({1+i, proIds::NullUid});
@@ -660,14 +660,14 @@ TEST_CASE("Reading Known Data - Digest By Time", "[Database]"){
 // Read and write state
 
 TEST_CASE("Round trip State", "[Database]"){
-  databaseStore theDB{"./Scratch/TestDatabase2.db", false};
+  databaseStore theDB{getScratchFileName(), false};
 
   theDB.writeItem<long long>("conf", 123);
   auto item = theDB.readItem<long long>("conf");
   REQUIRE(item == 123);
 }
 TEST_CASE("Round trip Config", "[Database]"){
-   databaseStore theDB{"./Scratch/TestDatabase2.db", false};
+   databaseStore theDB{getScratchFileName(), false};
 
   theDB.writeItem<std::string>("conf2", "XYZ");
   auto item2 = theDB.readItem<std::string>("conf2");
@@ -688,7 +688,7 @@ TEST_CASE("Write Params to Readonly", "[Database]"){
 }
 
 TEST_CASE("Reading bad state", "[Database]"){
-  databaseStore theDB{"./Scratch/TestDatabase2.db", false};
+  databaseStore theDB{getScratchFileName(), false};
 
   SECTION("State"){
     REQUIRE_THROWS_AS(theDB.readItem<long long>("dhlkfjg384i"), badLookup);
@@ -707,7 +707,7 @@ TEST_CASE("Reading bad state", "[Database]"){
 
 // Write digest period + entry (i.e. first touch)
 TEST_CASE("Write Digest", "[Database]"){
-  databaseStore theDB{"./Scratch/DigestDatabase.db", false};
+  databaseStore theDB{getScratchFileName(), false};
 
   // Create a project
   uniqueIdGenerator theGen;
@@ -753,7 +753,7 @@ TEST_CASE("Write Digest", "[Database]"){
 
 //Update digest for id
 TEST_CASE("Specific digest update", "[Database]"){
-  databaseStore theDB{"./Scratch/DigestDatabase2.db", false};
+  databaseStore theDB{getScratchFileName(), false};
 
   // Create a project
   uniqueIdGenerator theGen;
@@ -793,7 +793,7 @@ TEST_CASE("Specific digest update", "[Database]"){
 //Update ID in tracker or digest
 TEST_CASE("Update Tracker", "[Database]"){
 
-  databaseStore theDB{"./Scratch/TestDatabase5.db", false};
+  databaseStore theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   std::vector<long> times{112, 1093, 1345, 1780};
@@ -823,7 +823,7 @@ TEST_CASE("Update Tracker", "[Database]"){
 
 TEST_CASE("Update Digests", "[Database]"){
 
-  databaseStore theDB{"./Scratch/TestDatabase5.db", false};
+  databaseStore theDB{getScratchFileName(), false};
 
   // Write for TWO digest periods
   timeDigestPeriod tp;

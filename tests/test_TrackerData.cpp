@@ -13,7 +13,7 @@ auto dummyApp(){
     char** argv=nullptr;
     return QApplication(argc, argv);
 }
-auto basicConfig(std::string file="./Scratch/TrackerDB.db"){
+auto basicConfig(std::string file=getScratchFileName()){
   appConfig conf;
   conf.backend = dataBackendType::database;
   conf.dataFileName = file;
@@ -24,7 +24,7 @@ TEST_CASE("Constructing a Tracker", "[QTAware]"){
   auto app = dummyApp();
   appConfig conf;
   conf.backend = dataBackendType::database;
-  conf.dataFileName = "./Scratch/TrackerDB.db";
+  conf.dataFileName = getScratchFileName();
   auto init = [conf](){TrackerData td{conf};};
   REQUIRE_NOTHROW(init());
 }
@@ -280,7 +280,7 @@ TEST_CASE("Marking", "[QTAware, Slots]"){
 }
 TEST_CASE("Flashing", "[QTAware, Slots]"){
   auto app = dummyApp();
-  TrackerData td{basicConfig("./Scratch/Empty_89dfn.db")};
+  TrackerData td{basicConfig()};
 
   SignalCatcher sig;
   QAbstractEventDispatcher::connect(&td, &TrackerData::projectRunningFlash, &sig, &SignalCatcher::emitString);
@@ -387,7 +387,6 @@ TEST_CASE("Pause and Resume - OneOff", "[QTAware, Slots]"){
 TEST_CASE("Marking duplicates - silent fix", "[QTAware, Slots]"){
   auto app = dummyApp();
   auto conf = basicConfig();
-  conf.dataFileName = getScratchFileName();
   conf.stampConfig.ignoreCollisions = true;
   conf.stampConfig.maxBump = 2;
   TrackerData td{conf};
@@ -436,7 +435,6 @@ TEST_CASE("Marking duplicates - silent fix", "[QTAware, Slots]"){
 TEST_CASE("Marking duplicates - error", "[QTAware, Slots]"){
   auto app = dummyApp();
   auto conf = basicConfig();
-  conf.dataFileName = getScratchFileName();
   conf.stampConfig.ignoreCollisions = false;
   conf.stampConfig.maxBump = 5;
   TrackerData td{conf};
@@ -458,7 +456,6 @@ TEST_CASE("Marking duplicates - error", "[QTAware, Slots]"){
 TEST_CASE("Marking duplicates - exceeding range", "[No]"){
   auto app = dummyApp();
   auto conf = basicConfig();
-  conf.dataFileName = getScratchFileName();
   conf.stampConfig.ignoreCollisions = true;
   TrackerData td{conf};
 
@@ -636,7 +633,7 @@ TEST_CASE("Known Data - Time stamps", "[QTAware, Slots]"){
 
 TEST_CASE("Empty Data - Time summary", "[QTAware, Slots]"){
   auto app = dummyApp();
-  TrackerData td{basicConfig("./Scratch/Empty_dfkhawf.db")};
+  TrackerData td{basicConfig()};
 
   SignalCatcher sig;
   QAbstractEventDispatcher::connect(&td, &TrackerData::timeSummaryReady, &sig, &SignalCatcher::emitTimeSummary);
@@ -851,7 +848,7 @@ TEST_CASE("Known Data - Timestamps before", "[QTAware]"){
 }
 TEST_CASE("Missing Data - Timestamps before", "[QTAware]"){
   auto app = dummyApp();
-  TrackerData td{basicConfig("./Scratch/BlankDB_zbt53.db")};
+  TrackerData td{basicConfig()};
 
   int cnt = td.checkForTimeStampsBefore(timeWrapper::fromSeconds(3000));
   REQUIRE(cnt == 0);
@@ -861,7 +858,7 @@ TEST_CASE("Missing Data - Timestamps before", "[QTAware]"){
 
 TEST_CASE("Closing with active project", "[QTAware, Slots]"){
   auto app = dummyApp();
-  TrackerData td{basicConfig("./Scratch/Empty_89dfn.db")};
+  TrackerData td{basicConfig()};
 
   SignalCatcher sig;
   QAbstractEventDispatcher::connect(&td, &TrackerData::readyToClose, &sig, &SignalCatcher::emitReadyToClose);
@@ -907,7 +904,7 @@ TEST_CASE("Closing with active project", "[QTAware, Slots]"){
 }
 TEST_CASE("Closing without active project", "[QTAware, Slots]"){
   auto app = dummyApp();
-  TrackerData td{basicConfig("./Scratch/Empty_89dfn.db")};
+  TrackerData td{basicConfig()};
 
   SignalCatcher sig;
   QAbstractEventDispatcher::connect(&td, &TrackerData::readyToClose, &sig, &SignalCatcher::emitReadyToClose);

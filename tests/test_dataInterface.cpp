@@ -36,12 +36,12 @@ TEST_CASE("Int -Read Only File", "[Database]"){
 }
 
 TEST_CASE("Int -Bad File 2", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
+  databaseIO theDB{getScratchFileName(), false};
   REQUIRE_THROWS(theDB.closeDB());
 }
 
 TEST_CASE("Int- Reference Time", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
+  databaseIO theDB{getScratchFileName(), false};
   // Try to read before writing
   auto str = theDB.readReferenceTime();
   REQUIRE(str == "Reference time not yet written");
@@ -235,7 +235,7 @@ fullProjectData writeProjI(databaseIO & theDB, proIds::Uuid & pid){
   return pd;
 }
 TEST_CASE("Int -Writing Project", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
+  databaseIO theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -251,7 +251,7 @@ TEST_CASE("Int -Writing Project", "[Database]"){
 }
 
 TEST_CASE("Int -Writing Sub Project", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
+  databaseIO theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   auto id = theGen.getNextId();
@@ -275,7 +275,7 @@ TEST_CASE("Int -Writing Sub Project", "[Database]"){
   REQUIRE(sd.parentUid == sd_in.parentUid);
 }
 TEST_CASE("Int -Writing One Off", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
+  databaseIO theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -295,7 +295,7 @@ TEST_CASE("Int -Writing One Off", "[Database]"){
 //Delete
 
 TEST_CASE("Int -Deleting Project", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
+  databaseIO theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -308,7 +308,7 @@ TEST_CASE("Int -Deleting Project", "[Database]"){
 }
 
 TEST_CASE("Int -Deleting Sub Project", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
+  databaseIO theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   auto id = theGen.getNextId();
@@ -329,7 +329,7 @@ TEST_CASE("Int -Deleting Sub Project", "[Database]"){
 
 }
 TEST_CASE("Int -Deleting One Off", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
+  databaseIO theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -345,7 +345,7 @@ TEST_CASE("Int -Deleting One Off", "[Database]"){
 
 //Edit (uses write)
 TEST_CASE("Int -Edit project", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
+  databaseIO theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -365,7 +365,7 @@ TEST_CASE("Int -Edit project", "[Database]"){
 }
 
 TEST_CASE("Int -Edit subproject", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
+  databaseIO theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -445,7 +445,7 @@ TEST_CASE("Int -Reading Known Data - Latest Tracker", "[Database]"){
 
 //Write tracker
 TEST_CASE("Int -Writing Tracker" "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
+  databaseIO theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -478,7 +478,7 @@ TEST_CASE("Int - Free stamp with known data", "[Database]"){
   }
 }
 TEST_CASE("Int - Getting a free stamp with inserted data", "[Database]"){
-  databaseIO theDB{"./Scratch/Istamp2plusish.db", false};
+  databaseIO theDB{getScratchFileName(), false};
 
   // 3 consecutive filled
   theDB.writeTrackerEntry({11, proIds::NullUid});
@@ -491,7 +491,7 @@ TEST_CASE("Int - Getting a free stamp with inserted data", "[Database]"){
 }
 
 TEST_CASE("Int - Failing to get a free stamp", "[Database]"){
-  databaseIO theDB{"./Scratch/Istamp100plusish.db", false};
+  databaseIO theDB{getScratchFileName(), false};
 
   for(long i=0; i< 102; i++){
     theDB.writeTrackerEntry({1+i, proIds::NullUid});
@@ -501,7 +501,7 @@ TEST_CASE("Int - Failing to get a free stamp", "[Database]"){
 
 //Delete tracker
 TEST_CASE("Int -Delete Tracker By ID" "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase3I.db", false};
+  databaseIO theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   auto pid = theGen.getNextId();
@@ -528,7 +528,7 @@ TEST_CASE("Int -Delete Tracker By ID" "[Database]"){
 
 //Delete tracker in interval
 TEST_CASE("Int-Delete Tracker in Interval", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase4I.db", false};
+  databaseIO theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   std::vector<long> times{89, 703, 901, 1002, 1115};
@@ -617,14 +617,14 @@ TEST_CASE("Int -Reading Known Data - Digest By Time", "[Database]"){
 // Read and write state
 
 TEST_CASE("Int -Round trip State", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
+  databaseIO theDB{getScratchFileName(), false};
 
   theDB.writeAppState("conf_i", 137);
   auto item = theDB.readAppState("conf_i");
   REQUIRE(item == 137);
 }
 TEST_CASE("Int -Round trip Config", "[Database]"){
-  databaseIO theDB{"./Scratch/TestDatabase2I.db", false};
+  databaseIO theDB{getScratchFileName(), false};
 
   theDB.writeAppConfig("conf2_i", "XY_23");
   auto item2 = theDB.readAppConfig("conf2_i");
@@ -721,7 +721,7 @@ TEST_CASE("Int -Specific digest update", "[Database]"){
 // Write some entries, run the update, check the result
 TEST_CASE("Int- Update Tracker+Digests ", "[Database]"){
 
-  databaseIO theDB{"./Scratch/TestDatabase5I.db", false};
+  databaseIO theDB{getScratchFileName(), false};
 
   uniqueIdGenerator theGen;
   std::vector<long> times{112, 1093, 1345, 1780, 2078};

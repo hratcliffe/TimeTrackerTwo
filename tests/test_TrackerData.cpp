@@ -383,6 +383,58 @@ TEST_CASE("Pause and Resume - OneOff", "[QTAware, Slots]"){
   REQUIRE(str == name);
 
 }
+
+TEST_CASE("Marking duplicates - silent fix", "[Temp]"){
+  auto app = dummyApp();
+  auto conf = basicConfig();
+  conf.dataFileName = "./Scratch/dupetestDb.db";
+  conf.stampConfig.ignoreCollisions = true;
+  conf.stampConfig.maxBump = 5;
+  TrackerData td{conf};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectRunningUpdate, &sig, &SignalCatcher::emitString);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::timeStampListReady, &sig, &SignalCatcher::emitTimeStampList);
+
+  std::string name = "Project to be marked twice!";
+  auto id = CreateProjectAndReturnId(td, name);
+  td.markProject(id, name, 399);
+  REQUIRE_NOTHROW(td.markProject(id, name, 399));
+
+  //Request review data
+  td.generateReviewData(450);
+  std::vector<timeStampForDisplay> lst;
+  lst = sig.stashPayloadForReturn(lst, false);
+
+  REQUIRE(lst.size() ==2);
+
+  REQUIRE(lst[0].time == 399);
+  REQUIRE(lst[0].projectUid == id);
+  REQUIRE(lst[0].projectName == name);
+
+  REQUIRE(lst[1].time == 399 + 1);
+  REQUIRE(lst[1].projectUid == id);
+  REQUIRE(lst[1].projectName == name);
+
+}
+TEST_CASE("Marking duplicates - error", "[Temp]"){
+  auto app = dummyApp();
+  auto conf = basicConfig();
+  conf.dataFileName = "./Scratch/dupetestDb2.db";
+  conf.stampConfig.ignoreCollisions = false;
+  conf.stampConfig.maxBump = 5;
+  TrackerData td{conf};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectRunningUpdate, &sig, &SignalCatcher::emitString);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::timeStampListReady, &sig, &SignalCatcher::emitTimeStampList);
+
+  std::string name = "Project to be marked twice!";
+  auto id = CreateProjectAndReturnId(td, name);
+  td.markProject(id, name, 399);
+  REQUIRE_THROWS_AS(td.markProject(id, name, 399), stampCollision);
+}
+
 // ------- Summaries and display ---------------------------------------------------------------------
 TEST_CASE("Summarising a project", "[QTAware, Slots]"){
   auto app = dummyApp();

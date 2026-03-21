@@ -31,6 +31,8 @@ Q_OBJECT
   trackerTypes::projectStatus currentProjectStatus; /**< \brief Current project status*/
   dataIO * dataHandler = nullptr; /**< \brief Data handler for reading/writing data */
 
+  timeStampCollisionConfig stampConfig;
+
   void reapplyTags(timeStamp & t){
     // Timestamps come from DB without proper tags. Make sure they are in place
     if(thePM.isSubProject(t.projectUid)){
@@ -58,6 +60,7 @@ Q_OBJECT
       }else{
         throw std::runtime_error("Unknown data backend type specified in config");
       }
+      stampConfig = config.stampConfig;
     };
 
     ~TrackerData(){if(dataHandler) delete dataHandler;};
@@ -155,8 +158,25 @@ Q_OBJECT
         currentProjectStatus.uid = uid;
         currentProjectStatus.status = trackerTypes::projectStatusFlag::active;
         currentProjectStatus.name = name;
-        dataHandler->writeTrackerEntry(stamp); // Write to data handler
-        emit projectRunningUpdate(name); // Notify view that a project is running
+        try{
+          dataHandler->writeTrackerEntry(stamp); // Write to data handler
+          emit projectRunningUpdate(name); // Notify view that a project is running
+        }catch(stampCollision & e){
+          //That time is marked. Check whether we can correct
+          if(stampConfig.ignoreCollisions){
+            // TODO - handle the case where this is exhauted
+            auto fixed = dataHandler->getFirstAvailableAfter(stamp.time);
+            if(fixed - stampConfig.maxBump > 0){
+              stamp.time = fixed;
+              dataHandler->writeTrackerEntry(stamp);
+              emit projectRunningUpdate(name);
+            }
+          }else{
+            // TODO - something
+            throw e;
+          }
+          //Have to alert and ask what to do
+        }
       }else{
         throw std::runtime_error("Attempting to Mark a nonexistent project");
       }

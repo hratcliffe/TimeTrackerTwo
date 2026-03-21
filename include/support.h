@@ -53,12 +53,17 @@ struct appDigestConfig{
   timecode digestCreationDelay = -1;
   bool disableDigests = false;
 };
+struct timeStampCollisionConfig{
+  bool ignoreCollisions = true; /**< @brief Indicates to silently bump a non-unique time stamp to later, by up to maxBump */
+  timecode maxBump = 2; /**< Max value for silent de-duplication. Setting to 0 is effectively the same as ignore=false but does more work on the way*/
+};
 
 struct appConfig{
   bool read_only = false; /**< \brief App backend should be opened in read-only mode (Many operations will fail) */
   std::string dataFileName = "";
   dataBackendType backend = dataBackendType::database; /**< \brief Type of data backend to use */
   appDigestConfig digestConfig;
+  timeStampCollisionConfig stampConfig;
 };
 
 inline std::string displayFloat(float value, int dp=2){

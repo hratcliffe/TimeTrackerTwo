@@ -83,8 +83,21 @@ TEST_CASE("Clock strings", "[Basic]"){
     clk.travelTo(timeWrapper::parseTimeZoned("2000-01-01 11:23:01"));
     clk.tick();
     // Until clock ticks again this is exact time
-    auto str = clk.fullTimeString();
-    REQUIRE(str =="2000-01-01 11:23:01");
-    str = clk.shortTimeString();
-    REQUIRE(str == "11:23");
+    SECTION("Full string"){
+      auto str = clk.fullTimeString();
+      REQUIRE(str =="2000-01-01 11:23:01");
+    }
+    SECTION("Short string"){
+      auto str = clk.shortTimeString();
+      REQUIRE(str == "11:23");
+    }
+    SECTION("Display string"){
+      auto str = clk.displayTimeString();
+      REQUIRE(str == "App: 11:23");
+    }
+    SECTION("Untravelling"){
+      //Don't know what, but short and display should Match
+      clk.restoreToNow();
+      REQUIRE(clk.displayTimeString() == clk.shortTimeString());
+    }
 }

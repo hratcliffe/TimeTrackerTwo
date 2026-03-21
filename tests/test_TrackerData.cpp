@@ -239,7 +239,7 @@ TEST_CASE("Marking", "[QTAware, Slots]"){
   SECTION("Regular project"){
     std::string name = "Project to be marked dfhkaeh";
     auto id = CreateProjectAndReturnId(td, name);
-    td.markProject(id, name, 123);
+    td.markProject(id, name, 242);
 
     std::string str;
     str = sig.stashPayloadForReturn(str, false);
@@ -249,7 +249,7 @@ TEST_CASE("Marking", "[QTAware, Slots]"){
   }
   SECTION("One Off"){
     std::string name = "One off project for mark dfh";
-    td.markProject(uniqueIdGenerator().getNextId().tag(proIds::uidTag::oneoff), name, 187);
+    td.markProject(uniqueIdGenerator().getNextId().tag(proIds::uidTag::oneoff), name, 252);
     std::string str;
     str = sig.stashPayloadForReturn(str, false);
     REQUIRE(str == name);
@@ -271,7 +271,7 @@ TEST_CASE("Marking", "[QTAware, Slots]"){
     REQUIRE(it != list.end());
     auto sid = it->uid;
     sid.tag(proIds::uidTag::sub);
-    td.markProject(sid, sub_name, 123);
+    td.markProject(sid, sub_name, 274);
     std::string str;
     str = sig.stashPayloadForReturn(str, false);
     REQUIRE(str == sub_name);
@@ -289,7 +289,7 @@ TEST_CASE("Flashing", "[QTAware, Slots]"){
     //Creating a project and marking it running
     std::string name = "Project to be marked 125fgw";
     auto id = CreateProjectAndReturnId(td, name);
-    td.markProject(id, name, 123);
+    td.markProject(id, name, 292);
 
     //Check what is running:
     td.flashProject();
@@ -299,7 +299,7 @@ TEST_CASE("Flashing", "[QTAware, Slots]"){
     }
   SECTION("One Off"){
     std::string name = "One off project for mark dfh";
-    td.markProject(uniqueIdGenerator().getNextId().tag(proIds::uidTag::oneoff), name, 187);
+    td.markProject(uniqueIdGenerator().getNextId().tag(proIds::uidTag::oneoff), name, 302);
     //Check what is running:
     td.flashProject();
     std::string name_in;
@@ -317,7 +317,7 @@ TEST_CASE("Stopping", "[QTAware, Slots]"){
   //Mark some dummy project
   std::string name = "Wibble 79";
   auto id = CreateProjectAndReturnId(td, name);
-  td.markProject(id, name, 123);
+  td.markProject(id, name, 320);
 
   //Stop it again
   td.stopProject(128);
@@ -338,7 +338,7 @@ TEST_CASE("Pause and Resume", "[QTAware, Slots]"){
   //Marking something
   std::string name = "Wibble 79";
   auto pid = CreateProjectAndReturnId(td, name);
-  td.markProject(pid, name, 123);
+  td.markProject(pid, name, 341);
 
   std::string str;
   str = sig.stashPayloadForReturn(str, false);
@@ -367,18 +367,18 @@ TEST_CASE("Pause and Resume - OneOff", "[QTAware, Slots]"){
   auto oid = uniqueIdGenerator().getNextId();
   oid.tag(proIds::uidTag::oneoff);
   std::string name = "One Off Wibbly";
-  td.markProject(oid, name, 113);
+  td.markProject(oid, name, 370);
 
   std::string str;
   str = sig.stashPayloadForReturn(str, false);
   REQUIRE(str == name);
 
   //Pausing
-  td.pauseProject(180);
+  td.pauseProject(377);
   str = sig.stashPayloadForReturn<std::string, SignalCatcher::pause>(str, false);
   REQUIRE(str == "paused "+name);
 
-  td.resumeProject(223);
+  td.resumeProject(381);
   str = sig.stashPayloadForReturn(str, false);
   REQUIRE(str == name);
 
@@ -776,7 +776,7 @@ TEST_CASE("Closing with active project", "[QTAware, Slots]"){
   //Creating a project and marking it running
   const std::string name = "Project to be marked 125fgw";
   auto id = CreateProjectAndReturnId(td, name);
-  td.markProject(id, name, 123);
+  td.markProject(id, name, 779);
 
   //Silent close should NOT change active project
   //Check what is running:
@@ -785,10 +785,11 @@ TEST_CASE("Closing with active project", "[QTAware, Slots]"){
   name_in = sig.stashPayloadForReturn(name_in, false);
   REQUIRE(name == name_in);
 
-  SECTION("Silent closing"){
 
+  //These actions have to go in order so we know what happens first
+  //Previous SECTIONs version passed by co-incidence but was not right
     //Plan to close
-    td.handleCloseRequest(true, 150);
+    td.handleCloseRequest(true, 791);
     //Check close signal sent
     REQUIRE( sig.stashPayloadForReturn<bool, SignalCatcher::close>(false, false));
 
@@ -796,10 +797,10 @@ TEST_CASE("Closing with active project", "[QTAware, Slots]"){
     td.flashProject();
     name_in = sig.stashPayloadForReturn(name_in, false);
     REQUIRE(name == name_in);
-  }
-  SECTION("Stop and close"){
+
+    //Now doing a mark-and-close
     QAbstractEventDispatcher::connect(&td, &TrackerData::projectStopped, &sig, &SignalCatcher::emitStopped);
-    td.handleCloseRequest(false, 150);
+    td.handleCloseRequest(false, 802);
     //Check close signal sent
     REQUIRE(sig.stashPayloadForReturn<bool, SignalCatcher::close>(false, false));
 
@@ -809,8 +810,6 @@ TEST_CASE("Closing with active project", "[QTAware, Slots]"){
     td.flashProject();
     name_in = sig.stashPayloadForReturn<std::string>(name_in, false);
     REQUIRE("" == name_in);
-  }
-
 }
 TEST_CASE("Closing without active project", "[QTAware, Slots]"){
   auto app = dummyApp();
@@ -1028,7 +1027,7 @@ TEST_CASE("Marking Nonexistent Project", "[QTAware, Slots]"){
   auto id = uniqueIdGenerator().getNextId();
   std::string name = "Wibble 79";
   //If this is not a real project, it should reject
-  REQUIRE_THROWS(td.markProject(id, name, 123));
+  REQUIRE_THROWS(td.markProject(id, name, 1031));
 
 }
 

@@ -18,6 +18,7 @@ class ProjectTabUI : public QWidget
 
 public:
     Ui::ProjectTabContent ui;
+    proIds::Uuid selected = proIds::NullUid;
  
     explicit ProjectTabUI(QWidget *parent = nullptr) : QWidget(parent){
       ui.setupUi(this);   
@@ -105,6 +106,7 @@ public:
 
     void viewProjectClicked(projectButton * button){
       //Re-raise signal with the uid. We could raise it directly, but this gives us a chance to do something else with the button
+      this->selected = button->projectId;
       emit projectSelectedView(button->projectId, button->fullName);
     }
 

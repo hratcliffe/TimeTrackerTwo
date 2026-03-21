@@ -59,7 +59,6 @@ Q_OBJECT
 
     float usedFTE = 0.0, freeFTE=0.0; //Tracks FTE fractions
     viewProperties prop; //TODO - should there be any way to alter this? - maybe settings and some presets?
-    proIds::Uuid selected = proIds::NullUid;
 
   mainWindow(){
 
@@ -278,9 +277,9 @@ Q_OBJECT
         QVariant data = QVariant(proj.first.to_string().c_str());
         mergeUi.TargetDropdown->addItem(proj.second.name.c_str(), data);
         mergeUi.SelectionDropdown->addItem(proj.second.name.c_str(), data);
-        if(this->selected != proIds::NullUid){
+        if(projectTab->selected != proIds::NullUid){
           //Set selected
-          if(proj.first == this->selected){
+          if(proj.first == projectTab->selected){
             mergeUi.SelectionDropdown->setCurrentIndex(mergeUi.SelectionDropdown->count() - 1);
           }
         }

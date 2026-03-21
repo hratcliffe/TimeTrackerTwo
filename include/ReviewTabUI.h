@@ -13,20 +13,28 @@
 #include "projectbutton.h"
 #include "timeWrapper.h"
 
-
+//TODO - WHEN click away, stash selections to restore later?
 class ReviewTabUI : public QWidget
 {
     Q_OBJECT
 
+private:
+  std::vector<timeStampForDisplay> data;
 public:
     Ui::ReviewTabContent ui;
     
     explicit ReviewTabUI(QWidget *parent = nullptr) : QWidget(parent){
-      ui.setupUi(this);   
+      ui.setupUi(this);
+      ui.v_delete_button->setEnabled(true);
+      connect(ui.v_delete_button, &QPushButton::clicked, [this](){this->prepareListForDelete();});
     }
 
-    void reviewDisplayUpdated(std::vector<timeStampForDisplay> data){
+    void reviewDisplayUpdated(std::vector<timeStampForDisplay> data_in){
 
+      //Stash
+      data = data_in;
+      //Here would stash existing check-marks. NOTE- stamp may have been deleted or added so
+      // have to MATCH them
       //Clearing
       if (ui.v_items->layout() == nullptr) {
         std::cerr << "Error: v_items layout is null." << std::endl;
@@ -53,5 +61,28 @@ public:
         ui.v_items->addLayout(row, i);
       }
     }
+
+    void prepareListForDelete(){
+      std::vector<timeStamp> lst;
+      for(size_t i = 0; i< ui.v_items->count(); i++){
+        // First item is checkbox, second string
+        QCheckBox * box = static_cast<QCheckBox *>(ui.v_items->itemAt(i)->layout()->itemAt(0)->widget());
+        if(box->isChecked()){
+          lst.push_back({data[i].time, data[i].projectUid});
+        }
+        //TODO - use a QVariant or such instead of assuming the data list is intact
+      }
+      std::cout<<"Will delete: \n";
+      for(auto item: lst){
+        std::cout<<item<<std::endl;
+      }
+      emit(listDeletionRequested(lst));
+    }
+
+    public slots:
+      void boxChecked(int i){};
+      void reviewContentUpdated(std::vector<timeStampForDisplay> & lst){reviewDisplayUpdated(lst);}
+    signals:
+      void listDeletionRequested(std::vector<timeStamp>&);
 };
 #endif

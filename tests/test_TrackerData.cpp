@@ -144,13 +144,13 @@ TEST_CASE("Create and read - with helper", "[QTAware, Slots]"){
   td.createProject(pd);
 
   std::vector<selectableEntity> list;
-  list = sig.stashPayloadForReturn(list, false);
+  list = sig.what(list);
   REQUIRE(list.size() == 1);
   REQUIRE(list[0].name == pd.name);
   REQUIRE(list[0].level == 0);
 
   double dummy=0.0;
-  auto fte = sig.stashPayloadForReturn(dummy, dummy, false);
+  auto fte = sig.what(dummy, dummy);
   REQUIRE_THAT(fte.first, WithinAbs(0.54, margin));
   REQUIRE_THAT(fte.second, WithinAbs(0.46, margin));
 
@@ -173,7 +173,7 @@ TEST_CASE("Create and read - subproj", "[QTAware, Slots]"){
   td.createSubproject(spd, pid);
 
   std::vector<selectableEntity> list;
-  list = sig.stashPayloadForReturn(list, false);
+  list = sig.what(list);
   REQUIRE(list.size() == 2);
   REQUIRE(list[0].name == name);
   REQUIRE(list[0].level == 0);
@@ -194,7 +194,7 @@ TEST_CASE("Updating One-Off Id", "[QTAware, Slots]"){
   REQUIRE(id == proIds::NullUid);
 
   td.oneOffIdRequired();
-  id = sig.stashPayloadForReturn(proIds::NullUid, false);
+  id = sig.what(proIds::NullUid);
   REQUIRE(id != proIds::NullUid);
   REQUIRE(id.isTaggedAs(proIds::uidTag::oneoff));
 }
@@ -209,20 +209,20 @@ TEST_CASE("Creating OneOff", "[QTAware, Slots]"){
   // No summary yet:
   td.generateOneOffSummary();
   std::string descr;
-  descr = sig.stashPayloadForReturn(descr, false);
+  descr = sig.what(descr);
   REQUIRE(descr != "");
   REQUIRE(descr.find("No One Offs") != std::string::npos);
 
   auto oid = uniqueIdGenerator().getNextId();
   oid.tag(proIds::uidTag::oneoff);
   td.createOneOff(oid, "One Off Wobbly", "A generic description");
-  auto id = sig.stashPayloadForReturn(proIds::NullUid, false);
+  auto id = sig.what(proIds::NullUid);
   REQUIRE(id != proIds::NullUid);
   REQUIRE(id != oid);
 
   // Getting the summary
   td.generateOneOffSummary();
-  descr = sig.stashPayloadForReturn(descr, false);
+  descr = sig.what(descr);
   REQUIRE(descr != "");
   REQUIRE(descr.find("One Off Wobbly") != std::string::npos);
 }
@@ -242,7 +242,7 @@ TEST_CASE("Marking", "[QTAware, Slots]"){
     td.markProject(id, name, 242);
 
     std::string str;
-    str = sig.stashPayloadForReturn(str, false);
+    str = sig.what(str);
     REQUIRE(str == name);
 
   // TODO - Now check we wrote the mark...
@@ -251,7 +251,7 @@ TEST_CASE("Marking", "[QTAware, Slots]"){
     std::string name = "One off project for mark dfh";
     td.markProject(uniqueIdGenerator().getNextId().tag(proIds::uidTag::oneoff), name, 252);
     std::string str;
-    str = sig.stashPayloadForReturn(str, false);
+    str = sig.what(str);
     REQUIRE(str == name);
   }
   SECTION("Subproject"){
@@ -266,14 +266,14 @@ TEST_CASE("Marking", "[QTAware, Slots]"){
     QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
     td.createSubproject(spd, id);
     std::vector<selectableEntity> list;
-    list = sig.stashPayloadForReturn(list, false);
+    list = sig.what(list);
     auto it = std::find_if(list.begin(), list.end(), [sub_name](const selectableEntity & e){return e.name == sub_name;});
     REQUIRE(it != list.end());
     auto sid = it->uid;
     sid.tag(proIds::uidTag::sub);
     td.markProject(sid, sub_name, 274);
     std::string str;
-    str = sig.stashPayloadForReturn(str, false);
+    str = sig.what(str);
     REQUIRE(str == sub_name);
 
   }
@@ -294,7 +294,7 @@ TEST_CASE("Flashing", "[QTAware, Slots]"){
     //Check what is running:
     td.flashProject();
     std::string name_in;
-    name_in = sig.stashPayloadForReturn(name, false);
+    name_in = sig.what(name);
     REQUIRE(name_in == name);
     }
   SECTION("One Off"){
@@ -303,7 +303,7 @@ TEST_CASE("Flashing", "[QTAware, Slots]"){
     //Check what is running:
     td.flashProject();
     std::string name_in;
-    name_in = sig.stashPayloadForReturn(name, false);
+    name_in = sig.what(name);
     REQUIRE(name_in == name);
   }
 }
@@ -321,7 +321,7 @@ TEST_CASE("Stopping", "[QTAware, Slots]"){
 
   //Stop it again
   td.stopProject(128);
-  REQUIRE(sig.stashPayloadForReturn<bool, SignalCatcher::stop>(false, false));
+  REQUIRE(sig.what<bool, SignalCatcher::stop>(false));
 
   //Now check that we wrote a stop at time 128 and that id has 5 seconds allocated, as expected
 
@@ -341,16 +341,16 @@ TEST_CASE("Pause and Resume", "[QTAware, Slots]"){
   td.markProject(pid, name, 341);
 
   std::string str;
-  str = sig.stashPayloadForReturn(str, false);
+  str = sig.what(str);
   REQUIRE(str == name);
 
   //Pausing
   td.pauseProject(180);
-  str = sig.stashPayloadForReturn<std::string, SignalCatcher::pause>(str, false);
+  str = sig.what<std::string, SignalCatcher::pause>(str);
   REQUIRE(str == "paused "+name);
 
   td.resumeProject(223);
-  str = sig.stashPayloadForReturn(str, false);
+  str = sig.what(str);
   REQUIRE(str == name);
 
 }
@@ -370,16 +370,16 @@ TEST_CASE("Pause and Resume - OneOff", "[QTAware, Slots]"){
   td.markProject(oid, name, 370);
 
   std::string str;
-  str = sig.stashPayloadForReturn(str, false);
+  str = sig.what(str);
   REQUIRE(str == name);
 
   //Pausing
   td.pauseProject(377);
-  str = sig.stashPayloadForReturn<std::string, SignalCatcher::pause>(str, false);
+  str = sig.what<std::string, SignalCatcher::pause>(str);
   REQUIRE(str == "paused "+name);
 
   td.resumeProject(381);
-  str = sig.stashPayloadForReturn(str, false);
+  str = sig.what(str);
   REQUIRE(str == name);
 
 }
@@ -407,7 +407,7 @@ TEST_CASE("Marking duplicates - silent fix", "[QTAware, Slots]"){
     //Request review data
     td.generateReviewData(450);
     std::vector<timeStampForDisplay> lst;
-    //lst = sig.stashPayloadForReturn(lst, false);
+    //lst = sig.what(lst);
     lst = sig.what(lst);
 
     REQUIRE(lst.size() ==2);
@@ -487,7 +487,7 @@ TEST_CASE("Summarising a project", "[QTAware, Slots]"){
 
   td.generateProjectSummary(pid);
   std::string descr;
-  descr = sig.stashPayloadForReturn(descr, false);
+  descr = sig.what(descr);
   REQUIRE(descr != "");
   REQUIRE(descr.find(name) != std::string::npos);
   REQUIRE(descr.find("40 %") != std::string::npos);
@@ -521,7 +521,7 @@ TEST_CASE("Overall Summary", "[QTAware, Slots]"){
 
   td.generateToplevelSummary();
   std::string descr;
-  descr = sig.stashPayloadForReturn(descr, false);
+  descr = sig.what(descr);
   REQUIRE(descr != "");
   REQUIRE(descr.find("2 projects active") != std::string::npos);
   REQUIRE(descr.find("70 % FTE allocated") != std::string::npos);
@@ -538,7 +538,7 @@ TEST_CASE("Known Data - Time summary", "[QTAware, Slots]"){
   td.generateTimeSummary(timeSummaryUnit::debug);
 
   std::vector<timeSummaryItem> summary;
-  summary = sig.stashPayloadForReturn(summary, false);
+  summary = sig.what(summary);
   REQUIRE(summary.size() > 0);
 
   //Uptime
@@ -590,7 +590,7 @@ TEST_CASE("Known Data - Time stamps", "[QTAware, Slots]"){
   td.fetchTimestamps(timeWrapper::fromSeconds(0), timeWrapper::fromSeconds(10001));
 
   std::vector<timeStampForDisplay> summary;
-  summary = sig.stashPayloadForReturn(summary, false);
+  summary = sig.what(summary);
   REQUIRE(summary.size() == 8);
   //check for one main, one sub and a one-off, plus a null
   {
@@ -642,7 +642,7 @@ TEST_CASE("Empty Data - Time summary", "[QTAware, Slots]"){
   td.generateTimeSummary(timeSummaryUnit::debug);
 
   std::vector<timeSummaryItem> summary;
-  summary = sig.stashPayloadForReturn(summary, false);
+  summary = sig.what(summary);
   REQUIRE(summary.size() == 1);
   REQUIRE(summary[0].text.find("No time entries found!") != std::string::npos);
 }
@@ -659,7 +659,7 @@ TEST_CASE("Known Data - Time summary with downtime", "[QTAware, Slots]"){
   td.loadProjects(17000);
   td.generateTimeSummary(timeSummaryUnit::debug);
   std::vector<timeSummaryItem> summary;
-  summary = sig.stashPayloadForReturn(summary, false);
+  summary = sig.what(summary);
 
   //Uptime
   {auto check = [](timeSummaryItem & ts){return ts.text.find("14955.0 units") != std::string::npos;};
@@ -693,7 +693,7 @@ TEST_CASE("OneOff Marks - Time Summary", "[QTAware, Slots]"){
   td.loadProjects(17000);
   td.generateTimeSummary(timeSummaryUnit::debug);
   std::vector<timeSummaryItem> summary;
-  summary = sig.stashPayloadForReturn(summary, false);
+  summary = sig.what(summary);
 
   auto check = [](timeSummaryItem & ts){return ts.text.find("One Off Projects") != std::string::npos;};
   auto fst = std::find_if(summary.begin(), summary.end(), check);
@@ -714,7 +714,7 @@ TEST_CASE("Stamp review data", "[QTAware, Slots]"){
   //Request review data
   td.generateReviewData(10000);
   std::vector<timeStampForDisplay> lst;
-  lst = sig.stashPayloadForReturn(lst, false);
+  lst = sig.what(lst);
   REQUIRE(lst.size() ==4);
 
   REQUIRE(lst[0].time == 73);
@@ -746,7 +746,7 @@ TEST_CASE("Generating Digests", "[QTAware, Slots]"){
   td.generateDailyDigest(timeWrapper::fromSeconds(86401));
 
   std::vector<timeDigestEntry> dig;
-  dig = sig.stashPayloadForReturn(dig, false);
+  dig = sig.what(dig);
 
   for(auto item: dig){
     if(item.projectUid.to_string() == "{cc467402-acd5-494f-9c58-466f3aa6f117}"){
@@ -778,7 +778,7 @@ TEST_CASE("Known Data - Load projects", "[QTAware]"){
   td.loadProjects(0);
 
   std::vector<selectableEntity> list;
-  list = sig.stashPayloadForReturn(list, false);
+  list = sig.what(list);
   REQUIRE(list.size() == 5);
   // Check for the five items
   {auto check = [](selectableEntity & se){return se.name == "Project Alpha" && se.uid.to_string() == "{cc467402-acd5-494f-9c58-466f3aa6f117}" && se.level == 0;};
@@ -794,7 +794,7 @@ TEST_CASE("Known Data - Load projects", "[QTAware]"){
   REQUIRE(std::find_if(list.begin(), list.end(), check) != list.end());}
 
   double dummy=0.0;
-  auto fte = sig.stashPayloadForReturn(dummy, dummy, false);
+  auto fte = sig.what(dummy, dummy);
   REQUIRE_THAT(fte.first, WithinAbs(0.75, margin));
   REQUIRE_THAT(fte.second, WithinAbs(0.25, margin));
 
@@ -809,7 +809,7 @@ TEST_CASE("Known Data - Load projects with active project", "[QTAware]"){
   td.loadProjects(4000);
 
   std::string str;
-  str = sig.stashPayloadForReturn(str, false);
+  str = sig.what(str);
   REQUIRE(str == "Testing");
 
 }
@@ -823,7 +823,7 @@ TEST_CASE("Known Data - Load projects with active One-Off project", "[QTAware]")
   td.loadProjects(5800);
 
   std::string str;
-  str = sig.stashPayloadForReturn(str, false);
+  str = sig.what(str);
   REQUIRE(str == "Tuesday Coffee");
 
 }
@@ -873,7 +873,7 @@ TEST_CASE("Closing with active project", "[QTAware, Slots]"){
   //Check what is running:
   td.flashProject();
   std::string name_in;
-  name_in = sig.stashPayloadForReturn(name_in, false);
+  name_in = sig.what(name_in);
   REQUIRE(name == name_in);
 
 
@@ -882,24 +882,24 @@ TEST_CASE("Closing with active project", "[QTAware, Slots]"){
     //Plan to close
     td.handleCloseRequest(true, 791);
     //Check close signal sent
-    REQUIRE( sig.stashPayloadForReturn<bool, SignalCatcher::close>(false, false));
+    REQUIRE( sig.what<bool, SignalCatcher::close>(false));
 
     // Check same project still running
     td.flashProject();
-    name_in = sig.stashPayloadForReturn(name_in, false);
+    name_in = sig.what(name_in);
     REQUIRE(name == name_in);
 
     //Now doing a mark-and-close
     QAbstractEventDispatcher::connect(&td, &TrackerData::projectStopped, &sig, &SignalCatcher::emitStopped);
     td.handleCloseRequest(false, 802);
     //Check close signal sent
-    REQUIRE(sig.stashPayloadForReturn<bool, SignalCatcher::close>(false, false));
+    REQUIRE(sig.what<bool, SignalCatcher::close>(false));
 
     //Check stop signal sent
-    REQUIRE(sig.stashPayloadForReturn<bool, SignalCatcher::stop>(false, false));
+    REQUIRE(sig.what<bool, SignalCatcher::stop>(false));
     // Nothing should be running
     td.flashProject();
-    name_in = sig.stashPayloadForReturn<std::string>(name_in, false);
+    name_in = sig.what<std::string>(name_in);
     REQUIRE("" == name_in);
 }
 TEST_CASE("Closing without active project", "[QTAware, Slots]"){
@@ -912,7 +912,7 @@ TEST_CASE("Closing without active project", "[QTAware, Slots]"){
   //Plan to close
   REQUIRE_NOTHROW(td.handleCloseRequest(true, 150));
   //Check close signal sent
-  REQUIRE( sig.stashPayloadForReturn<bool, SignalCatcher::close>(false, false));
+  REQUIRE( sig.what<bool, SignalCatcher::close>(false));
 }
 
 TEST_CASE("Deleting Stamps", "[QTAware]"){
@@ -927,7 +927,7 @@ TEST_CASE("Deleting Stamps", "[QTAware]"){
   td.loadProjects(16000);
   td.generateTimeSummary(timeSummaryUnit::debug);
   std::vector<timeSummaryItem> summary;
-  summary = sig.stashPayloadForReturn(summary, false);
+  summary = sig.what(summary);
 
   //Uptime
   {auto check = [](timeSummaryItem & ts){return ts.text.find("14905.0 units") != std::string::npos;};
@@ -959,7 +959,7 @@ TEST_CASE("Deleting Stamps", "[QTAware]"){
     // Check final state
     td.generateTimeSummary(timeSummaryUnit::debug);
     std::vector<timeSummaryItem> summary;
-    summary = sig.stashPayloadForReturn(summary, false);
+    summary = sig.what(summary);
 
     //Uptime
     {auto check = [](timeSummaryItem & ts){return ts.text.find("13817.0 units") != std::string::npos;};
@@ -995,7 +995,7 @@ TEST_CASE("Deleting Stamps - no-op cases", "[QTAware]"){
   td.loadProjects(16000);
   td.generateTimeSummary(timeSummaryUnit::debug);
   std::vector<timeSummaryItem> summary;
-  summary = sig.stashPayloadForReturn(summary, false);
+  summary = sig.what(summary);
 
   //Uptime
   {auto check = [](timeSummaryItem & ts){return ts.text.find("14905.0 units") != std::string::npos;};
@@ -1024,7 +1024,7 @@ TEST_CASE("Deleting Stamps - no-op cases", "[QTAware]"){
     // Check final state
     td.generateTimeSummary(timeSummaryUnit::debug);
     std::vector<timeSummaryItem> summary;
-    summary = sig.stashPayloadForReturn(summary, false);
+    summary = sig.what(summary);
 
     //Uptime
     {auto check = [](timeSummaryItem & ts){return ts.text.find("14905.0 units") != std::string::npos;};
@@ -1053,7 +1053,7 @@ TEST_CASE("Deleting Stamps - no-op cases", "[QTAware]"){
     // Check final state
     td.generateTimeSummary(timeSummaryUnit::debug);
     std::vector<timeSummaryItem> summary;
-    summary = sig.stashPayloadForReturn(summary, false);
+    summary = sig.what(summary);
 
     //Uptime
     {auto check = [](timeSummaryItem & ts){return ts.text.find("14905.0 units") != std::string::npos;};
@@ -1089,7 +1089,7 @@ TEST_CASE("Deleting Stamps - by list", "[Failing]"){
   td.fetchTimestamps(timeWrapper::fromSeconds(0), timeWrapper::fromSeconds(10001));
 
   std::vector<timeStampForDisplay> summary, summary2;
-  summary = sig.stashPayloadForReturn(summary, false);
+  summary = sig.what(summary);
 
   CHECK(summary.size() == 6);
   //Delete some
@@ -1102,7 +1102,7 @@ TEST_CASE("Deleting Stamps - by list", "[Failing]"){
 
   td.fetchTimestamps(timeWrapper::fromSeconds(0), timeWrapper::fromSeconds(10001));
 
-  summary2 = sig.stashPayloadForReturn(summary2, false);
+  summary2 = sig.what(summary2);
   REQUIRE(summary2.size() == 4);
   REQUIRE(summary[1] == summary2[0]);
   REQUIRE(summary[2] == summary2[1]);

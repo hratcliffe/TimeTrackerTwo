@@ -458,6 +458,41 @@ TEST_CASE("Int -Writing Tracker" "[Database]"){
   REQUIRE(stamp.projectUid == stamp_in.projectUid);
 }
 
+//Checking for free stamps
+TEST_CASE("Int - Getting a free stamp with known data", "[Database]"){
+  databaseIO theDB{"./InputData/KnownDatabase.db", true};
+  SECTION("Free slot"){
+    REQUIRE(theDB.getFirstAvailableAfter(3611) == 3611);
+  }
+  SECTION("Occupied directly"){
+    REQUIRE(theDB.getFirstAvailableAfter(689) == 690);
+  }
+  SECTION("Just before a mark"){
+    REQUIRE(theDB.getFirstAvailableAfter(688) == 688);
+  }
+}
+TEST_CASE("Int - Getting a free stamp with inserted data", "[Database]"){
+  databaseIO theDB{"./Scratch/Istamp2plusish.db", false};
+
+  // 3 consecutive filled
+  theDB.writeTrackerEntry({11, proIds::NullUid});
+  theDB.writeTrackerEntry({12, proIds::NullUid});
+  theDB.writeTrackerEntry({13, proIds::NullUid});
+
+  REQUIRE(theDB.getFirstAvailableAfter(13) == 14);
+  REQUIRE(theDB.getFirstAvailableAfter(12) == 14);
+  REQUIRE(theDB.getFirstAvailableAfter(11) == 14);
+}
+
+TEST_CASE("Int - Failing to get a free stamp", "[Database]"){
+  databaseIO theDB{"./Scratch/Istamp100plusish.db", false};
+
+  for(long i=0; i< 102; i++){
+    theDB.writeTrackerEntry({1+i, proIds::NullUid});
+  }
+  REQUIRE_THROWS_AS(theDB.getFirstAvailableAfter(1), stampExhaustion);
+}
+
 //Delete tracker
 TEST_CASE("Int -Delete Tracker By ID" "[Database]"){
   databaseIO theDB{"./Scratch/TestDatabase3I.db", false};

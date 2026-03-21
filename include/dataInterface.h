@@ -47,6 +47,9 @@ class dataIO{
     virtual std::vector<fullOneOffProjectData> fetchOneOffProjectsInTimeRange(timecode start, timecode end) = 0;
 
     virtual timeStamp fetchTrackerAt(timecode time) = 0; /**< \brief Fetch the stamp 'active at' given time */
+    virtual bool checkTrackerTimeMarked(timecode time, timecode interval=0) = 0; /**< Check whether given time is already marked */
+    virtual timecode getFirstAvailableAfter(timecode time) = 0;
+
     virtual std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1) = 0; /**< \brief Fetch ORDERED tracker entries from the data source, optionally within a time range */
     virtual std::vector<timeStamp> fetchTrackerEntries(proIds::Uuid const & id) = 0; /**< \brief Fetch ORDERED tracker entries for specific id */
     virtual timeStamp fetchLatestTrackerEntry() = 0;/**< \brief Fetch the latest (most recent) tracker entry */
@@ -182,6 +185,12 @@ class databaseIO : public dataIO{
 
     timeStamp fetchTrackerAt(timecode time) override{
       return dbStore.fetchTrackerAt(time);
+    }
+    bool checkTrackerTimeMarked(timecode time, timecode interval=0)override{
+      return dbStore.checkTrackerTimeMarked(time, interval);
+    }
+    timecode getFirstAvailableAfter(timecode time)override{
+      return dbStore.getFirstAvailableAfter(time);
     }
 
     std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1) override {

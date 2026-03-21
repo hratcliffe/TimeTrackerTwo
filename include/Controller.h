@@ -120,7 +120,7 @@ Q_OBJECT
     // Collect all the connections from mainWindow to Model (TrackerData)
 
     // Close, and silent close. Close will mark current project as stopped. Silent close will not...
-    connect(themainWindow, &mainWindow::closeRequested, [this](bool silent){this->writeState(); currentData->handleCloseRequest(silent, this->clock->now());}); // TODO - is there a tiny race where a digest could trigger during this process?
+    connect(themainWindow->main, &outerWindow::closeRequested, [this](bool silent){this->writeState(); currentData->handleCloseRequest(silent, this->clock->now());}); // TODO - is there a tiny race where a digest could trigger during this process?
 
     connect(currentData, &TrackerData::readyToClose, themainWindow, &mainWindow::exitApp);
 

@@ -30,13 +30,27 @@
 #include "projectbutton.h"
 #include "timeWrapper.h"
 
+class outerWindow : public QMainWindow{
+  Q_OBJECT
+public:
+  bool silent = false;
+  outerWindow():QMainWindow(){;}
+
+  void closeEvent(QCloseEvent *event) override {
+    std::cout << "Close event triggered." << std::endl;
+    emit closeRequested(silent); // Default to non-silent close
+    event->ignore();
+  }
+  signals:
+  void closeRequested(bool silent);/**< \brief Signal to close - silent means without writing a stop mark */
+};
 
 class mainWindow: public QWidget{
 Q_OBJECT
   public:
 
     Ui::main_window * ui;
-    QMainWindow * main;
+    outerWindow * main;
     TrackerTabContent *  trackerTab;
     ProjectTabUI * projectTab;
     SummaryTabUI * summaryTab;
@@ -49,7 +63,7 @@ Q_OBJECT
 
   mainWindow(){
 
-    main = new QMainWindow(); //Pointer so it lives after this exits...
+    main = new outerWindow();
     ui = new Ui::main_window();
     ui->setupUi(main);
 
@@ -66,8 +80,8 @@ Q_OBJECT
  
     // TODO - perhaps should move this into the tracker class?
     //Connecting buttons to downstream functions for controller to connect to
-    connect(trackerTab->ui.t_close_button, &QPushButton::clicked, [this](){emit closeRequested(false);});
-    connect(trackerTab->ui.t_silent_button, &QPushButton::clicked, [this](){emit closeRequested(true);});
+    connect(trackerTab->ui.t_close_button, &QPushButton::clicked, [this](){this->main->close();});
+    connect(trackerTab->ui.t_silent_button, &QPushButton::clicked, [this](){this->main->silent=true; this->main->close();});
     connect(trackerTab->ui.t_pause_button, &QPushButton::clicked, [this](){emit pauseRequested();});
     connect(trackerTab->ui.t_resume_button, &QPushButton::clicked, [this](){emit resumeRequested();});
     connect(trackerTab->ui.t_stop_button, &QPushButton::clicked, [this](){emit stopRequested();});
@@ -109,13 +123,6 @@ Q_OBJECT
     updateAvailableActions(false);
     
     main->show();
-  }
-  void closeEvent(QCloseEvent *event) override {
-    // Handle close event, emit signal to controller
-    // TODO figure out why this is not working...
-    std::cout << "Close event triggered." << std::endl;
-    emit closeRequested(false); // Default to non-silent close
-    event->ignore();
   }
 
   ~mainWindow(){
@@ -435,7 +442,6 @@ Q_OBJECT
     void pauseRequested(); /**< \brief Signal emitted when the pause button is clicked */
     void resumeRequested(); /**< \brief Signal emitted when the resume button is clicked */
     void stopRequested(); /**< \brief Signal emitted when the stop button is clicked */
-    void closeRequested(bool silent);/**< \brief Signal emitted when the close button is clicked, silent is true if the silent close button is clicked */
 
     void projectAddRequested(const projectData & data);
     void subprojectAddRequested(const subprojectData & data, const proIds::Uuid & parent);

@@ -60,8 +60,15 @@ TEST_CASE("Travelling to now", "[Long]"){
   auto clk = appClock();
   clk.travelBy(-1);
   auto now = timeWrapper::now();
-  clk.travelTo(now);
-  REQUIRE_FALSE(clk.travelling()); // Will fail in case we pass a second between these lines of code...
+  //If we do this part dead on a seconds-boundary it fails.
+  // Repeating it twice is much _less likely_ to fail twice
+  // Perhaps there is a genuinely better way?
+  bool failed = true;
+  for(int i =0; i<2; i++){
+    clk.travelTo(now);
+    failed &= clk.travelling();
+  }
+  REQUIRE_FALSE(failed);
   auto st = timeWrapper::toSeconds(timeWrapper::now());
   auto end = timeWrapper::toSeconds(timeWrapper::now());
   for(;end == st;){

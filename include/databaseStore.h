@@ -656,6 +656,36 @@ class databaseStore{
         return ret;
     }
 
+    /** @brief Check whether time is marked
+     * 
+     * Checks whether there is already a stamp in range [time-interval, time+interval]
+     * @param time The time to check
+     * @param interval Range above and below
+     * @returns True if interval is occupied, else false
+     * @throws runtime_error if lookup fails for any reason
+     * @pre Interval is >= 0
+     * @post Check is performed. If interval < 0 result is always false. The database connection does not _become_ unusable.
+    */
+    bool checkTrackerTimeMarked(timecode time, timecode interval=0){
+      // Check if given time HAS an entry - i.e. if there is anything between [time-interval, time+interval]
+      std::string cmd = "SELECT time, project_id from timestamps t WHERE t.time >= ? AND t.time <= ? LIMIT 1;";
+      sqlite3_stmt * prep_cmd;
+      int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+      sqlite3_bind_int64(prep_cmd, 1, time-interval);
+      sqlite3_bind_int64(prep_cmd, 2, time+interval);
+      bool row_fnd=false;
+      while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+        row_fnd = true;
+      }
+      if(err != SQLITE_DONE){
+        sqlite3_finalize(prep_cmd);
+        throw std::runtime_error("Failed to fetch tracker entries");
+      }else{
+        sqlite3_finalize(prep_cmd);
+        return row_fnd;
+      }
+    }
+
     std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1){
         //TODO - should the Uid tags be handled down here?
       //TODO - is there an elegant way to do this with prepared statements?

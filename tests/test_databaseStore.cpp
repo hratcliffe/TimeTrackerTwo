@@ -472,6 +472,23 @@ TEST_CASE("Reading Known Data - Latest Tracker", "[Database]"){
   auto stamp = theDB.fetchLatestTrackerEntry();
   REQUIRE(stamp == timeStamp{8001, proIds::NullUid});
 }
+// Fetch exists
+TEST_CASE("Reading Known Data - Tracker Entry Exists", "[Database]"){
+  databaseStore theDB{"./InputData/KnownDatabase.db", true};
+
+  REQUIRE(theDB.checkTrackerTimeMarked(3609));
+  REQUIRE(theDB.checkTrackerTimeMarked(3609+1, 11));
+  REQUIRE_FALSE(theDB.checkTrackerTimeMarked(3609+2, 0));
+
+  REQUIRE(theDB.checkTrackerTimeMarked(689+5, 6));
+  REQUIRE_FALSE(theDB.checkTrackerTimeMarked(689+5, 2));
+}
+TEST_CASE("Tracker Entry Exists", "[Database]"){
+  databaseStore theDB{"./Scratch/asbge.db", false};
+
+  theDB.writeTrackerEntry({111, proIds::NullUid});
+  REQUIRE_THROWS(theDB.writeTrackerEntry({111, proIds::NullUid}));
+}
 
 //Write tracker
 TEST_CASE("Writing Tracker" "[Database]"){

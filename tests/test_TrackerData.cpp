@@ -384,7 +384,7 @@ TEST_CASE("Pause and Resume - OneOff", "[QTAware, Slots]"){
 
 }
 
-TEST_CASE("Marking duplicates - silent fix", "[Temp]"){
+TEST_CASE("Marking duplicates - silent fix", "[QTAware, Slots]"){
   auto app = dummyApp();
   auto conf = basicConfig();
   conf.dataFileName = getScratchFileName();
@@ -395,6 +395,8 @@ TEST_CASE("Marking duplicates - silent fix", "[Temp]"){
   SignalCatcher sig;
   QAbstractEventDispatcher::connect(&td, &TrackerData::projectRunningUpdate, &sig, &SignalCatcher::emitString);
   QAbstractEventDispatcher::connect(&td, &TrackerData::timeStampListReady, &sig, &SignalCatcher::emitTimeStampList);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::popAlert, &sig, &SignalCatcher::emitAlert);
+
 
   std::string name = "Project to be marked twice!";
   auto id = CreateProjectAndReturnId(td, name);
@@ -406,7 +408,8 @@ TEST_CASE("Marking duplicates - silent fix", "[Temp]"){
     //Request review data
     td.generateReviewData(450);
     std::vector<timeStampForDisplay> lst;
-    lst = sig.stashPayloadForReturn(lst, false);
+    //lst = sig.stashPayloadForReturn(lst, false);
+    lst = sig.what(lst);
 
     REQUIRE(lst.size() ==2);
 
@@ -421,14 +424,19 @@ TEST_CASE("Marking duplicates - silent fix", "[Temp]"){
   SECTION("Exceeds bump"){
     REQUIRE_NOTHROW(td.markProject(id, name, 399));
     REQUIRE_NOTHROW(td.markProject(id, name, 399));
-    REQUIRE_THROWS_AS(td.markProject(id, name, 399), stampCollision); // Too large to bump
-  }
+    REQUIRE_NOTHROW(td.markProject(id, name, 399)); // Now alerts not throws
+    //REQUIRE_THROWS_AS(td.markProject(id, name, 399), stampCollision); // Too large to bump
+ 
+    std::string msg;
+    msg = sig.what<std::string, SignalCatcher::alert>(msg);
+    REQUIRE(msg == "Hey - are you really tracking down to the second!?!\n Wait a moment and try again!");
+ }
 
 }
-TEST_CASE("Marking duplicates - error", "[Temp]"){
+TEST_CASE("Marking duplicates - error", "[QTAware, Slots]"){
   auto app = dummyApp();
   auto conf = basicConfig();
-  conf.dataFileName = "./Scratch/dupetestDb2.db";
+  conf.dataFileName = getScratchFileName();
   conf.stampConfig.ignoreCollisions = false;
   conf.stampConfig.maxBump = 5;
   TrackerData td{conf};
@@ -436,11 +444,37 @@ TEST_CASE("Marking duplicates - error", "[Temp]"){
   SignalCatcher sig;
   QAbstractEventDispatcher::connect(&td, &TrackerData::projectRunningUpdate, &sig, &SignalCatcher::emitString);
   QAbstractEventDispatcher::connect(&td, &TrackerData::timeStampListReady, &sig, &SignalCatcher::emitTimeStampList);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::popAlert, &sig, &SignalCatcher::emitAlert);
 
   std::string name = "Project to be marked twice!";
   auto id = CreateProjectAndReturnId(td, name);
   td.markProject(id, name, 399);
-  REQUIRE_THROWS_AS(td.markProject(id, name, 399), stampCollision);
+  //REQUIRE_THROWS_AS(td.markProject(id, name, 399), stampCollision);
+  REQUIRE_NOTHROW(td.markProject(id, name+"two", 399));
+  std::string msg;
+  msg = sig.what<std::string, SignalCatcher::alert>(msg);
+  REQUIRE(msg.find("Wait a moment and try again!") != std::string::npos);
+}
+TEST_CASE("Marking duplicates - exceeding range", "[No]"){
+  auto app = dummyApp();
+  auto conf = basicConfig();
+  conf.dataFileName = getScratchFileName();
+  conf.stampConfig.ignoreCollisions = true;
+  TrackerData td{conf};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::popAlert, &sig, &SignalCatcher::emitAlert);
+
+  std::string name = "Project to be marked many times!";
+  auto id = CreateProjectAndReturnId(td, name);
+  for(int i = 0; i< 102; i++){
+    td.markProject(id, name, 9+i);
+  }
+  REQUIRE_NOTHROW(td.markProject(id, name+"two", 9));
+  std::string msg;
+  msg = sig.what<std::string, SignalCatcher::alert>(msg);
+  std::cout<<msg<<std::endl;
+  REQUIRE(msg.find("try again later!") != std::string::npos);
 }
 
 // ------- Summaries and display ---------------------------------------------------------------------

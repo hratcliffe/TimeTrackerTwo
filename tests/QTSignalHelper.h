@@ -12,6 +12,7 @@ public:
 static const int close = 1;
 static const int stop = 2;
 static const int pause = 3;
+static const int alert = 4;
 
 template<typename T>
 T stashPayloadForReturn(T payload, bool stash=true){
@@ -19,7 +20,7 @@ T stashPayloadForReturn(T payload, bool stash=true){
     if(stash) payload_int = payload;
     return payload_int;
 }
-template<typename T, int>
+template<typename T, int i>
 T stashPayloadForReturn(T payload, bool stash=true){
     static T payload_int{};
     if(stash) payload_int = payload;
@@ -34,7 +35,18 @@ std::pair<T1, T2> stashPayloadForReturn(T1 a, T2 b, bool stash=true){
     }
     return payload_int;
 }
-
+template<typename T>
+T what(T p){
+  return stashPayloadForReturn<T>(p, false);
+}
+template<typename T, int i>
+T what(T p){
+  return stashPayloadForReturn<T, i>(p, false);
+}
+template<typename T1, typename T2>
+std::pair<T1, T2> what(T1 a, T2 b){
+  return stashPayloadForReturn(a, b, false);
+}
 public slots:
   // No need to name slots - just something unique based on the payload they recieve
   // Use one of the stash functions to store for later retrieval
@@ -54,4 +66,6 @@ public slots:
   void emitPaused(std::string p){stashPayloadForReturn<std::string, SignalCatcher::pause>("paused "+p);}
   void emitReadyToClose(){stashPayloadForReturn<bool, SignalCatcher::close>("ready2close");}
 
+  //Ignore the button text
+  void emitAlert(std::string s, [[maybe_unused]] std::string b){stashPayloadForReturn<std::string, SignalCatcher::alert>(s);}
 };

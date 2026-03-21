@@ -175,8 +175,9 @@ Q_OBJECT
               }
             }catch(stampExhaustion & ee){
               std::stringstream ss;
-              ss<<"The "<<ee.ct<<" seconds after "<<stamp.time<<" are all already marked\n. Review your marks uder the Review tab and try again later!";
+              ss<<"The "<<ee.ct<<" seconds after "<<stamp.time<<" are all already marked\n. Review your marks under the Review tab and try again later!";
               emit popAlert(ss.str(), "Got It!");
+              alert = false; // Don't need the alert below
             }
           }
           if(alert){

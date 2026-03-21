@@ -163,19 +163,27 @@ Q_OBJECT
           emit projectRunningUpdate(name); // Notify view that a project is running
         }catch(stampCollision & e){
           //That time is marked. Check whether we can correct
+          bool alert = true;
           if(stampConfig.ignoreCollisions){
-            // TODO - handle the case where this is exhauted
-            auto fixed = dataHandler->getFirstAvailableAfter(stamp.time);
-            if(fixed - stampConfig.maxBump > 0){
-              stamp.time = fixed;
-              dataHandler->writeTrackerEntry(stamp);
-              emit projectRunningUpdate(name);
+            try{
+              auto fixed = dataHandler->getFirstAvailableAfter(stamp.time);
+              if( (fixed - stamp.time) <= stampConfig.maxBump){
+                stamp.time = fixed;
+                dataHandler->writeTrackerEntry(stamp);
+                alert = false;
+                emit projectRunningUpdate(name);
+              }
+            }catch(stampExhaustion & ee){
+              //TODO In this case we should alert that there's just too much stuff!
+              throw ee;
             }
-          }else{
-            // TODO - something
+          }
+          if(alert){
+            // TODO - alert user "Hey - are you really tracking down to the second!?!"
+            // If not travelling - Wait until "time" and try again
+            // If travelling - you can delete or re-assign marks under 'Review'
             throw e;
           }
-          //Have to alert and ask what to do
         }
       }else{
         throw std::runtime_error("Attempting to Mark a nonexistent project");

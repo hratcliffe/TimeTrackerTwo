@@ -459,8 +459,14 @@ TEST_CASE("Int -Writing Tracker" "[Database]"){
 }
 
 //Checking for free stamps
-TEST_CASE("Int - Getting a free stamp with known data", "[Database]"){
+TEST_CASE("Int - Free stamp with known data", "[Database]"){
   databaseIO theDB{"./InputData/KnownDatabase.db", true};
+  SECTION("Checking - +ve"){
+    REQUIRE(theDB.checkTrackerTimeMarked(689));
+  }
+  SECTION("Checking - -ve"){
+    REQUIRE_FALSE(theDB.checkTrackerTimeMarked(685));
+  }
   SECTION("Free slot"){
     REQUIRE(theDB.getFirstAvailableAfter(3611) == 3611);
   }

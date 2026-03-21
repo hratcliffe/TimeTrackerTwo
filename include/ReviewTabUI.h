@@ -34,7 +34,9 @@ public:
       if (ui.v_items->layout() == nullptr) {
         std::cerr << "Error: v_items layout is null." << std::endl;
       }else{
-        QLocalShortcuts::deleteLayoutItems(ui.v_items->layout());
+        // TODO - double check what we should do here to delete the cells but
+        // not the overall layout
+        QLocalShortcuts::deleteLayoutWidgets(ui.v_items->layout());
       }
 
       for(int i = 0; i < data.size(); i++){

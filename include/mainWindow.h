@@ -90,13 +90,14 @@ Q_OBJECT
     reviewTab = new ReviewTabUI();
     ui->review_target_layout->addWidget(reviewTab);
 
+    // TODO - does not clear when report is generated...
     reportTab = new ReportTabUI(this, ui->report_target_layout);
     ui->report_target_layout->addWidget(reportTab);
 
     //Connecting Tab bar to refresh actions
     auto tabRefresh =  [this](int index){
       if(index == 1) emit timeSummaryRequested(timeSummaryUnit::minute);
-      else if(index == 2) emit reviewRequested();
+      else if(index == 3) emit reviewRequested();
       else if(index == 4) this->reportSelected();
     };
     connect(ui->tabWidget, &QTabWidget::currentChanged, tabRefresh);

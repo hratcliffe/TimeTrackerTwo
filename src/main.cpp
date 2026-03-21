@@ -23,13 +23,14 @@ NOTE: after a period (default 100 days), only summary info is available
 // TODO - if do this, might want to be able to promote 'one-off' to project also if it
 // turned out to be more
 
+// TODO - when app opens, DON't mark active project. Instead note last shutdown and start time and offer some way to see these for a correction. Esp. if it has been > 10 hours say?
+// perhaps add an 'ooops' button which goes back to the time of last close to add a stop mark ?
+
 // TODO - alter summary to allow specifying date range
 // TODO - add configuration update options (selected while running)
 // TODO add a 'load projects from file' option ?
 // TODO add an export option ?
-// TODO add a disable digests option?
 
-// TODO add an 'ooops' button which goes back to the time of last close to add a stop mark ?
 
 // TODO - FINISH: replace 'delete' project button with 'merge', implement
 // TODO - allow actual delete of project with NO stamps
@@ -39,8 +40,6 @@ NOTE: after a period (default 100 days), only summary info is available
 // TODO both FTE and frac seem to cut off 1 tick too early at 99
 
 // TODO - some of the classes are HUGE. Cut them down
-
-//TODO - protect from writing two stamps at same second
 
 //TODO - available frac does not seem to get displayed? Nothing even calls availableSubFrac
 

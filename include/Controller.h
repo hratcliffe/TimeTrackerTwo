@@ -116,6 +116,9 @@ Q_OBJECT
 
     connect(currentData, &TrackerData::readyToClose, themainWindow, &mainWindow::exitApp);
 
+    //Generic alert
+    connect(currentData, &TrackerData::popAlert, themainWindow, &mainWindow::showSimpleAlert);
+
     // Update the view when the project list changes
     connect(currentData, &TrackerData::projectListUpdateEvent, themainWindow, &mainWindow::projectListUpdated);
     connect(currentData, &TrackerData::projectTotalUpdateEvent, themainWindow, &mainWindow::projectTimeUpdated);

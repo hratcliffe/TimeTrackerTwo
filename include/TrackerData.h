@@ -179,10 +179,11 @@ Q_OBJECT
             }
           }
           if(alert){
+            emit popAlert("Hey - are you really tracking down to the second!?!\n Wait a moment and try again!", "Got It!");
             // TODO - alert user "Hey - are you really tracking down to the second!?!"
             // If not travelling - Wait until "time" and try again
             // If travelling - you can delete or re-assign marks under 'Review'
-            throw e;
+            // throw e;
           }
         }
       }else{
@@ -563,5 +564,6 @@ Q_OBJECT
       void projectStopped(); /**< \brief Signal emitted when no project is running */
       void readyToClose(); /**< \brief Signal emitted when data is saved and app is ready to close */
       void oneOffIdUpdate(proIds::Uuid);
+      void popAlert(std::string, std::string);
 };
 #endif // ____trackerData__

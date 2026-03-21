@@ -403,6 +403,14 @@ Q_OBJECT
       }
     }
 
+    void showSimpleAlert(std::string message, std::string buttonMessage){
+      QMessageBox box;
+      box.setText(message.c_str());
+      //box.setDefaultButton(QMessageBox::Ok);
+      box.addButton(buttonMessage.c_str(), QMessageBox::AcceptRole);
+      box.exec();
+    }
+
     void reportSelected(){
       //Need project details
       emit projectDetailsRequiredAll(makeCallback(&mainWindow::fillReportsImpl));

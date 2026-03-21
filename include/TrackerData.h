@@ -174,16 +174,13 @@ Q_OBJECT
                 emit projectRunningUpdate(name);
               }
             }catch(stampExhaustion & ee){
-              //TODO In this case we should alert that there's just too much stuff!
-              throw ee;
+              std::stringstream ss;
+              ss<<"The "<<ee.ct<<" seconds after "<<stamp.time<<" are all already marked\n. Review your marks uder the Review tab and try again later!";
+              emit popAlert(ss.str(), "Got It!");
             }
           }
           if(alert){
             emit popAlert("Hey - are you really tracking down to the second!?!\n Wait a moment and try again!", "Got It!");
-            // TODO - alert user "Hey - are you really tracking down to the second!?!"
-            // If not travelling - Wait until "time" and try again
-            // If travelling - you can delete or re-assign marks under 'Review'
-            // throw e;
           }
         }
       }else{

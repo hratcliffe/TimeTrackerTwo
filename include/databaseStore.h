@@ -21,8 +21,14 @@ class badLookup : public std::runtime_error{
 
 class stampCollision : public std::runtime_error{
     public:
-    long time =-1;
+    long time = -1;
     stampCollision(const char * msg, long time_in):runtime_error(msg){time=time_in;};
+};
+
+class stampExhaustion : public std::runtime_error{
+    public:
+    size_t ct = 0;
+    stampExhaustion(const char * msg, long ct_in):runtime_error(msg){ct=ct_in;};
 };
 
 class databaseStore{
@@ -684,6 +690,51 @@ class databaseStore{
         sqlite3_finalize(prep_cmd);
         return row_fnd;
       }
+    }
+    /**
+     * @brief Get the first usable timecode after 'time'
+     * 
+     * Gets the lowest unmarked timecode in [time,).
+     * @param time Desired time
+     * @pre Time >=0
+     * @post The closest unmarked timecode greater than time is returned. The database connection does not _become_ unusable.
+     * @throws Database error OR stampExhaustion error if no free timecode is found after a max number are checked
+     * @return timecode
+     */
+    timecode getFirstAvailableAfter(timecode time){
+      const int lim = 100;
+      std::string cmd = "SELECT time, project_id from timestamps t WHERE t.time >= ? ORDER BY t.time ASC LIMIT ?;";
+      sqlite3_stmt * prep_cmd;
+      int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+      sqlite3_bind_int64(prep_cmd, 1, time);
+      sqlite3_bind_int64(prep_cmd, 2, lim);
+
+      timecode to_chk = time, occ = 0;
+      int ct = 0;
+      bool free = false;
+      while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+        occ = sqlite3_column_int64(prep_cmd, 0);
+        ct ++;
+        if(occ == to_chk){
+            to_chk ++; // Try next
+        }else{
+            free = true;
+            break;
+        }
+      }
+      sqlite3_finalize(prep_cmd);
+      if((free && err == SQLITE_ROW) || ct < lim){
+        // Found a free one between two rows in the set, before running out of rows
+        // OR reached the end of our fetch - therefore the next code is free
+        return to_chk;
+      }else if(! free){
+        // Did not find one!
+        throw stampExhaustion("Failed to find a free stamp", lim);
+      }else if(err != SQLITE_DONE){
+        // Other errors
+        throw std::runtime_error("Failed to fetch tracker entries");
+      }
+      return 0;
     }
 
     std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1){

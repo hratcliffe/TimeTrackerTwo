@@ -35,13 +35,23 @@ public:
       data = data_in;
       //Here would stash existing check-marks. NOTE- stamp may have been deleted or added so
       // have to MATCH them
-      //Clearing
-      if (ui.v_items->layout() == nullptr) {
-        std::cerr << "Error: v_items layout is null." << std::endl;
-      }else{
-        // TODO - double check what we should do here to delete the cells but
-        // not the overall layout
-        QLocalShortcuts::deleteLayoutWidgets(ui.v_items->layout());
+      //Clearing - safely remove all items from parent layout
+      if (auto vl = ui.v_items->layout()) {
+        QLayoutItem *item;
+        while ((item = vl->takeAt(0)) != nullptr) {
+          // If this item is a layout (e.g., our QHBoxLayout row),
+          // iterate through its children and delete widgets
+          if (auto layout = item->layout()) {
+            QLayoutItem *child;
+            while ((child = layout->takeAt(0)) != nullptr) {
+              if (child->widget()) delete child->widget();
+              delete child;
+            }
+            // Don't manually delete layout - let the item cleanup handle it
+          }
+          // Deleting the item cleans up the nested layout if it has one
+          delete item;
+        }
       }
 
       for(int i = 0; i < data.size(); i++){

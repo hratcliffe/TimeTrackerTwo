@@ -26,9 +26,6 @@ public:
     }
 
     void reviewDisplayUpdated(std::vector<timeStampForDisplay> data){
-      for(auto item: data){
-        std::cout<<item<<std::endl;
-      }
 
       //Clearing
       if (ui.v_items->layout() == nullptr) {

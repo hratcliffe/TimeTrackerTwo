@@ -8,6 +8,8 @@
 // ReadOnlyFile.db - permission u-w
 // UnreadableFile.db - permission u-rw
 
+//TODO - for tests which throw, check that another action on the same connection is valid
+
 // Connecting and setup -----------------------------------------------------------------
 
 TEST_CASE("Connect", "[Database]"){

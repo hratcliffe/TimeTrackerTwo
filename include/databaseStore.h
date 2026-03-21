@@ -11,10 +11,18 @@
 #include "dataObjects.h"
 #include "idGenerators.h"
 //TODO - configurable error logging!
+//TODO - more exceptions?
+// TODO - Ensure finalize occurs in error cases!
 
 class badLookup : public std::runtime_error{
   public:
   badLookup(const char * msg):runtime_error(msg){;};
+};
+
+class stampCollision : public std::runtime_error{
+    public:
+    long time =-1;
+    stampCollision(const char * msg, long time_in):runtime_error(msg){time=time_in;};
 };
 
 class databaseStore{
@@ -64,7 +72,7 @@ class databaseStore{
 
         // NOTE: ideally would have a foreign key here BUT since it can be either a project OR a sub OR a one-off
         // that would require an additional table
-        cmds["timestamps"] = "CREATE TABLE IF NOT EXISTS timestamps(id INTEGER PRIMARY KEY, time INTEGER, project_id CHAR(36));";
+        cmds["timestamps"] = "CREATE TABLE IF NOT EXISTS timestamps(id INTEGER PRIMARY KEY, time INTEGER, project_id CHAR(36), UNIQUE(time));";
         cmds["digest_periods"] = "CREATE TABLE IF NOT EXISTS digest_periods(id INTEGER PRIMARY KEY, start INTEGER, duration INTEGER);";
         //NOTE project id can be a project OR a subproject
         cmds["time_digests"] = "CREATE TABLE IF NOT EXISTS time_digests(id INTEGER PRIMARY KEY, period_id INTEGER, duration INTEGER, project_id CHAR(36), FOREIGN KEY(period_id) REFERENCES digest_periods(id) UNIQUE(period_id, project_id));";
@@ -119,7 +127,7 @@ class databaseStore{
           throw std::runtime_error("Intended to open read-only, but is writeable");
         }
         if(verbose) std::cout<<"Opened Database"<<std::endl;
-
+        if(!readOnly) sqlite3_extended_result_codes(DB, 1);
         // Enable foreign keys
         enable_foreign_keys();
         // Check if tables exist, create if not
@@ -291,6 +299,15 @@ class databaseStore{
         }
         sqlite3_finalize(prep_cmd);
     }
+
+    /** @brief Write a timstamp
+     * 
+     * @param stamp Timestamp to write
+     * @pre Stamp time is not already marked
+     * @post A new entry for the given time and ID is created. The database connection does not _become_ unusable.
+     * @throws runtime_error if there are database problems
+     * @throws stampCollision if the time is already marked
+     */
     void writeTrackerEntry(const timeStamp & stamp){
 
         //Unpacking
@@ -300,16 +317,21 @@ class databaseStore{
         std::string cmd;
         sqlite3_stmt * prep_cmd;
         int err = 0;
-        cmd = "insert into timestamps(time, project_id) values(?, ?)"; // No conflict clause here - if we want to avoid overlaps that is a task for the data model
+        cmd = "insert into timestamps(time, project_id) values(?, ?)";
         err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_int64(prep_cmd, 1, time);
         sqlite3_bind_text(prep_cmd, 2, project_id.c_str(), project_id.length(), SQLITE_STATIC);
         err = sqlite3_step(prep_cmd);
         if(err == SQLITE_DONE) err = SQLITE_OK;
-        if(err != SQLITE_OK){
+        if(err == SQLITE_CONSTRAINT_UNIQUE){
+            sqlite3_finalize(prep_cmd);
+            throw stampCollision(("Stamp collides with existing entry "+std::to_string(time)).c_str(), time);
+        }else if(err != SQLITE_OK){
+            sqlite3_finalize(prep_cmd);
             throw std::runtime_error("Failed to write tracker entry");
+        }else{
+            sqlite3_finalize(prep_cmd);
         }
-        sqlite3_finalize(prep_cmd);
     }
 
     void deleteProject(proIds::Uuid const & id){

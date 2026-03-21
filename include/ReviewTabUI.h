@@ -53,6 +53,9 @@ public:
           delete item;
         }
       }
+      if(data.size() == 0){
+        ui.v_delete_button->setEnabled(false);
+      }
 
       for(int i = 0; i < data.size(); i++){
         auto item = data[i];
@@ -74,17 +77,29 @@ public:
 
     void prepareListForDelete(){
       std::vector<timeStamp> lst;
+      int latestValid = 0;
       for(size_t i = 0; i< ui.v_items->count(); i++){
         // First item is checkbox, second string
         QCheckBox * box = static_cast<QCheckBox *>(ui.v_items->itemAt(i)->layout()->itemAt(0)->widget());
         if(box->isChecked()){
           lst.push_back({data[i].time, data[i].projectUid});
+          if(i > 1 && i == data.size()-1){
+            //Have to update the state in the view, according to whether the remaining current state is a stop or a project
+            if( data[latestValid].projectUid == proIds::NullUid){
+              //Stop
+              emit currentStatusUpdatedS();
+            }else{
+              //A project
+              emit currentStatusUpdatedP(data[latestValid].projectName);
+            }
+          }else if(data.size() == 1){
+            //Deleting the only stamp is also a 'stop' action
+            emit currentStatusUpdatedS();
+          }
+        }else{
+          latestValid = i;
         }
         //TODO - use a QVariant or such instead of assuming the data list is intact
-      }
-      std::cout<<"Will delete: \n";
-      for(auto item: lst){
-        std::cout<<item<<std::endl;
       }
       emit(listDeletionRequested(lst));
     }
@@ -94,5 +109,8 @@ public:
       void reviewContentUpdated(std::vector<timeStampForDisplay> & lst){reviewDisplayUpdated(lst);}
     signals:
       void listDeletionRequested(std::vector<timeStamp>&);
+      void currentStatusUpdatedP(std::string);
+      void currentStatusUpdatedS();
+
 };
 #endif

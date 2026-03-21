@@ -444,6 +444,7 @@ Q_OBJECT
     }
 
     void handleCloseRequest(bool silent, timecode now){
+      //TODO write state for last-closed time
       if(silent){
         // Just exit
         // TODO - can we persist a pause?

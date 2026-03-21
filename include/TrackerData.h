@@ -31,7 +31,7 @@ Q_OBJECT
   trackerTypes::projectStatus currentProjectStatus; /**< \brief Current project status*/
   dataIO * dataHandler = nullptr; /**< \brief Data handler for reading/writing data */
 
-  timeStampCollisionConfig stampConfig;
+  timeStampIssueConfig stampConfig;
 
   void reapplyTags(timeStamp & t){
     // Timestamps come from DB without proper tags. Make sure they are in place
@@ -115,7 +115,7 @@ Q_OBJECT
 
     //Load existing projects from the data backend
     // TODO - use start and end dates
-    void loadProjects(timecode now){
+    void loadProjects(timecode now, timecode lastClose){
       if(! dataHandler) throw std::runtime_error("No Data Backend Found");
 
       auto projectList = dataHandler->fetchProjectList();
@@ -136,7 +136,12 @@ Q_OBJECT
         if(latest.projectUid != proIds::NullUid){
           // Project in progress. Place a mark
           reapplyTags(latest);
-          //TODO - if it has been a long time, offer an option to place an end mark?
+          if(latest.time+ stampConfig.aLongTime < now){
+            //It's been a while
+            std::stringstream ss;
+            ss<<"It's been about "<< displayFloatHalves((now-latest.time)/timeFactors::hour)<<" hours since you started "<<thePM.getName(latest.projectUid);
+            emit popTT(ss.str(), "That's right", "Oops, let me fix that");
+          }
           if(latest.projectUid.isTaggedAs(proIds::uidTag::oneoff)){
             // Need to get the name for mark
             auto proj = dataHandler->readOneOffProject(latest.projectUid);
@@ -563,5 +568,6 @@ Q_OBJECT
       void readyToClose(); /**< \brief Signal emitted when data is saved and app is ready to close */
       void oneOffIdUpdate(proIds::Uuid);
       void popAlert(std::string, std::string);
+      void popTT(std::string, std::string, std::string);
 };
 #endif // ____trackerData__

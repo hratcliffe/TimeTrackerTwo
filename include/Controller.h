@@ -26,12 +26,19 @@ Q_OBJECT
 
     themainWindow = new mainWindow();
 
-    currentData = new TrackerData(config);
-    connectSignals();
-
     clock = new appClock();
 
-    currentData->loadProjects(clock->now());
+    currentData = new TrackerData(config);
+    currentData->writeState("Opened", clock->now());
+
+    connectSignals();
+    timecode lastClose=0;
+    try{
+      lastClose = currentData->readState("Closed");
+    }catch(badLookup & e){
+      //No prior close mark to check
+    }
+    currentData->loadProjects(clock->now(), lastClose);
 
     disableDigests = config.digestConfig.disableDigests;
     //These are the internal parameters for how often we should check
@@ -106,6 +113,7 @@ Q_OBJECT
     currentData->writeState("lastDigestCreationTime", timeWrapper::toSeconds(lastDigestCreationTime));
     currentData->writeState("digestCreationDelay", timeWrapper::toSeconds(digestCreationDelay));
 
+    currentData->writeState("Closed", clock->now());
   }
 
   void connectSignals(){
@@ -191,6 +199,8 @@ Q_OBJECT
     connect(themainWindow, &mainWindow::fetchTimeTravelInfo, [this](){themainWindow->showTimeTravelDialog(this->clock->shortTimeString(), QDateTime::currentDateTime());});
     connect(themainWindow, &mainWindow::timeTravelRequested, [this](QDateTime time){this->clock->travelTo(fromQDateTime(time));});
 
+    //Offer time-travel as an option
+    connect(currentData, &TrackerData::popTT, themainWindow, &mainWindow::showTTOption);
   }
 
   void checkTimedEvents(){

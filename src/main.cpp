@@ -46,6 +46,8 @@ NOTE: after a period (default 100 days), only summary info is available
 //TODO - Should Projects and subs have unique names?
 // TODO - what about one-offs? Maybe Name+day?
 
+//TODO - when time-travelling, clock does not get rid of the ;App string after 'return to now' - should this use 'restore to now' function?
+// If time-travel, the L footer does not update to the project at that time
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);

@@ -411,6 +411,17 @@ Q_OBJECT
       box.exec();
     }
 
+    void showTTOption(std::string message, std::string buttonMessage1, std::string buttonMessage2){
+      QMessageBox box;
+      box.setText(message.c_str());
+      auto *bb = box.addButton(buttonMessage2.c_str(), QMessageBox::AcceptRole);
+      box.addButton(buttonMessage1.c_str(), QMessageBox::RejectRole);
+      box.exec();
+      if(box.clickedButton() == bb){
+        emit fetchTimeTravelInfo();
+      }
+    }
+
     void reportSelected(){
       //Need project details
       emit projectDetailsRequiredAll(makeCallback(&mainWindow::fillReportsImpl));

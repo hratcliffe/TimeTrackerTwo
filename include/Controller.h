@@ -169,7 +169,13 @@ Q_OBJECT
     //Review view
     connect(themainWindow, &mainWindow::reviewRequested, [this](){currentData->generateReviewData(this->clock->now());});
     connect(currentData, &TrackerData::timeStampListReady, themainWindow->reviewTab, &ReviewTabUI::reviewDisplayUpdated);
- 
+    // Review deletion
+    connect(themainWindow->reviewTab, &ReviewTabUI::listDeletionRequested, currentData, &TrackerData::deleteTimeStampList);
+    connect(currentData, &TrackerData::timeStampListUpdateEvent, themainWindow, &mainWindow::reviewRequested);
+    // Review can cause current status to change
+    connect(themainWindow->reviewTab, &ReviewTabUI::currentStatusUpdatedP, themainWindow, &mainWindow::updateRunningProjectDisplay);
+    connect(themainWindow->reviewTab, &ReviewTabUI::currentStatusUpdatedS, themainWindow, &mainWindow::updateStoppedProjectDisplay);
+
     //Clock ticking
     clockTicker = new QTimer();
     clockTicker->start(1000);

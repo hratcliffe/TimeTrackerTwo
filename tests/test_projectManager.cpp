@@ -411,14 +411,24 @@ TEST_CASE("Moving sub between parents - valid case", "[Basic]"){
   pd2.FTE = 0.45;
   auto pid2 = pm.addProject(pd2);
 
-  pm.moveSubproject(pid, sid, pid2);
-  REQUIRE(pm.isSubProject(sid));
-  auto det = pm.getSubDetails(sid);
-  REQUIRE(det.name == sd.name);
-  REQUIRE_THAT(pm.getFTE(pid), WithinAbs(0.15, margin));
-  REQUIRE_THAT(pm.getFTE(pid2), WithinAbs(0.6, margin));
-  REQUIRE_THAT(pm.getFrac(sid), WithinAbs(0.25, margin)); //Is 1/4 of the new FTE
-
+  SECTION("Transfer FTE"){
+    pm.moveSubproject(pid, sid, pid2);
+    REQUIRE(pm.isSubProject(sid));
+    auto det = pm.getSubDetails(sid);
+    REQUIRE(det.name == sd.name);
+    REQUIRE_THAT(pm.getFTE(pid), WithinAbs(0.15, margin));
+    REQUIRE_THAT(pm.getFTE(pid2), WithinAbs(0.6, margin));
+    REQUIRE_THAT(pm.getFrac(sid), WithinAbs(0.25, margin)); //Is 1/4 of the new FTE
+  }
+  SECTION("Fixed FTE"){
+    pm.moveSubproject(pid, sid, pid2, true);
+    REQUIRE(pm.isSubProject(sid));
+    auto det = pm.getSubDetails(sid);
+    REQUIRE(det.name == sd.name);
+    REQUIRE_THAT(pm.getFTE(pid), WithinAbs(0.3, margin));
+    REQUIRE_THAT(pm.getFTE(pid2), WithinAbs(0.45, margin));
+    REQUIRE_THAT(pm.getFrac(sid), WithinAbs(0.3333, margin)); //Is 1/4 of the new FTE
+  }
 }
 //Transfer failure cases
 TEST_CASE("Moving sub between parents - simple invalid", "[Basic]"){

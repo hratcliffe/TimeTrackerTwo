@@ -187,6 +187,27 @@ TEST_CASE("Getting Parent from Sub", "[Basic]"){
   REQUIRE(pm.getParentId(sub) == pid);
   REQUIRE(pm.getParentNameForSub(sub) == proj.name);
 }
+TEST_CASE("Getting list of subs from parent", "[Basic]"){
+  projectManager pm;
+  auto pd = createSubProj();
+  pd.name = "BB9E0";
+  pd.frac = 0.43;
+  auto pid = pm.addProject(createProj());
+  auto sid1 = pm.addSubproject(pd, pid);
+  pd.name = "dfhk";
+  auto sid2 = pm.addSubproject(pd, pid);
+
+  auto lst = pm.getSubs(pid);
+  REQUIRE(lst.size() == 2);
+  {
+    auto chk = [sid1](proIds::Uuid id){return id == sid1;};
+    REQUIRE(std::find_if(lst.begin(), lst.end(), chk) != lst.end());
+  }
+  {
+    auto chk = [sid2](proIds::Uuid id){return id == sid2;};
+    REQUIRE(std::find_if(lst.begin(), lst.end(), chk) != lst.end());
+  }
+}
 
 // ------- Removing ----------------------------------------------------------------
 TEST_CASE("Deleting project", "[Basic]"){

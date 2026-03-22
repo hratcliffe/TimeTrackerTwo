@@ -251,6 +251,20 @@ class projectManager{
       }
     }
 
+    /**
+     * @brief Get the list of subproject ids by parent
+     * 
+     * @param uid Parent id
+     * @return Vector of sub ids. Empty if uid is not a project OR has no subs
+     */
+    std::vector<proIds::Uuid> getSubs(proIds::Uuid uid){
+      if(projects.count(uid)> 0){
+        return projects[uid].subprojects;
+      }else{
+        return std::vector<proIds::Uuid>{};
+      }
+    }
+
     float getFTE(proIds::Uuid uid){
       if(projects.count(uid) > 0){
         return projects[uid].FTE;

@@ -2,7 +2,7 @@
 #include "shorthand.h"
 
 #include "projectManager.h"
-
+#include "shorthand.h"
 // Basic manager --------------------------------------------------------------------
 
 TEST_CASE("Initialise PM and Generator", "[Basic]"){
@@ -395,6 +395,87 @@ TEST_CASE("Updating sub frac", "[Basic]"){
   pm.setFrac(proj, 0.33);
   auto frac = pm.availableSubFrac(pid);
   REQUIRE_THAT(frac, WithinAbs(0.27, margin));
+}
+
+// Transferring a sub between parents
+TEST_CASE("Moving sub between parents - valid case", "[Basic]"){
+  projectManager pm;
+  auto sd = createSubProj();
+  sd.frac = 0.5;
+  auto pd = createProj();
+  pd.FTE = 0.3;
+  auto pid = pm.addProject(pd);
+  auto sid = pm.addSubproject(sd, pid);
+  auto pd2 = createProj();
+  pd2.name = "New parent Proj";
+  pd2.FTE = 0.45;
+  auto pid2 = pm.addProject(pd2);
+
+  pm.moveSubproject(pid, sid, pid2);
+  REQUIRE(pm.isSubProject(sid));
+  auto det = pm.getSubDetails(sid);
+  REQUIRE(det.name == sd.name);
+  REQUIRE_THAT(pm.getFTE(pid), WithinAbs(0.15, margin));
+  REQUIRE_THAT(pm.getFTE(pid2), WithinAbs(0.6, margin));
+  REQUIRE_THAT(pm.getFrac(sid), WithinAbs(0.25, margin)); //Is 1/4 of the new FTE
+
+}
+//Transfer failure cases
+TEST_CASE("Moving sub between parents - simple invalid", "[Basic]"){
+  auto theGen = uniqueIdGenerator();
+  projectManager pm;
+  auto sd = createSubProj();
+  sd.frac = 0.5;
+  auto pd = createProj();
+  pd.FTE = 0.3;
+  auto pid = pm.addProject(pd);
+  auto sid = pm.addSubproject(sd, pid);
+  auto pd2 = createProj();
+  pd2.name = "A second Proj";
+  pd2.FTE = 0.45;
+  auto pid2 = pm.addProject(pd2);
+
+  SECTION("Not the parent - invalid"){
+    REQUIRE_THROWS(pm.moveSubproject(theGen.getNextId(), sid, pid2));
+  }
+  SECTION("Not the parent - wrong project"){
+    REQUIRE_THROWS(pm.moveSubproject(pid2, sid, pid));
+  }
+  SECTION("Not a sub"){
+    REQUIRE_THROWS(pm.moveSubproject(pid, theGen.getNextId().tag(proIds::uidTag::sub), pid2));
+  }
+  SECTION("Not another"){
+    REQUIRE_THROWS(pm.moveSubproject(pid, sid, theGen.getNextId()));
+  }
+  SECTION("Dupe"){
+    REQUIRE_THROWS(pm.moveSubproject(pid, sid, pid));
+  }
+}
+TEST_CASE("Moving sub between parents - insufficient frac", "[Basic]"){
+  //In this case we try to transfer more FTE than can be absorbed
+  projectManager pm;
+  auto sd = createSubProj();
+  sd.frac = 0.5;
+  auto pd = createProj();
+  pd.FTE = 0.4;
+  auto pid = pm.addProject(pd);
+  auto sid = pm.addSubproject(sd, pid);
+  auto pd2 = createProj();
+  pd2.name = "New parent Proj";
+
+  SECTION("New parent simply too small"){
+    pd2.FTE = 0.18;
+    auto pid2 = pm.addProject(pd2);
+    REQUIRE_THROWS(pm.moveSubproject(pid, sid, pid2, true));
+  }
+  SECTION("New parent already assigned"){
+    pd2.FTE = 0.4;
+    sd.frac = 0.75;
+    //Used up 0.75 of 0.4 = 0.3 leaving only 0.1
+    auto pid2 = pm.addProject(pd2);
+    auto sid2 = pm.addSubproject(sd, pid2);
+    REQUIRE_THROWS(pm.moveSubproject(pid, sid, pid2, true));
+  }
 }
 
 //---------- Fetching Details -----------------------------------------------------

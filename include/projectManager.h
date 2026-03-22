@@ -96,6 +96,65 @@ class projectManager{
       parent.subprojects.erase(std::find(parent.subprojects.begin(), parent.subprojects.end(), s_id));
       subprojects[s_id].parentUid = proIds::NullUid;
     }
+    /**
+     * @brief Move sub project between parents
+     * 
+     * Moves a subproject from one parent to another. This does not affect any time associated with either, but will change the
+     * summary
+     * 
+     * @pre all parameters are not null. 
+     * @pre s_id is a valid subproject. p_id is a valid project and the parent of s_id. 
+     * @pre new_p_id is a valid project and is not equal to p_id
+     * @post new_p_id is the parent of s_id. FTE is transferred IF lockedFTE is false
+     * 
+     * @param p_id Initial parent id
+     * @param s_id Subproject id
+     * @param new_p_id New parent id
+     * @param lock_parent_FTE True if no FTE should be transferred between parents - in this case new_p_id must have sufficient fraction to absorb
+     */
+    void moveSubproject(const proIds::Uuid & p_id, const proIds::Uuid & s_id, const proIds::Uuid & new_p_id, bool lock_parent_FTE=false){
+      //Checks roughly in order of difficulty
+      if(p_id == new_p_id){
+        throw std::runtime_error("Cannot move subproject - new parent same as old");
+      }else if(p_id == proIds::NullUid || s_id ==proIds::NullUid || new_p_id == proIds::NullUid){
+        throw std::runtime_error("Cannot move subproject - null id supplied");
+      }else if(!isProject(p_id) || !isSubProject(s_id) || !isProject(new_p_id)){
+        throw std::runtime_error("Cannot move subproject, invalid id supplied");
+      }else if(getParentId(s_id) != p_id){
+        // This is supplied as a double check
+        throw std::runtime_error("Cannot move subproject - that is not its parent");
+      }
+      //Also Check the FTE to be moved
+      auto &proj = projects[p_id];
+      auto &sub = subprojects[s_id];
+      auto &newp = projects[new_p_id];
+      if(lock_parent_FTE){
+        //In this case we don't MOVE any FTE so we just rejig the fraction representation
+        float new_frac = (proj.FTE * sub.frac)/(newp.FTE); // New FTE stays the same, but frac rep. may change
+        //update the subproject frac
+        float avail = availableSubFracImpl(projects[new_p_id]);
+        if(avail < new_frac){
+          throw std::runtime_error("Insufficient fraction to add sub");
+        }
+        sub.frac = new_frac;
+      }else{
+        //In this case we transfer the entire FTE allocation
+        float FTE_transfer = proj.FTE * sub.frac; // FTE to be moved
+        float new_frac = FTE_transfer/(newp.FTE+FTE_transfer); // Calc fraction of updated FTE
+        //update the subproject frac
+        sub.frac = new_frac;
+        // And Transfer the FTE
+        proj.FTE -= FTE_transfer;
+        newp.FTE += FTE_transfer;
+      }
+      // Now update the subproject entry to point to parent
+      sub.parentUid = new_p_id;
+
+      // Add the id to the list for newp and remove from proj
+      newp.subprojects.push_back(s_id);
+      proj.subprojects.erase(std::find(proj.subprojects.begin(), proj.subprojects.end(), s_id));
+
+   }
 
     //IMPORTANT - these do not expect Tagged Ids since we do not know what we have
     bool isProject(proIds::Uuid id ){return projects.count(id) > 0;};

@@ -17,6 +17,18 @@ NOTE: after a period (default 100 days), only summary info is available
 
 */
 
+/*
+NOTE: The "subprojects" are represented as a fraction of their parent. If the parent
+FTE changes, the subproject remains _at the same fraction_ and thus also changes FTE.
+This is deliberate.
+Transferring a subproject from one parent to another transfers the equivalent FTE (not the fraction)
+TODO - implement a function to add parent time while preserving subs FTE
+TODO - add merge option to move a sub by fraction ??
+TODO - add option to move a sub, either by fraction or FTE
+*/
+
+//TODO history of project and sub data ??
+
 // TODO - csv and pdf? reporting
 // TODO - add a 'recent events' Tab and show recent start, stop etca
 // TODO - BETTER: stamp review tab which shows recent marks and allows to remove. Also should allow time travel to insert

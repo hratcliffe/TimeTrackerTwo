@@ -32,13 +32,14 @@ Q_OBJECT
     currentData->writeState("Opened", clock->now());
 
     connectSignals();
-    timecode lastClose=0;
+    [[maybe_unused]] timecode lastClose=0;
     try{
       lastClose = currentData->readState("Closed");
     }catch(badLookup & e){
       //No prior close mark to check
     }
-    currentData->loadProjects(clock->now(), lastClose);
+    //TODO - do something if it's been a while since last closed?
+    currentData->loadProjects(clock->now());
 
     disableDigests = config.digestConfig.disableDigests;
     //These are the internal parameters for how often we should check

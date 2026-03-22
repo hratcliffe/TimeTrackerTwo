@@ -430,6 +430,50 @@ TEST_CASE("Moving sub between parents - valid case", "[Basic]"){
     REQUIRE_THAT(pm.getFrac(sid), WithinAbs(0.3333, margin)); //Is 1/4 of the new FTE
   }
 }
+TEST_CASE("Moving sub between parents - valid case, multiple subs", "[Basic]"){
+  projectManager pm;
+  auto sd = createSubProj();
+  sd.frac = 0.5;
+  auto pd = createProj();
+  pd.FTE = 0.3;
+  auto pid = pm.addProject(pd);
+  auto sid = pm.addSubproject(sd, pid);
+  auto sd2 = createSubProj();
+  sd2.name = "Wibble";
+  sd2.frac = 0.4;
+  auto sid2 = pm.addSubproject(sd2, pid);
+  auto pd2 = createProj();
+  pd2.name = "New parent Proj";
+  pd2.FTE = 0.45;
+  auto pid2 = pm.addProject(pd2);
+  auto sd3 = createSubProj();
+  sd2.name = "Wobble";
+  sd2.frac = 0.4;
+  auto sid3 = pm.addSubproject(sd3, pid2); // Existing sub...
+
+  SECTION("Transfer FTE"){
+    pm.moveSubproject(pid, sid, pid2);
+    REQUIRE(pm.isSubProject(sid));
+    auto det = pm.getSubDetails(sid);
+    REQUIRE(det.name == sd.name);
+    REQUIRE_THAT(pm.getFTE(pid), WithinAbs(0.15, margin));
+    REQUIRE_THAT(pm.getFTE(pid2), WithinAbs(0.6, margin));
+    REQUIRE_THAT(pm.getFrac(sid), WithinAbs(0.25, margin)); //Is 1/4 of the new FTE
+    REQUIRE_THAT(pm.getFrac(sid2), WithinAbs(0.8, margin)); //This should go up - to maintain the FTE
+    REQUIRE_THAT(pm.getFrac(sid3), WithinAbs(0.3, margin)); // 0.45*0.4 -> 0.18 FTE, stays same
+  }
+  SECTION("Fixed FTE"){
+    pm.moveSubproject(pid, sid, pid2, true);
+    REQUIRE(pm.isSubProject(sid));
+    auto det = pm.getSubDetails(sid);
+    REQUIRE(det.name == sd.name);
+    REQUIRE_THAT(pm.getFTE(pid), WithinAbs(0.3, margin));
+    REQUIRE_THAT(pm.getFTE(pid2), WithinAbs(0.45, margin));
+    REQUIRE_THAT(pm.getFrac(sid), WithinAbs(0.3333, margin)); //Is 1/4 of the new FTE
+    REQUIRE_THAT(pm.getFrac(sid2), WithinAbs(0.4, margin)); //This should be unchanged - still 0.4 of the unchanged FTE
+    REQUIRE_THAT(pm.getFrac(sid3), WithinAbs(0.4, margin)); //Also unchanged
+  }
+}
 //Transfer failure cases
 TEST_CASE("Moving sub between parents - simple invalid", "[Basic]"){
   auto theGen = uniqueIdGenerator();

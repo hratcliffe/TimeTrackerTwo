@@ -137,12 +137,27 @@ class projectManager{
           throw std::runtime_error("Insufficient fraction to add sub");
         }
         sub.frac = new_frac;
+        proj.subprojects.erase(std::find(proj.subprojects.begin(), proj.subprojects.end(), s_id));
       }else{
         //In this case we transfer the entire FTE allocation
         float FTE_transfer = proj.FTE * sub.frac; // FTE to be moved
         float new_frac = FTE_transfer/(newp.FTE+FTE_transfer); // Calc fraction of updated FTE
         //update the subproject frac
         sub.frac = new_frac;
+        //Remove from proj so we can recalculate
+        proj.subprojects.erase(std::find(proj.subprojects.begin(), proj.subprojects.end(), s_id));
+        // And those for any other subprojects of original:
+         for(auto sub_id : proj.subprojects){
+          if(sub_id != s_id){
+            // Recalculate the subfraction
+            setFrac(sub_id, getFrac(sub_id) * proj.FTE/(proj.FTE-FTE_transfer));
+          }
+        }
+        // And those for any other subprojects of new:
+        for(auto sub_id : newp.subprojects){
+          // Recalculate the subfraction
+          setFrac(sub_id, getFrac(sub_id) * newp.FTE/(newp.FTE + FTE_transfer));
+        }
         // And Transfer the FTE
         proj.FTE -= FTE_transfer;
         newp.FTE += FTE_transfer;
@@ -152,8 +167,6 @@ class projectManager{
 
       // Add the id to the list for newp and remove from proj
       newp.subprojects.push_back(s_id);
-      proj.subprojects.erase(std::find(proj.subprojects.begin(), proj.subprojects.end(), s_id));
-
    }
 
     //IMPORTANT - these do not expect Tagged Ids since we do not know what we have

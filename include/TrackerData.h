@@ -531,6 +531,39 @@ Q_OBJECT
         dataHandler->deleteProject(current);
         // Delete from map
         thePM.deleteProjectById(current);
+      }else if((current.isProj() && sub.isNull()) && (target.isProj() && sub_target.isNull()) && current_has_subs){
+        //Rewrite the timestamps
+        dataHandler->rewriteTrackerProjectId(current, target);
+
+        //Fetch the FTE for current NOT USED BY SUBS and add it to target
+        auto free_frac = thePM.availableSubFrac(current);
+        auto targetData = dataHandler->readProject(target);
+
+        targetData.FTE += (thePM.getFTE(current) * free_frac); // Transferring parent-not-sub FTE
+        thePM.setFTE(target, targetData.FTE);
+
+        //Transferring subs
+        // Note TOTAL FTE will change with each one we do....
+        auto subs = thePM.getSubs(current);
+        for(auto sub_id : subs){
+          thePM.moveSubproject(current, sub_id, target);
+        }
+        //Now write the updated subs, including the Ids
+        auto t_subs = thePM.getSubs(target);
+        for(auto sub_id : t_subs){
+          auto details = thePM.getSubDetails(sub_id);
+          auto data = dataHandler->readSubproject(sub_id);
+          data.frac = details.frac;
+          data.parentUid = target; // Rewrites id for those we've moved
+          dataHandler->updateSubproject(data);
+        }
+        dataHandler->updateProject(targetData);
+        // Delete the details in DB
+        dataHandler->deleteProject(current);
+        // Delete from map
+        thePM.deleteProjectById(current);
+
+
       }else if(current.isProj() && !sub.isNull() && target.isProj() && !sub_target.isNull()){
         auto firstParent = thePM.getParentId(current);
         if(firstParent == thePM.getParentId(target)){

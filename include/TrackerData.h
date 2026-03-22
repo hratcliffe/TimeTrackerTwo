@@ -22,6 +22,15 @@ class projectStatus{
     std::string name;
     projectStatusFlag status = projectStatusFlag::none; /**< \brief Status of project */
 };
+enum class mergeErrorKind{invalid, not_implemented};
+enum class mergeErrorPath{unknown, proj2proj, sub2parent, sub2sub, sub2other, other};
+};
+
+class trackerMergeError : public std::runtime_error{
+  public:
+  const trackerTypes::mergeErrorKind kind;
+  const trackerTypes::mergeErrorPath path;
+  explicit trackerMergeError(const char * msg, trackerTypes::mergeErrorKind kind_in, trackerTypes::mergeErrorPath path_in=trackerTypes::mergeErrorPath::unknown):runtime_error(msg), kind(kind_in), path(path_in) {;}
 };
 
 class TrackerData: public QWidget{
@@ -498,7 +507,13 @@ Q_OBJECT
         Current is sub, target is another project, NOT parent
         NOTE: do we also want to support idea of promoting sub to parent?
       */
-      if(current == target && sub == sub_target) return; // Nothing to do
+      //Checking for simply bad
+      if(current == proIds::NullUid || target == proIds::NullUid){
+        throw trackerMergeError("Null uids are not valid", trackerTypes::mergeErrorKind::invalid);
+      }else if(current == target && sub == sub_target){
+        throw trackerMergeError("Cannot merge with itself", trackerTypes::mergeErrorKind::invalid);
+      };
+
       bool current_has_subs = false;
       if(current.isProj()){
         current_has_subs = (thePM.subprojectCount(current) > 0);

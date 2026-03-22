@@ -829,8 +829,23 @@ TEST_CASE("Known Data - Load projects with active One-Off project", "[QTAware]")
 }
 
 // ---------- Merging Projects ---------------------------------------------------------------------
-TEST_CASE("Merging project data", "[QTAware, Slots]"){
+TEST_CASE("Merging project data - basic checks", "[QTAware]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+  auto theGen = uniqueIdGenerator();
 
+  SECTION("Invalid ids"){
+    REQUIRE_THROWS_AS(td.mergeProject(proIds::NullUid, proIds::NullUid, proIds::NullUid, proIds::NullUid), trackerMergeError);
+  }
+  SECTION("Degenerate id: parent"){
+    auto id = theGen.getNextId();
+    REQUIRE_THROWS_AS(td.mergeProject(id, proIds::NullUid, id, proIds::NullUid), trackerMergeError);
+  }
+  SECTION("Degenerate id: subparent"){
+    auto id = theGen.getNextId();
+    auto id2 = theGen.getNextId();
+    REQUIRE_THROWS_AS(td.mergeProject(id, id2, id, id2), trackerMergeError);
+  }
 }
 
 // ---------- Special functions ---------------------------------------------------------------------

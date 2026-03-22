@@ -1003,22 +1003,46 @@ class databaseStore{
     void updateDigestEntriesId(proIds::Uuid current, proIds::Uuid target){
         const std::string & p_old = current.to_string();
         const std::string & p_new = target.to_string();
+        //Need to select those with current id, sum their time to that in target FOR THE SAME period
 
-        std::string cmd = "UPDATE time_digests SET project_id = ? WHERE project_id = ?;";
-        sqlite3_stmt * prep_cmd;
-        int err = 0;
-        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
-        sqlite3_bind_text(prep_cmd, 1, p_new.c_str(), p_new.length(), SQLITE_STATIC); // First param - value to SET
-        sqlite3_bind_text(prep_cmd, 2, p_old.c_str(), p_old.length(), SQLITE_STATIC);
-        err = sqlite3_step(prep_cmd);
-        if(err == SQLITE_DONE) err = SQLITE_OK;
-        if(err != SQLITE_OK){
-          throw std::runtime_error("Failed to modify project ID in time digests");
+        // Loop for minor reduction in duplication - be EXTREMELY careful that the parameter binds
+        // are the correct way around!!
+        if(current != proIds::NullUid && target != proIds::NullUid){
+          //Produce the sum
+          //Merge  BUT _into id to be dropped_ - This produces a combined record if-and-only-if the target and previous exists
+          std::string cmd1 = "INSERT INTO time_digests(period_id, duration, project_id) SELECT targ.period_id, targ.duration+prev.duration, prev.project_id from time_digests as targ inner join time_digests as prev where targ.project_id=? and prev.project_id=? and targ.period_id = prev.period_id ON CONFLICT(period_id, project_id) DO UPDATE SET duration=excluded.duration;";
+          // Now Rewrite the id - if there was no existing record target to merge with, this creates the single one by renaming the old one
+          std::string cmd2 = "INSERT INTO time_digests(period_id, duration, project_id) SELECT period_id, duration, ? FROM time_digests WHERE project_id = ? ON CONFLICT(period_id, project_id) DO UPDATE SET project_id = project_id, duration = excluded.duration;";
+          
+          for(std::string cmd: {cmd1, cmd2}){
+            sqlite3_stmt * prep_cmd;
+            int err = 0;
+            err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+            sqlite3_bind_text(prep_cmd, 1, p_new.c_str(), p_new.length(), SQLITE_STATIC);
+            sqlite3_bind_text(prep_cmd, 2, p_old.c_str(), p_old.length(), SQLITE_STATIC);
+            err = sqlite3_step(prep_cmd);
+            if(err == SQLITE_DONE) err = SQLITE_OK;
+            if(err != SQLITE_OK){
+                std::cout<<sqlite3_errmsg(DB)<<std::endl;
+              throw std::runtime_error("Failed to modify project ID in time digests");
+            }
+            sqlite3_finalize(prep_cmd);
+          }
+          //FINALLY can do the delete of the rewritten stamps
+          std::string cmd = "DELETE FROM time_digests WHERE project_id = ?;";
+            sqlite3_stmt * prep_cmd;
+            int err = 0;
+            err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+            sqlite3_bind_text(prep_cmd, 1, p_old.c_str(), p_old.length(), SQLITE_STATIC); // First param - value to SET
+            err = sqlite3_step(prep_cmd);
+            if(err == SQLITE_DONE) err = SQLITE_OK;
+            if(err != SQLITE_OK){
+                std::cout<<sqlite3_errmsg(DB)<<std::endl;
+              throw std::runtime_error("Failed to modify project ID in time digests");
+            }
+            sqlite3_finalize(prep_cmd);
         }
-        sqlite3_finalize(prep_cmd);
-
     }
-
 
 };
 

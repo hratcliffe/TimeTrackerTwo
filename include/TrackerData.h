@@ -123,6 +123,10 @@ Q_OBJECT
       return thePM.getDetails(id);
     }
 
+    auto trackerEntriesRequired(proIds::Uuid id){
+      return dataHandler->fetchTrackerEntries(id);
+    }
+
     //Load existing projects from the data backend
     // TODO - use start and end dates
     void loadProjects(timecode now){

@@ -7,6 +7,7 @@
 #include <QFrame>
 #include <QMessageBox>
 #include <QLineEdit>
+#include <sstream>
 #include "ui_Main.h"
 // ---- Dialogs
 #include "ui_AddProjectDialog.h"
@@ -95,6 +96,7 @@ Q_OBJECT
     connect(projectTab, &ProjectTabUI::addProjectRequested, this, &mainWindow::showAddDialog);
     connect(projectTab, &ProjectTabUI::addSubprojectRequested, this, &mainWindow::showAddSubDialog);
     connect(projectTab, &ProjectTabUI::mergeProjectRequested, this, &mainWindow::showMergeDialog);
+    connect(projectTab, &ProjectTabUI::deleteProjectRequested, this, &mainWindow::showDeleteDialog);
 
     summaryTab = new SummaryTabUI();
     summaryTab->updateProperties(prop);
@@ -301,6 +303,26 @@ Q_OBJECT
 
   void fillReportsImpl(std::map<proIds::Uuid, projectDetails> details){reportTab->fillReports(details);}
 
+  void showDeleteDialogImpl(projectDetails details, bool marked){
+    QMessageBox box;
+    box.setWindowTitle("Delete Project");
+    std::stringstream ss;
+    if(marked){
+      ss<<"Project "<<details.name<<" has non-zero time spent\n This will become inactive time";
+    }else{ 
+      ss<<"No time spent on project "<<details.name<<"\n Deletion will not affect active time";
+    }
+    box.setText(ss.str().c_str());
+    auto *bb = box.addButton("Delete", QMessageBox::AcceptRole);
+    box.addButton("Cancel", QMessageBox::RejectRole);
+    box.exec();
+    if(box.clickedButton() == bb){
+      //Actually do the delete...
+      std::cout<<"Delete confirmed\n";
+    }
+  }
+  using projectDetailsSpecialCallbackType = decltype(makeCallback(&mainWindow::showDeleteDialogImpl));
+
   public slots:
     void exitApp(){
       std::cout << "Exiting UI" << std::endl;
@@ -377,6 +399,9 @@ Q_OBJECT
       emit projectDetailsRequiredAll(makeCallback(&mainWindow::showMergeDialogImpl));
     }
 
+    void showDeleteDialog(){
+      emit projectDetailsRequiredSpecial(makeCallback(&mainWindow::showDeleteDialogImpl), projectTab->selected);
+    }
     void showOneOffDialog(proIds::Uuid id){
       
       auto addDialog = new QDialog(this);
@@ -446,6 +471,7 @@ Q_OBJECT
     void subprojectAddRequested(const subprojectData & data, const proIds::Uuid & parent);
     void mergeRequested(const proIds::Uuid & selection, const proIds::Uuid & sub_selection, const proIds::Uuid & target, const proIds::Uuid & sub_target);
     void projectDetailsRequiredAll(projectDetailsArgCallbackType);
+    void projectDetailsRequiredSpecial(projectDetailsSpecialCallbackType, proIds::Uuid);
     void projectDetailsRequired(const proIds::Uuid & proj);
 
     void fetchTimeTravelInfo();

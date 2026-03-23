@@ -304,10 +304,22 @@ TEST_CASE("Verifying data consitency - deliberately broken", "[QTAware]"){
     list = sig.what(list);
     auto sid = list[1].uid.tag(proIds::uidTag::sub); //Make sure
     auto sd = theDB.readSubproject(sid);
-    auto pid2 = CreateProjectAndReturnId(td, "Test Project 11-1", 0.3);
-    sd.parentUid = pid2;
-    theDB.updateSubproject(sd);
-    REQUIRE_THROWS_AS(td.verifyProjectOrSub(pid),verifyError<trackerTypes::verifyErrorKind::dataMismatch>);
+    SECTION("Change Name"){
+      sd.name = "Not your subproject";
+      theDB.updateSubproject(sd);
+      REQUIRE_THROWS_AS(td.verifyProjectOrSub(pid),verifyError<trackerTypes::verifyErrorKind::dataMismatch>);
+    }
+    SECTION("Change frac"){
+      sd.frac /=1.2;
+      theDB.updateSubproject(sd);
+      REQUIRE_THROWS_AS(td.verifyProjectOrSub(pid),verifyError<trackerTypes::verifyErrorKind::dataMismatch>);
+    }
+    SECTION("Change pid"){
+      auto pid2 = CreateProjectAndReturnId(td, "Test Project 11-1", 0.3);
+      sd.parentUid = pid2;
+      theDB.updateSubproject(sd);
+      REQUIRE_THROWS_AS(td.verifyProjectOrSub(pid),verifyError<trackerTypes::verifyErrorKind::dataMismatch>);
+    }
   }
   SECTION("Checking single sub"){
     subprojectData spd;
@@ -321,9 +333,22 @@ TEST_CASE("Verifying data consitency - deliberately broken", "[QTAware]"){
     list = sig.what(list);
     auto sid = list[1].uid.tag(proIds::uidTag::sub); //Make sure
     auto sd = theDB.readSubproject(sid);
-    sd.name = "Not your subproject";
-    theDB.updateSubproject(sd);
-    REQUIRE_THROWS_AS(td.verifyProjectOrSub(sid),verifyError<trackerTypes::verifyErrorKind::dataMismatch>);
+    SECTION("Change Name"){
+      sd.name = "Not your subproject";
+      theDB.updateSubproject(sd);
+      REQUIRE_THROWS_AS(td.verifyProjectOrSub(sid),verifyError<trackerTypes::verifyErrorKind::dataMismatch>);
+    }
+    SECTION("Change frac"){
+      sd.frac /=1.2;
+      theDB.updateSubproject(sd);
+      REQUIRE_THROWS_AS(td.verifyProjectOrSub(sid),verifyError<trackerTypes::verifyErrorKind::dataMismatch>);
+    }
+    SECTION("Change pid"){
+      auto pid2 = CreateProjectAndReturnId(td, "Test Project 11-1", 0.3);
+      sd.parentUid = pid2;
+      theDB.updateSubproject(sd);
+      REQUIRE_THROWS_AS(td.verifyProjectOrSub(sid),verifyError<trackerTypes::verifyErrorKind::dataMismatch>);
+    }
   }
 }
 // ------ Mark, pause, stop etc -----------------------------------------------------------------------

@@ -227,6 +227,105 @@ TEST_CASE("Creating OneOff", "[QTAware, Slots]"){
   REQUIRE(descr.find("One Off Wobbly") != std::string::npos);
 }
 
+TEST_CASE("Verifying data consistency", "[QTAware]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+
+  //Create a project with some subs
+  auto pid = CreateProjectAndReturnId(td, "Test Project", 0.3);
+
+  SECTION("No subs"){
+    // Check it
+    REQUIRE_NOTHROW(td.verifyProjectOrSub(pid));
+  }
+  SECTION("With subs"){
+    subprojectData spd;
+    spd.name = "SubXYZ Created by Tracker Mk3";
+    spd.frac = 0.3;
+    td.createSubproject(spd, pid);
+    spd.name = "SubXYZ  Yet again";
+    spd.frac = 0.3;
+    td.createSubproject(spd, pid);
+    REQUIRE_NOTHROW(td.verifyProjectOrSub(pid));
+  }
+  SECTION("Checking a sub"){
+    subprojectData spd;
+    spd.name = "SubXYZ Created by Tracker Mk3";
+    spd.frac = 0.3;
+    SignalCatcher sig;
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+    td.createSubproject(spd, pid);
+
+    std::vector<selectableEntity> list;
+    list = sig.what(list);
+    auto sid = list[1].uid.tag(proIds::uidTag::sub); //Make sure
+    REQUIRE_NOTHROW(td.verifyProjectOrSub(sid));
+  }
+}
+TEST_CASE("Verifying data consistency - simple error", "[QTAware]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+  REQUIRE_THROWS_AS(td.verifyProjectOrSub(uniqueIdGenerator().getNextId().tag(proIds::uidTag::oneoff)), verifyError<trackerTypes::verifyErrorKind::badId>);
+
+  REQUIRE_THROWS_AS(td.verifyProjectOrSub(uniqueIdGenerator().getNextId()), verifyError<trackerTypes::verifyErrorKind::missing>);
+  REQUIRE_THROWS_AS(td.verifyProjectOrSub(uniqueIdGenerator().getNextId().tag(proIds::uidTag::sub)), verifyError<trackerTypes::verifyErrorKind::missing>);
+}
+TEST_CASE("Verifying data consitency - deliberately broken", "[QTAware]"){
+  //Add something, break it in the database, and check it
+  auto app = dummyApp();
+  auto conf = basicConfig();
+  TrackerData td{conf};
+  databaseIO theDB{conf.dataFileName, false};
+
+  //Create a project with some subs
+  auto pid = CreateProjectAndReturnId(td, "Test Project", 0.3);
+
+  SECTION("No subs - name wrong"){
+    fullProjectData pd = theDB.readProject(pid);
+    pd.name = "Not tseT tcejorP";
+    theDB.updateProject(pd);
+    REQUIRE_THROWS_AS(td.verifyProjectOrSub(pid),verifyError<trackerTypes::verifyErrorKind::dataMismatch>);
+  }
+  SECTION("No subs - FTE wrong"){
+    fullProjectData pd = theDB.readProject(pid);
+    pd.FTE /= 2.0;
+    theDB.updateProject(pd);
+    REQUIRE_THROWS_AS(td.verifyProjectOrSub(pid),verifyError<trackerTypes::verifyErrorKind::dataMismatch>);
+  }
+  SECTION("Checking sub of parent"){
+    subprojectData spd;
+    spd.name = "SubXYZ Created by Tracker Mk3";
+    spd.frac = 0.3;
+    SignalCatcher sig;
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+    td.createSubproject(spd, pid);
+
+    std::vector<selectableEntity> list;
+    list = sig.what(list);
+    auto sid = list[1].uid.tag(proIds::uidTag::sub); //Make sure
+    auto sd = theDB.readSubproject(sid);
+    auto pid2 = CreateProjectAndReturnId(td, "Test Project 11-1", 0.3);
+    sd.parentUid = pid2;
+    theDB.updateSubproject(sd);
+    REQUIRE_THROWS_AS(td.verifyProjectOrSub(pid),verifyError<trackerTypes::verifyErrorKind::dataMismatch>);
+  }
+  SECTION("Checking single sub"){
+    subprojectData spd;
+    spd.name = "SubXYZ Created by Tracker Mk3";
+    spd.frac = 0.3;
+    SignalCatcher sig;
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+    td.createSubproject(spd, pid);
+
+    std::vector<selectableEntity> list;
+    list = sig.what(list);
+    auto sid = list[1].uid.tag(proIds::uidTag::sub); //Make sure
+    auto sd = theDB.readSubproject(sid);
+    sd.name = "Not your subproject";
+    theDB.updateSubproject(sd);
+    REQUIRE_THROWS_AS(td.verifyProjectOrSub(sid),verifyError<trackerTypes::verifyErrorKind::dataMismatch>);
+  }
+}
 // ------ Mark, pause, stop etc -----------------------------------------------------------------------
 
 TEST_CASE("Marking", "[QTAware, Slots]"){

@@ -22,6 +22,16 @@ class projectStatus{
     std::string name;
     projectStatusFlag status = projectStatusFlag::none; /**< \brief Status of project */
 };
+enum class mergeErrorKind{invalid, not_implemented, runtime};
+enum class mergeErrorPath{unknown, proj2proj, sub2parent, sub2sub, sub2other, other};
+enum class verifyErrorKind{none, badId, missing, dataMismatch};
+};
+
+template<trackerTypes::verifyErrorKind T_kind>
+class verifyError : public std::runtime_error{
+  public:
+  const trackerTypes::verifyErrorKind kind = T_kind;
+  explicit verifyError(const char * msg):runtime_error(msg){;}
 };
 
 class TrackerData: public QWidget{
@@ -154,6 +164,110 @@ Q_OBJECT
         //Probably there is no timestamp entry - pass
       }
 
+    }
+
+    /**
+     * @brief Check project manager against backend
+     * 
+     * Verifies that given project or subproject matches in the project manager and
+     * the data backend. If uid is tagged as 'sub' the lookup assumes a subproject.
+     * 
+     * @pre uid is a valid id
+     * @post A suitable error is raised - either project/sub is missing, or data backend
+     * does not match project manager
+     * @param uid Uuid to check
+     */
+    void verifyProjectOrSub(proIds::Uuid uid){
+      if(uid.isTaggedAs(proIds::uidTag::oneoff)){
+        throw verifyError<trackerTypes::verifyErrorKind::badId>("One off project cannot be verified this way");
+      }else if(uid.isTaggedAs(proIds::uidTag::sub)){
+        subprojectDetails det;
+        fullSubProjectData dat;
+        bool foundPM=false, foundDB=false;
+        std::string msg="";
+        if(thePM.isSubProject(uid)){
+          foundPM = true;
+          det = thePM.getSubDetails(uid);
+        }else{
+          msg += " PM-Not a SubProject;";
+        }
+        try{
+          dat = dataHandler->readSubproject(uid);
+          foundDB = true;
+        }catch(std::runtime_error & e){
+          msg += e.what();
+          msg += " ;";
+        }
+        //Now - do we have both data?
+        if(!foundPM || ! foundDB) throw verifyError<trackerTypes::verifyErrorKind::missing>(msg.c_str());
+          //OK, now compare main details
+          bool detailsBad = false;
+          if(det.name != dat.name){
+            msg += " Name mismatch ";
+            detailsBad = true;
+          }
+          if(std::abs(det.frac - dat.frac) >1e-3){
+            msg += " Fraction mismatch ";
+            detailsBad = true;
+          }
+          auto pid = thePM.getParentId(uid);
+          if(pid != dat.parentUid){
+            msg += " Parent-id mismatch ";
+            detailsBad = true;
+          }
+        if(detailsBad){
+          throw verifyError<trackerTypes::verifyErrorKind::dataMismatch>(msg.c_str());
+        }
+      }else{
+        //First check existence
+        projectDetails det;
+        fullProjectData dat;
+        bool foundPM=false, foundDB=false;
+        std::string msg="";
+        if(thePM.isProject(uid)){
+          foundPM = true;
+          det = thePM.getDetails(uid);
+        }else{
+          msg += " PM-Not a Project;";
+        }
+        try{
+          dat = dataHandler->readProject(uid);
+          foundDB = true;
+        }catch(std::runtime_error & e){
+          msg += e.what();
+          msg += " ;";
+        }
+        //Now - do we have both data?
+        if(!foundPM || ! foundDB) throw verifyError<trackerTypes::verifyErrorKind::missing>(msg.c_str());
+        //OK, now compare main details
+        bool detailsBad = false;
+        if(det.name != dat.name){
+          msg += " Name mismatch ";
+          detailsBad = true;
+        }
+        if(det.FTE != dat.FTE){
+          msg += " FTE mismatch ";
+          detailsBad = true;
+        }
+        if(detailsBad) throw verifyError<trackerTypes::verifyErrorKind::dataMismatch>(msg.c_str());
+
+        bool badSubs = false;
+        try{
+          //TODO - wont detect sub in DB but not in pm...
+          for(auto sub : det.subs){
+            auto subDB = dataHandler->readSubproject(sub.uid);
+            if(subDB.name != sub.name) throw std::runtime_error(" Sub name bad ");
+            if( std::abs(subDB.frac - sub.frac) > 1e-3) throw std::runtime_error(" Sub frac bad ");
+            if(subDB.parentUid != thePM.getParentId(sub.uid)) throw std::runtime_error(" Sub parent bad ");
+         }
+        }catch(std::runtime_error & e){
+          msg += e.what();
+          msg += " ;";
+          badSubs = true;
+          //Continue - check them all before throwing
+        }
+        if(badSubs) throw verifyError<trackerTypes::verifyErrorKind::dataMismatch>(msg.c_str());
+      }
     }
 
     void markProject(proIds::Uuid uid, std::string name, timecode now){

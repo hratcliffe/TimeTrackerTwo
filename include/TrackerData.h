@@ -178,6 +178,7 @@ Q_OBJECT
      * @param uid Uuid to check
      */
     void verifyProjectOrSub(proIds::Uuid uid){
+      const float float_margin = 1e-4; //Constant for A==B in FP
       if(uid.isTaggedAs(proIds::uidTag::oneoff)){
         throw verifyError<trackerTypes::verifyErrorKind::badId>("One off project cannot be verified this way");
       }else if(uid.isTaggedAs(proIds::uidTag::sub)){
@@ -206,7 +207,7 @@ Q_OBJECT
             msg += " Name mismatch ";
             detailsBad = true;
           }
-          if(std::abs(det.frac - dat.frac) >1e-3){
+          if(std::abs(det.frac - dat.frac) > float_margin){
             msg += " Fraction mismatch ";
             detailsBad = true;
           }
@@ -245,7 +246,7 @@ Q_OBJECT
           msg += " Name mismatch ";
           detailsBad = true;
         }
-        if(det.FTE != dat.FTE){
+        if( std::abs(det.FTE - dat.FTE) > float_margin){
           msg += " FTE mismatch ";
           detailsBad = true;
         }
@@ -257,7 +258,7 @@ Q_OBJECT
           for(auto sub : det.subs){
             auto subDB = dataHandler->readSubproject(sub.uid);
             if(subDB.name != sub.name) throw std::runtime_error(" Sub name bad ");
-            if( std::abs(subDB.frac - sub.frac) > 1e-3) throw std::runtime_error(" Sub frac bad ");
+            if( std::abs(subDB.frac - sub.frac) > float_margin) throw std::runtime_error(" Sub frac bad ");
             if(subDB.parentUid != thePM.getParentId(sub.uid)) throw std::runtime_error(" Sub parent bad ");
          }
         }catch(std::runtime_error & e){

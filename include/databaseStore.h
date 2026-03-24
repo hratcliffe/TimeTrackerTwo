@@ -806,6 +806,28 @@ class databaseStore{
         return ret;
     }
 
+    size_t countTrackerEntries(std::vector<proIds::Uuid> const & ids){
+      if(ids.size() == 0) return 0;
+      std::string base_cmd = "SELECT COUNT() FROM timestamps WHERE ";
+      for(size_t i=0; i < ids.size(); i++){
+        base_cmd += "project_id = ?";
+        if(i<ids.size()-1) base_cmd +=" OR ";
+      }
+      base_cmd += ";";
+      sqlite3_stmt * prep_cmd;
+      int err = sqlite3_prepare_v2(DB, base_cmd.c_str(), base_cmd.length(), &prep_cmd, nullptr);
+      for(size_t i = 0; i < ids.size(); i++){
+          std::string id = ids[i].to_string();
+          sqlite3_bind_text(prep_cmd, i+1, id.c_str(), id.length(), SQLITE_TRANSIENT); // id string has scope of loop iteration, so use TRANSIENT to prolong
+      }
+      size_t ct = 0;
+      while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+        ct = sqlite3_column_int64(prep_cmd, 0);
+      }
+      sqlite3_finalize(prep_cmd);
+      return ct;
+    }
+
     void deleteTrackerEntry(const timeStamp & stamp){
         const std::string id_str = stamp.projectUid.to_string();
         const long long time = stamp.time;

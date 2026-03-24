@@ -53,6 +53,7 @@ class dataIO{
     virtual std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1) = 0; /**< \brief Fetch ORDERED tracker entries from the data source, optionally within a time range */
     virtual std::vector<timeStamp> fetchTrackerEntries(proIds::Uuid const & id) = 0; /**< \brief Fetch ORDERED tracker entries for specific id */
     virtual timeStamp fetchLatestTrackerEntry() = 0;/**< \brief Fetch the latest (most recent) tracker entry */
+    virtual size_t countTrackerEntries(std::vector<proIds::Uuid> const & ids) = 0;/**< \brief Count the number of timestamps under the given list of ids */
 
     virtual void deleteTrackerInInterval(timecode start, timecode end) = 0;/**< \brief Delete tracker entries in the given range*/
     virtual void deleteTrackerEntry(const timeStamp & stamp) = 0;/**< \brief Delete specific timestamp */
@@ -203,6 +204,10 @@ class databaseIO : public dataIO{
 
     timeStamp fetchLatestTrackerEntry() override{
       return dbStore.fetchLatestTrackerEntry();
+    }
+
+    size_t countTrackerEntries(std::vector<proIds::Uuid> const & ids) override{
+      return dbStore.countTrackerEntries(ids);
     }
 
     void deleteTrackerEntry(const timeStamp & stamp) override{

@@ -490,6 +490,18 @@ TEST_CASE("Tracker Entry Exists", "[Database]"){
   REQUIRE_THROWS(theDB.writeTrackerEntry({111, proIds::NullUid}));
 }
 
+TEST_CASE("Counting entries", "[Database]"){
+  databaseStore theDB{"./InputData/KnownDatabaseForCounts.db", true};
+
+  proIds::Uuid id1 = proIds::Uuid("{07e453ad-b698-47b8-aa52-c7ef2306731d}");
+  proIds::Uuid id2 = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
+  proIds::Uuid id3 = uniqueIdGenerator().getOnesId();
+  REQUIRE(theDB.countTrackerEntries({id1}) == 2);
+  REQUIRE(theDB.countTrackerEntries({id1, id2}) == 3);
+  REQUIRE(theDB.countTrackerEntries({id3}) == 0);
+  REQUIRE(theDB.countTrackerEntries({id1, id3, id2}) == 3);
+}
+
 //Write tracker
 TEST_CASE("Writing Tracker" "[Database]"){
   databaseStore theDB{getScratchFileName(), false};

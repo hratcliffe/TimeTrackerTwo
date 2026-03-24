@@ -669,6 +669,18 @@ TEST_CASE("Reading Known Data - Digest By Time", "[Database]"){
   }
 }
 
+TEST_CASE("Counting entries - digests", "[Database]"){
+  databaseStore theDB{"./InputData/KnownDatabaseForCounts.db", true};
+
+  proIds::Uuid id1 = proIds::Uuid("{07e453ad-b698-47b8-aa52-c7ef2306731d}");
+  proIds::Uuid id2 = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
+  proIds::Uuid id3 = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+  proIds::Uuid id4 = uniqueIdGenerator().getOnesId();
+  REQUIRE(theDB.countDigestEntries({id1}) == 0);
+  REQUIRE(theDB.countDigestEntries({id1, id2}) == 2);
+  REQUIRE(theDB.countDigestEntries({id3}) == 1);
+  REQUIRE(theDB.countDigestEntries({id1, id3, id2, id4}) == 3);
+}
 // Read and write state
 
 TEST_CASE("Round trip State", "[Database]"){

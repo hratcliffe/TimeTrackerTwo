@@ -64,6 +64,7 @@ class dataIO{
     virtual std::vector<timeDigestEntry> fetchDigestEntries(timeDigestPeriod period) = 0; /**< \brief Fetch the daily digests of time spent*/
     virtual void updateDigestEntry(timeDigestEntry) = 0;/**< \brief Update an entry (unique on period_id+uid) */
     virtual std::vector<timeDigestEntry> fetchDigestEntriesForTime(timecode start = -1, timecode end=-1)=0;/**<\brief Fetch all the digests which fall in the given time range */
+    virtual size_t countDigestEntries(std::vector<proIds::Uuid> const & ids) = 0;/**< \brief Count the number of timestamps under the given list of ids */
 
     // Manipulation and editing
     virtual void rewriteTrackerProjectId(proIds::Uuid current, proIds::Uuid target) = 0;
@@ -233,6 +234,10 @@ class databaseIO : public dataIO{
     std::vector<timeDigestEntry> fetchDigestEntriesForTime(timecode start = -1, timecode end=-1) override{
       return dbStore.fetchDigestEntries(start, end);
     }
+    size_t countDigestEntries(std::vector<proIds::Uuid> const & ids) override{
+      return dbStore.countDigestEntries(ids);
+    }
+
 
     // Editing and manipulation
     void rewriteTrackerProjectId(proIds::Uuid current, proIds::Uuid target) override{

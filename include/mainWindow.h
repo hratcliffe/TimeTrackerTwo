@@ -312,6 +312,7 @@ Q_OBJECT
     }else{ 
       ss<<"No time spent on project "<<details.name<<"\n Deletion will not affect active time";
     }
+    //TODO - add check for 'currently running'
     box.setText(ss.str().c_str());
     auto *bb = box.addButton("Delete", QMessageBox::AcceptRole);
     box.addButton("Cancel", QMessageBox::RejectRole);

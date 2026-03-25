@@ -227,6 +227,7 @@ TEST_CASE("Creating OneOff", "[QTAware, Slots]"){
   REQUIRE(descr.find("One Off Wobbly") != std::string::npos);
 }
 
+// --- Checking and verifying
 TEST_CASE("Verifying data consistency", "[QTAware]"){
   auto app = dummyApp();
   TrackerData td{basicConfig()};
@@ -350,6 +351,71 @@ TEST_CASE("Verifying data consitency - deliberately broken", "[QTAware]"){
       REQUIRE_THROWS_AS(td.verifyProjectOrSub(sid),verifyError<trackerTypes::verifyErrorKind::dataMismatch>);
     }
   }
+}
+
+TEST_CASE("Counting use of projects -via stamps"){
+  auto app = dummyApp();
+  auto conf = basicConfig();
+  conf.dataFileName = "./InputData/KnownDatabaseForCounts2.db";
+  conf.read_only = true;
+  TrackerData td{conf};
+
+  td.loadProjects(200000);
+  proIds::Uuid sp_impo = proIds::Uuid("{07e453ad-b698-47b8-aa52-c7ef2306731d}").tag(proIds::uidTag::sub);
+  proIds::Uuid p_test  = proIds::Uuid("{cc467402-ace5-474f-9c58-466f3ba6f117}");
+  proIds::Uuid p_alpha = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+  proIds::Uuid p_beta  = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+  proIds::Uuid p_gamma = proIds::Uuid("{ab467402-acd5-494f-9c58-466f3aa6f119}");
+  proIds::Uuid p_tues  = proIds::Uuid("{9bf5d44a-2921-4666-b33b-053459e2ced6}").tag(proIds::uidTag::oneoff);
+  proIds::Uuid p_bugs  = proIds::Uuid("{d74a08d4-35b4-4b7a-b525-b5da00af6269}").tag(proIds::uidTag::oneoff);
+  proIds::Uuid id_1s   = uniqueIdGenerator().getOnesId();
+
+  //No entries  
+  REQUIRE_FALSE(td.checkTimeOnProjectOrSub(p_test));
+  //Not even a project
+  REQUIRE_FALSE(td.checkTimeOnProjectOrSub(id_1s));
+  // A project - direct time only
+  REQUIRE(td.checkTimeOnProjectOrSub(p_gamma));
+  //A subproject
+  REQUIRE(td.checkTimeOnProjectOrSub(sp_impo));
+  // A project - with subs and both time
+  REQUIRE(td.checkTimeOnProjectOrSub(p_alpha));
+  // A project, only via subs
+  REQUIRE(td.checkTimeOnProjectOrSub(p_beta));
+  //A one off
+  REQUIRE(td.checkTimeOnProjectOrSub(p_tues));
+   //A one off - none
+  REQUIRE_FALSE(td.checkTimeOnProjectOrSub(p_bugs));
+ 
+}
+TEST_CASE("Counting use of projects -via digests"){
+  auto app = dummyApp();
+  auto conf = basicConfig();
+  conf.dataFileName = "./InputData/KnownDatabaseForCounts3.db";
+  TrackerData td{conf};
+
+  td.loadProjects(200000);
+  proIds::Uuid sp_impo = proIds::Uuid("{07e453ad-b698-47b8-aa52-c7ef2306731d}").tag(proIds::uidTag::sub);
+  proIds::Uuid p_alpha = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+  proIds::Uuid p_beta  = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+  proIds::Uuid p_gamma = proIds::Uuid("{ab467402-acd5-494f-9c58-466f3aa6f119}");
+  proIds::Uuid p_tues  = proIds::Uuid("{9bf5d44a-2921-4666-b33b-053459e2ced6}").tag(proIds::uidTag::oneoff);
+  proIds::Uuid p_bugs  = proIds::Uuid("{d74a08d4-35b4-4b7a-b525-b5da00af6269}").tag(proIds::uidTag::oneoff);
+
+  //No need to re-check null cases
+  // A project - direct time only
+  REQUIRE(td.checkTimeOnProjectOrSub(p_gamma));
+  //A subproject
+  REQUIRE(td.checkTimeOnProjectOrSub(sp_impo));
+  // A project - with subs and both time
+  REQUIRE(td.checkTimeOnProjectOrSub(p_alpha));
+  // A project, only via subs
+  REQUIRE(td.checkTimeOnProjectOrSub(p_beta));
+  //A one off
+  REQUIRE(td.checkTimeOnProjectOrSub(p_tues));
+  //Empty entry
+  REQUIRE_FALSE(td.checkTimeOnProjectOrSub(p_bugs));
+
 }
 // ------ Mark, pause, stop etc -----------------------------------------------------------------------
 

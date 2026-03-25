@@ -275,6 +275,28 @@ Q_OBJECT
       }
     }
 
+    /**
+     * @brief Check whether given id has any uptime
+     * 
+     * Checks for timestamps, digests, and, if id is a project, for time under and subprojects
+     * 
+     * @param uid 
+     * @return true if there is any time associated with the given id
+     */
+    bool checkTimeOnProjectOrSub(proIds::Uuid uid){
+      if((uid.isTaggedAs(proIds::uidTag::sub) && thePM.isSubProject(uid))|| uid.isTaggedAs(proIds::uidTag::oneoff)){
+        return (dataHandler->countTrackerEntries({uid}) != 0 || dataHandler->countDigestEntries({uid}) != 0);
+      }else if(thePM.isProject(uid)){
+        //Form list of id, plus subs
+        std::vector<proIds::Uuid> ids;
+        ids = thePM.getSubs(uid);
+        ids.push_back(uid);
+        return (dataHandler->countTrackerEntries(ids) != 0 || dataHandler->countDigestEntries(ids) != 0);
+      }else{
+        return 0;
+      }
+    }
+
     void markProject(proIds::Uuid uid, std::string name, timecode now){
       //Timestamp project with current 'time' - (NB app time, not necessarily real time)
       if(uid.isTaggedAs(proIds::uidTag::oneoff) || (uid.isTaggedAs(proIds::uidTag::sub) && thePM.isSubProject(uid)) || thePM.isActiveProject(uid)){

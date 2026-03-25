@@ -122,14 +122,15 @@ class databaseStore{
      * @param ids Vector of project_ids
      * @returns Count of entries
      */
-    size_t countEntriesByIdGeneric(std::string tbl, std::vector<proIds::Uuid> const & ids){
+    size_t countEntriesByIdGeneric(std::string tbl, std::vector<proIds::Uuid> const & ids, std::string extra=""){
       if(ids.size() == 0) return 0;
-      std::string base_cmd = "SELECT COUNT() FROM "+tbl+" WHERE ";
+      std::string base_cmd = "SELECT COUNT() FROM "+tbl+" WHERE (";
       for(size_t i=0; i < ids.size(); i++){
         base_cmd += "project_id = ?";
         if(i<ids.size()-1) base_cmd +=" OR ";
       }
-      base_cmd += ";";
+      if(extra != "") base_cmd += ") AND "+ extra + ";";
+      else base_cmd += ");";
       sqlite3_stmt * prep_cmd;
       int err = sqlite3_prepare_v2(DB, base_cmd.c_str(), base_cmd.length(), &prep_cmd, nullptr);
       for(size_t i = 0; i < ids.size(); i++){
@@ -1015,7 +1016,7 @@ class databaseStore{
 
     }
 
-    size_t countDigestEntries(std::vector<proIds::Uuid> const & ids){return countEntriesByIdGeneric("time_digests", ids);}
+    size_t countDigestEntries(std::vector<proIds::Uuid> const & ids){return countEntriesByIdGeneric("time_digests", ids, "duration != 0");}
 
     void updateTimestampEntriesId(proIds::Uuid current, proIds::Uuid target){
         const std::string & p_old = current.to_string();

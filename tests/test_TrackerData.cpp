@@ -664,6 +664,28 @@ TEST_CASE("Marking duplicates - exceeding range", "[No]"){
   REQUIRE(msg.find("try again later!") != std::string::npos);
 }
 
+TEST_CASE("Checking Status", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectRunningUpdate, &sig, &SignalCatcher::emitString);
+
+  std::string name = "Project to be marked dfhkaeh";
+  auto id = CreateProjectAndReturnId(td, name);
+  REQUIRE_FALSE(td.checkProjectRunning(id));
+  REQUIRE_FALSE(td.checkProjectRunning(uniqueIdGenerator().getNextId()));
+  td.markProject(id, name, 242);
+  REQUIRE_FALSE(td.checkProjectRunning(uniqueIdGenerator().getNextId()));
+  REQUIRE(td.checkProjectRunning(id));
+  td.stopProject(250);
+  REQUIRE_FALSE(td.checkProjectRunning(uniqueIdGenerator().getNextId()));
+  REQUIRE_FALSE(td.checkProjectRunning(id));
+  td.markProject(id, name, 262);
+  td.pauseProject(270);
+  REQUIRE_FALSE(td.checkProjectRunning(uniqueIdGenerator().getNextId()));
+  REQUIRE(td.checkProjectRunning(id));
+}
 // ------- Summaries and display ---------------------------------------------------------------------
 TEST_CASE("Summarising a project", "[QTAware, Slots]"){
   auto app = dummyApp();

@@ -303,7 +303,12 @@ Q_OBJECT
 
   void fillReportsImpl(std::map<proIds::Uuid, projectDetails> details){reportTab->fillReports(details);}
 
-  void showDeleteDialogImpl(projectDetails details, bool marked){
+  void showDeleteDialogImpl(projectDetails details, bool running, bool marked){
+    if(running){
+      // TODO - could offer to stop it here
+      showSimpleAlert("Cannot delete a running project - please stop it first", "OK");
+      return;
+    }
     QMessageBox box;
     box.setWindowTitle("Delete Project");
     std::stringstream ss;
@@ -312,7 +317,6 @@ Q_OBJECT
     }else{ 
       ss<<"No time spent on project "<<details.name<<"\n Deletion will not affect active time";
     }
-    //TODO - add check for 'currently running'
     box.setText(ss.str().c_str());
     auto *bb = box.addButton("Delete", QMessageBox::AcceptRole);
     box.addButton("Cancel", QMessageBox::RejectRole);

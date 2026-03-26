@@ -148,7 +148,7 @@ Q_OBJECT
     //To delete, we need to verify the marks
     // TODO - add a less ineffcient check?
     //TODO also have to check subs
-    connect(themainWindow, &mainWindow::projectDetailsRequiredSpecial, [this](auto functor, auto id){std::cout<<id<<std::endl; functor(themainWindow, currentData->projectDetailsRequired(id), currentData->trackerEntriesRequired(id).size()>0);});
+    connect(themainWindow, &mainWindow::projectDetailsRequiredSpecial, [this](auto functor, auto id){functor(themainWindow,  currentData->projectDetailsRequired(id), currentData->checkProjectRunning(id), currentData->checkTimeOnProjectOrSub(id));});
 
     //Pausing a project:
     connect(themainWindow, &mainWindow::pauseRequested, [this](){currentData->pauseProject(this->clock->now());});

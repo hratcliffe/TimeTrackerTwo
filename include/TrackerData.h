@@ -21,6 +21,8 @@ class projectStatus{
     proIds::Uuid uid; /**< \brief Pointer to project, null if none in progress */
     std::string name;
     projectStatusFlag status = projectStatusFlag::none; /**< \brief Status of project */
+    bool isUp(){return status != projectStatusFlag::none;} /**< \brief Whether ANY project is selected (active OR paused)  */
+    bool isUp(proIds::Uuid id){return isUp() && uid == id;}/**< \brief Whether project ID is selected */
 };
 enum class mergeErrorKind{invalid, not_implemented, runtime};
 enum class mergeErrorPath{unknown, proj2proj, sub2parent, sub2sub, sub2other, other};
@@ -296,6 +298,8 @@ Q_OBJECT
         return 0;
       }
     }
+
+    bool checkProjectRunning(proIds::Uuid uid){return currentProjectStatus.isUp(uid);}
 
     void markProject(proIds::Uuid uid, std::string name, timecode now){
       //Timestamp project with current 'time' - (NB app time, not necessarily real time)

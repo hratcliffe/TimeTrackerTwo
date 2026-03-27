@@ -26,12 +26,17 @@ enum class mergeErrorKind{invalid, not_implemented, runtime};
 enum class mergeErrorPath{unknown, proj2proj, sub2parent, sub2sub, sub2other, other};
 enum class verifyErrorKind{none, badId, missing, dataMismatch};
 };
-
 template<trackerTypes::verifyErrorKind T_kind>
 class verifyError : public std::runtime_error{
   public:
   const trackerTypes::verifyErrorKind kind = T_kind;
   explicit verifyError(const char * msg):runtime_error(msg){;}
+};
+class trackerMergeError : public std::runtime_error{
+  public:
+  const trackerTypes::mergeErrorKind kind;
+  const trackerTypes::mergeErrorPath path;
+  explicit trackerMergeError(const char * msg, trackerTypes::mergeErrorKind kind_in, trackerTypes::mergeErrorPath path_in=trackerTypes::mergeErrorPath::unknown):runtime_error(msg), kind(kind_in), path(path_in) {;}
 };
 
 class TrackerData: public QWidget{
@@ -613,51 +618,93 @@ Q_OBJECT
         Current is sub, target is another project, NOT parent
         NOTE: do we also want to support idea of promoting sub to parent?
       */
-      if(current == target && sub == sub_target) return; // Nothing to do
+      //Checking for simply bad
+      if(current == proIds::NullUid || target == proIds::NullUid){
+        throw trackerMergeError("Null uids are not valid", trackerTypes::mergeErrorKind::invalid);
+      }else if(current == target && sub == sub_target){
+        throw trackerMergeError("Cannot merge with itself", trackerTypes::mergeErrorKind::invalid);
+      };
+
       bool current_has_subs = false;
       if(current.isProj()){
         current_has_subs = (thePM.subprojectCount(current) > 0);
       }
       if((current.isProj() && sub.isNull()) && (target.isProj() && sub_target.isNull()) && !current_has_subs){
-        //Rewrite the timestamps
-        dataHandler->rewriteTrackerProjectId(current, target);
-        //Fetch the FTE for current and add it to target
-        auto targetData = dataHandler->readProject(target);
-        targetData.FTE += thePM.getFTE(current);
-        thePM.setFTE(target, targetData.FTE);
+        try{
+          //Rewrite the timestamps
+          dataHandler->rewriteTrackerProjectId(current, target);
+          //Fetch the FTE for current and add it to target
+          auto targetData = dataHandler->readProject(target);
+          targetData.FTE += thePM.getFTE(current);
+          thePM.setFTE(target, targetData.FTE);
 
-        dataHandler->updateProject(targetData);
-        // Delete the details in DB
-        dataHandler->deleteProject(current);
-        // Delete from map
-        thePM.deleteProjectById(current);
+          dataHandler->updateProject(targetData);
+          // Delete the details in DB
+          dataHandler->deleteProject(current);
+          // Delete from map
+          thePM.deleteProjectById(current);
+        }catch(std::runtime_error & e){
+          throw trackerMergeError(e.what(), trackerTypes::mergeErrorKind::runtime, trackerTypes::mergeErrorPath::proj2proj);
+        }
+      }else if((current.isProj() && sub.isNull()) && (target.isProj() && sub_target.isNull()) && current_has_subs){
+        try{
+          //Rewrite the timestamps
+          dataHandler->rewriteTrackerProjectId(current, target);
+
+          //Fetch the FTE for current NOT USED BY SUBS and add it to target
+          auto free_frac = thePM.availableSubFrac(current);
+          auto targetData = dataHandler->readProject(target);
+
+          targetData.FTE += (thePM.getFTE(current) * free_frac); // Transferring parent-not-sub FTE
+          thePM.setFTE(target, targetData.FTE);
+
+          //Transferring subs
+          // Note TOTAL FTE will change with each one we do....
+          auto subs = thePM.getSubs(current);
+          for(auto sub_id : subs){
+            thePM.moveSubproject(current, sub_id, target);
+          }
+          //Now write the updated subs, including the Ids
+          auto t_subs = thePM.getSubs(target);
+          for(auto sub_id : t_subs){
+            auto details = thePM.getSubDetails(sub_id);
+            auto data = dataHandler->readSubproject(sub_id);
+            data.frac = details.frac;
+            data.parentUid = target; // Rewrites id for those we've moved
+            dataHandler->updateSubproject(data);
+          }
+          targetData.FTE = thePM.getFTE(target);
+          dataHandler->updateProject(targetData);
+          // Delete the details in DB
+          dataHandler->deleteProject(current);
+          // Delete from map
+          thePM.deleteProjectById(current);
+        }catch(std::runtime_error & e){
+          throw trackerMergeError(e.what(), trackerTypes::mergeErrorKind::runtime, trackerTypes::mergeErrorPath::sub2sub);
+        }
+
       }else if(current.isProj() && !sub.isNull() && target.isProj() && !sub_target.isNull()){
         auto firstParent = thePM.getParentId(current);
         if(firstParent == thePM.getParentId(target)){
           //Rewrite the timestamps
           dataHandler->rewriteTrackerProjectId(sub, sub_target);
           // Combine the fractions
-          //Fetch the FTE for current and add it to target
           auto targetData = dataHandler->readSubproject(sub_target);
           targetData.frac += thePM.getFrac(sub);
+          thePM.deleteSubprojectById(sub);
           thePM.setFrac(sub_target, targetData.frac);
           dataHandler->updateSubproject(targetData);
 
           // Delete the details in DB
           dataHandler->deleteSubproject(sub);
-          // Delete sub
-          thePM.deleteSubprojectById(sub);
-
-          }else{
-            throw std::runtime_error("Not implemented merge for this case (non shared parent)");
-          }
-        }else if(current.isNull() || target.isNull()){
-          throw std::runtime_error("Missing project for merge");
         }else{
-          throw std::runtime_error("Not implemented merge for this case");
+            throw trackerMergeError("Not implemented merge for this case (non shared parent)", trackerTypes::mergeErrorKind::not_implemented, trackerTypes::mergeErrorPath::sub2sub);
         }
-        generateProjectSummary(target); // Effectively, a refresh
+      }else{
+        throw trackerMergeError("Not implemented merge for this case", trackerTypes::mergeErrorKind::not_implemented);
       }
+      generateProjectSummary(target); // Effectively, a refresh
+    }
 
     void deleteTimeStampList(std::vector<timeStamp> & stmps){
       // Delete a list of timestamps

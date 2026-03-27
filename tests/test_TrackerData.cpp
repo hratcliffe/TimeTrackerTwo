@@ -953,8 +953,195 @@ TEST_CASE("Known Data - Load projects with active One-Off project", "[QTAware]")
 }
 
 // ---------- Merging Projects ---------------------------------------------------------------------
-TEST_CASE("Merging project data", "[QTAware, Slots]"){
+TEST_CASE("Merging project data - basic checks", "[QTAware]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+  auto theGen = uniqueIdGenerator();
 
+  SECTION("Invalid ids"){
+    REQUIRE_THROWS_AS(td.mergeProject(proIds::NullUid, proIds::NullUid, proIds::NullUid, proIds::NullUid), trackerMergeError);
+  }
+  SECTION("Degenerate id: parent"){
+    auto id = theGen.getNextId();
+    REQUIRE_THROWS_AS(td.mergeProject(id, proIds::NullUid, id, proIds::NullUid), trackerMergeError);
+  }
+  SECTION("Degenerate id: subparent"){
+    auto id = theGen.getNextId();
+    auto id2 = theGen.getNextId();
+    REQUIRE_THROWS_AS(td.mergeProject(id, id2, id, id2), trackerMergeError);
+  }
+}
+
+TEST_CASE("Merging project data - project to another project - move from has subs", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./Scratch/KnownDatabaseForMerge.db")};
+  td.loadProjects(1); // No start-end times so load for any time...
+  databaseIO theDB{"./Scratch/KnownDatabaseForMerge.db", true}; // read-only connection to read back...
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectSummaryReady, &sig, &SignalCatcher::emitString);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::timeStampListReady, &sig, &SignalCatcher::emitTimeStampList);
+
+  proIds::Uuid t_id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+  proIds::Uuid c_id = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+  std::string descr;
+
+  td.fetchTimestamps(timeWrapper::fromSeconds(0), timeWrapper::fromSeconds(180000));
+  std::vector<timeStampForDisplay> stmp_orig;
+  stmp_orig = sig.what(stmp_orig);
+  auto dig = timeDigestPeriod();
+  dig.id = 3;
+  auto lst_orig = theDB.fetchDigestEntries(dig);
+
+  td.mergeProject(c_id, proIds::NullUid, t_id, proIds::NullUid);
+
+  //Overall
+  td.generateToplevelSummary();
+  descr = sig.what(descr);
+  REQUIRE(descr.find("1 projects active") != std::string::npos);
+  REQUIRE(descr.find("75 % FTE allocated") != std::string::npos);
+
+  // Checking project Alpha
+  td.generateProjectSummary(t_id);
+  descr = sig.what(descr);
+  REQUIRE(descr.find("Project Alpha") != std::string::npos);
+  REQUIRE(descr.find("75 %") != std::string::npos);
+  REQUIRE(descr.find("3 subprojects") != std::string::npos);
+  REQUIRE_NOTHROW(td.verifyProjectOrSub(t_id));
+  //Checking a sub
+  auto s_id = proIds::Uuid("{de58a6f8-d0bb-46c8-af18-aed15e92060c}").tag(proIds::uidTag::sub);
+  REQUIRE_NOTHROW(td.verifyProjectOrSub(s_id));
+
+  //Check the timestamps
+  td.fetchTimestamps(timeWrapper::fromSeconds(0), timeWrapper::fromSeconds(180000));
+  std::vector<timeStampForDisplay> stmp;
+  stmp = sig.what(stmp);
+  // One at 170000 should now be under t_id
+  // Others unchanged
+  for(size_t i =0; i<stmp_orig.size(); i++){
+    if(stmp_orig[i].time != 170000){
+      REQUIRE(stmp_orig[i].time == stmp[i].time);
+      REQUIRE(stmp_orig[i].projectUid == stmp[i].projectUid);
+    }else{
+      REQUIRE(stmp[i].projectUid == t_id);
+    }
+  }
+  //Check a digest - 3538
+  // Kinda have to use the DB directly...
+  auto lst = theDB.fetchDigestEntries(dig);
+  for(size_t i=0; i<lst.size(); i++){
+    if(lst[i].projectUid == t_id){
+      REQUIRE(lst[i].duration == 3538);
+    }else{
+      //Search entire lst_orig for match to other items in lst...
+      auto chk = [i, lst](timeDigestEntry td){return td.projectUid == lst[i].projectUid && td.duration==lst[i].duration;};
+      REQUIRE(std::find_if(lst_orig.begin(), lst_orig.end(), chk) != lst_orig.end());
+    }
+  }
+}
+
+TEST_CASE("Merging project data - project to another project - move from has NO subs", "[Failing]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./Scratch/KnownDatabaseForMergeS.db")};
+  td.loadProjects(1); // No start-end times so load for any time...
+  databaseIO theDB{"./Scratch/KnownDatabaseForMergeS.db", true}; // read-only connection to read back...
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectSummaryReady, &sig, &SignalCatcher::emitString);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::timeStampListReady, &sig, &SignalCatcher::emitTimeStampList);
+
+  proIds::Uuid t_id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+  proIds::Uuid c_id = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+  std::string descr;
+
+  td.mergeProject(c_id, proIds::NullUid, t_id, proIds::NullUid);
+
+  //Overall
+  td.generateToplevelSummary();
+  descr = sig.what(descr);
+  REQUIRE(descr.find("1 projects active") != std::string::npos);
+  REQUIRE(descr.find("75 % FTE allocated") != std::string::npos);
+
+  // Checking project Alpha
+  td.generateProjectSummary(t_id);
+  descr = sig.what(descr);
+  REQUIRE(descr.find("Project Alpha") != std::string::npos);
+  REQUIRE(descr.find("75 %") != std::string::npos);
+  REQUIRE(descr.find("2 subprojects") != std::string::npos);
+  REQUIRE_NOTHROW(td.verifyProjectOrSub(t_id));
+
+  //Check the timestamps
+  td.fetchTimestamps(timeWrapper::fromSeconds(0), timeWrapper::fromSeconds(180000));
+  std::vector<timeStampForDisplay> stmp;
+  stmp = sig.what(stmp);
+  // One at 170000 should now be under t_id
+  {
+    auto chk = [t_id](timeStampForDisplay td){return td.projectUid == t_id && td.time==170000;};
+    REQUIRE(std::find_if(stmp.begin(), stmp.end(), chk) != stmp.end());
+  }
+  //Check a digest - 3538
+  // Kinda have to use the DB directly...
+  auto dig = timeDigestPeriod();
+  dig.id = 3;
+  auto lst = theDB.fetchDigestEntries(dig);
+  {
+    auto chk = [t_id](timeDigestEntry td){return td.projectUid == t_id && td.duration ==3538;};
+    REQUIRE(std::find_if(lst.begin(), lst.end(), chk) != lst.end());
+  }
+}
+TEST_CASE("Merging project data - sub to another sub of same parent"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./Scratch/KnownDatabaseForMerge2.db")};
+  td.loadProjects(1); // No start-end times so load for any time...
+  databaseIO theDB{"./Scratch/KnownDatabaseForMerge2.db", true}; // read-only connection to read back...
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectSummaryReady, &sig, &SignalCatcher::emitString);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::timeStampListReady, &sig, &SignalCatcher::emitTimeStampList);
+
+  //Fractions combine, timestamps and digests merge. No other changes
+  proIds::Uuid p_id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+  proIds::Uuid ts_id = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}").tag(proIds::uidTag::sub);
+  proIds::Uuid cs_id = proIds::Uuid("{de58a6f8-d0bb-46c8-af18-aed15e92060c}").tag(proIds::uidTag::sub);
+
+  std::string descr;
+
+  td.mergeProject(p_id, cs_id, p_id, ts_id);
+
+  //Overall
+  td.generateToplevelSummary();
+  descr = sig.what(descr);
+  std::cout<<descr<<std::endl;
+  REQUIRE(descr.find("2 projects active") != std::string::npos);
+  REQUIRE(descr.find("75 % FTE allocated") != std::string::npos);
+
+  // Checking project Alpha
+  td.generateProjectSummary(p_id);
+  descr = sig.what(descr);
+  REQUIRE(descr.find("Project Alpha") != std::string::npos);
+  REQUIRE(descr.find("50 %") != std::string::npos);
+  REQUIRE(descr.find("1 subprojects") != std::string::npos);
+
+  //Check the frac here?
+  REQUIRE_NOTHROW(td.verifyProjectOrSub(ts_id));
+  //Check the timestamps
+  td.fetchTimestamps(timeWrapper::fromSeconds(0), timeWrapper::fromSeconds(180000));
+  std::vector<timeStampForDisplay> stmp;
+  stmp = sig.what(stmp);
+  // One at 170000 should now be under t_id
+  {
+    auto chk = [ts_id](timeStampForDisplay td){return td.projectUid == ts_id && td.time==90184;};
+    REQUIRE(std::find_if(stmp.begin(), stmp.end(), chk) != stmp.end());
+  }
+  //Check a digest - 6219 + 3046
+  // Kinda have to use the DB directly...
+  auto dig = timeDigestPeriod();
+  dig.id = 3;
+  auto lst = theDB.fetchDigestEntries(dig);
+  {
+    auto chk = [ts_id](timeDigestEntry td){return td.projectUid == ts_id && td.duration ==6219+3046;};
+    REQUIRE(std::find_if(lst.begin(), lst.end(), chk) != lst.end());
+  }
 }
 
 // ---------- Special functions ---------------------------------------------------------------------

@@ -145,6 +145,8 @@ Q_OBJECT
 
     //To add a subproject, view needs an up-to-date list of projects - gather this and then call the provided callback
     connect(themainWindow, &mainWindow::projectDetailsRequiredAll, [this](auto functor){functor(themainWindow, currentData->projectDetailsRequired());});
+    //To delete, we need to verify the marks
+    connect(themainWindow, &mainWindow::projectDetailsRequiredSpecial, [this](auto functor, auto id){functor(themainWindow,  currentData->projectDetailsRequired(id), currentData->checkProjectRunning(id), currentData->checkTimeOnProjectOrSub(id));});
 
     //Pausing a project:
     connect(themainWindow, &mainWindow::pauseRequested, [this](){currentData->pauseProject(this->clock->now());});
@@ -170,6 +172,7 @@ Q_OBJECT
 
     //Making changes to projects etc
     connect(themainWindow, &mainWindow::mergeRequested, currentData, &TrackerData::mergeProject);
+    connect(themainWindow, &mainWindow::deleteConfirmed, currentData, &TrackerData::deleteProject);
 
     //Time summary view
     connect(themainWindow, &mainWindow::timeSummaryRequested, currentData, &TrackerData::generateTimeSummary);

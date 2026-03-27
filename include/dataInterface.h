@@ -53,6 +53,7 @@ class dataIO{
     virtual std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1) = 0; /**< \brief Fetch ORDERED tracker entries from the data source, optionally within a time range */
     virtual std::vector<timeStamp> fetchTrackerEntries(proIds::Uuid const & id) = 0; /**< \brief Fetch ORDERED tracker entries for specific id */
     virtual timeStamp fetchLatestTrackerEntry() = 0;/**< \brief Fetch the latest (most recent) tracker entry */
+    virtual size_t countTrackerEntries(std::vector<proIds::Uuid> const & ids) = 0;/**< \brief Count the number of timestamps under the given list of ids */
 
     virtual void deleteTrackerInInterval(timecode start, timecode end) = 0;/**< \brief Delete tracker entries in the given range*/
     virtual void deleteTrackerEntry(const timeStamp & stamp) = 0;/**< \brief Delete specific timestamp */
@@ -63,6 +64,7 @@ class dataIO{
     virtual std::vector<timeDigestEntry> fetchDigestEntries(timeDigestPeriod period) = 0; /**< \brief Fetch the daily digests of time spent*/
     virtual void updateDigestEntry(timeDigestEntry) = 0;/**< \brief Update an entry (unique on period_id+uid) */
     virtual std::vector<timeDigestEntry> fetchDigestEntriesForTime(timecode start = -1, timecode end=-1)=0;/**<\brief Fetch all the digests which fall in the given time range */
+    virtual size_t countDigestEntries(std::vector<proIds::Uuid> const & ids) = 0;/**< \brief Count the number of timestamps under the given list of ids */
 
     // Manipulation and editing
     virtual void rewriteTrackerProjectId(proIds::Uuid current, proIds::Uuid target) = 0;
@@ -205,6 +207,10 @@ class databaseIO : public dataIO{
       return dbStore.fetchLatestTrackerEntry();
     }
 
+    size_t countTrackerEntries(std::vector<proIds::Uuid> const & ids) override{
+      return dbStore.countTrackerEntries(ids);
+    }
+
     void deleteTrackerEntry(const timeStamp & stamp) override{
       dbStore.deleteTrackerEntry(stamp);
     };
@@ -228,13 +234,21 @@ class databaseIO : public dataIO{
     std::vector<timeDigestEntry> fetchDigestEntriesForTime(timecode start = -1, timecode end=-1) override{
       return dbStore.fetchDigestEntries(start, end);
     }
+    size_t countDigestEntries(std::vector<proIds::Uuid> const & ids) override{
+      return dbStore.countDigestEntries(ids);
+    }
+
 
     // Editing and manipulation
     void rewriteTrackerProjectId(proIds::Uuid current, proIds::Uuid target) override{
       // Rewrite the Uid for timestamp and digest entries from current to target
       dbStore.updateTimestampEntriesId(current, target);
       // TODO - this doesn't work - need to MERGE the digests
-      dbStore.updateDigestEntriesId(current, target);
+      if(target != proIds::NullUid){
+        dbStore.updateDigestEntriesId(current, target);
+      }else{
+        dbStore.deleteDigestEntries(current);
+      }
     }
 
 };

@@ -490,6 +490,18 @@ TEST_CASE("Tracker Entry Exists", "[Database]"){
   REQUIRE_THROWS(theDB.writeTrackerEntry({111, proIds::NullUid}));
 }
 
+TEST_CASE("Counting entries", "[Database]"){
+  databaseStore theDB{"./InputData/KnownDatabaseForCounts.db", true};
+
+  proIds::Uuid id1 = proIds::Uuid("{07e453ad-b698-47b8-aa52-c7ef2306731d}");
+  proIds::Uuid id2 = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
+  proIds::Uuid id3 = uniqueIdGenerator().getOnesId();
+  REQUIRE(theDB.countTrackerEntries({id1}) == 2);
+  REQUIRE(theDB.countTrackerEntries({id1, id2}) == 3);
+  REQUIRE(theDB.countTrackerEntries({id3}) == 0);
+  REQUIRE(theDB.countTrackerEntries({id1, id3, id2}) == 3);
+}
+
 //Write tracker
 TEST_CASE("Writing Tracker" "[Database]"){
   databaseStore theDB{getScratchFileName(), false};
@@ -657,6 +669,18 @@ TEST_CASE("Reading Known Data - Digest By Time", "[Database]"){
   }
 }
 
+TEST_CASE("Counting entries - digests", "[Database]"){
+  databaseStore theDB{"./InputData/KnownDatabaseForCounts.db", true};
+
+  proIds::Uuid id1 = proIds::Uuid("{07e453ad-b698-47b8-aa52-c7ef2306731d}");
+  proIds::Uuid id2 = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
+  proIds::Uuid id3 = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+  proIds::Uuid id4 = uniqueIdGenerator().getOnesId();
+  REQUIRE(theDB.countDigestEntries({id1}) == 0);
+  REQUIRE(theDB.countDigestEntries({id1, id2}) == 2);
+  REQUIRE(theDB.countDigestEntries({id3}) == 1);
+  REQUIRE(theDB.countDigestEntries({id1, id3, id2, id4}) == 3);
+}
 // Read and write state
 
 TEST_CASE("Round trip State", "[Database]"){
@@ -705,6 +729,27 @@ TEST_CASE("Reading bad state", "[Database]"){
   }
 }
 
+timeDigestPeriod createSampleP(long id){
+  timeDigestPeriod tp;
+  tp.start = id*600;
+  tp.duration = 600;
+  tp.displayName = "Ten Mins";
+  tp.id = id;
+  return tp;
+}
+std::vector<timeDigestEntry> writeSampleEntries(databaseStore & theDB, timeDigestPeriod tp, std::vector<long> durs, std::vector<proIds::Uuid> ids){
+  std::vector<timeDigestEntry> entries;
+  for(size_t i =0; i<durs.size(); i++){
+    timeDigestEntry te;
+    te.duration = durs[i];
+    te.projectUid = ids[i];
+    te.period = tp.id;
+    entries.push_back(te);
+  }
+  theDB.writeDigestEntries(tp, entries);
+  return entries;
+}
+
 // Write digest period + entry (i.e. first touch)
 TEST_CASE("Write Digest", "[Database]"){
   databaseStore theDB{getScratchFileName(), false};
@@ -717,40 +762,15 @@ TEST_CASE("Write Digest", "[Database]"){
   auto pid2 = theGen.getNextId();
   auto pd2 = writeProj(theDB, pid2);
 
-  timeDigestPeriod tp;
-  tp.start = 1268;
-  tp.duration = 600;
-  tp.displayName = "Ten Mins";
-  tp.id = 1; // This gets constructed on insert but is 1 for fresh DB
-
-  std::vector<timeDigestEntry> entries;
-  timeDigestEntry te;
-  te.duration = 273;
-  te.projectUid = pd.uid;
-  te.period = 1;
-  entries.push_back(te);
-
-  timeDigestEntry te2;
-  te2.duration = 181;
-  te2.projectUid = pd2.uid;
-  te2.period = 1;
-  entries.push_back(te2);
-
-  theDB.writeDigestEntries(tp, entries);
-  // Written
+  auto tp = createSampleP(1);
+  auto entries = writeSampleEntries(theDB, tp, {273, 181}, {pd.uid, pd2.uid});
+  // Checking Written
   auto entries_in = theDB.fetchDigestEntries(tp);
-
-  {
-    auto check = [te](timeDigestEntry & td){return td == te;};
+  for(auto &entry: entries){
+    auto check = [entry](timeDigestEntry & td){return td == entry;};
     REQUIRE(std::find_if(entries_in.begin(), entries_in.end(), check) != entries_in.end());
   }
-  {
-    auto check = [te2](timeDigestEntry & td){return td == te2;};
-    REQUIRE(std::find_if(entries_in.begin(), entries_in.end(), check) != entries_in.end());
-  }
-
 }
-
 //Update digest for id
 TEST_CASE("Specific digest update", "[Database]"){
   databaseStore theDB{getScratchFileName(), false};
@@ -766,28 +786,53 @@ TEST_CASE("Specific digest update", "[Database]"){
   tp.displayName = "Twenty Mins";
   tp.id = 1; // This gets constructed on insert but is 1 for fresh DB
 
-  std::vector<timeDigestEntry> entries;
-  timeDigestEntry te;
-  te.duration = 111;
-  te.projectUid = pd.uid;
-  te.period = 1;
-  entries.push_back(te);
+  auto entries = writeSampleEntries(theDB, tp, {111}, {pd.uid});
 
   theDB.writeDigestEntries(tp, entries);
 
   //Update it
+  auto & te=entries[0];
   te.duration = 181;
   theDB.updateDigestEntry(te);
   // Read back
   auto entries_in = theDB.fetchDigestEntries(tp);
-{
+  {
     auto check = [te](timeDigestEntry & td){return td == te;};
     REQUIRE(std::find_if(entries_in.begin(), entries_in.end(), check) != entries_in.end());
   }
-{ // Explicit checkt
+  { // Explicit checkt
     auto check = [](timeDigestEntry & td){return td.duration == 181;};
     REQUIRE(std::find_if(entries_in.begin(), entries_in.end(), check) != entries_in.end());
   }
+}
+
+TEST_CASE("Delete digest", "[Database]"){
+  databaseStore theDB{getScratchFileName(), false};
+
+  // Create projects
+  uniqueIdGenerator theGen;
+  auto pid = theGen.getNextId();
+  auto pd = writeProj(theDB, pid);
+
+  auto pid2 = theGen.getNextId();
+  auto pd2 = writeProj(theDB, pid2);
+
+  auto tp = createSampleP(1);
+  auto entries = writeSampleEntries(theDB, tp, {273, 181}, {pd.uid, pd2.uid});
+  auto tp2 = createSampleP(2);
+  auto entries_2 = writeSampleEntries(theDB, tp2, {94}, {pd.uid});
+
+  //Delete entries for pd
+  theDB.deleteDigestEntries(pd.uid);
+  //Check no entries left on p2
+  auto entries_in = theDB.fetchDigestEntries(tp2);
+  REQUIRE(entries_in.size() == 0);
+
+  //One entry on p1 with id pid2
+  entries_in = theDB.fetchDigestEntries(tp);
+  REQUIRE(entries_in.size() == 1);
+  REQUIRE(entries_in[0].projectUid == pd2.uid);
+
 }
 
 //Update ID in tracker or digest

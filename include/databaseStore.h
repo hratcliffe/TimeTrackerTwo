@@ -112,6 +112,38 @@ class databaseStore{
         std::cout << "All tables deleted successfully." << std::endl;
 
     }
+
+    /**
+     * @brief Generic implementation for counting by project_id
+     * 
+     * Reduces duplication when counting by id. DO NOT use with unsafe string for tbl. 
+     * 
+     * @param tbl Table name for count
+     * @param ids Vector of project_ids
+     * @returns Count of entries
+     */
+    size_t countEntriesByIdGeneric(std::string tbl, std::vector<proIds::Uuid> const & ids, std::string extra=""){
+      if(ids.size() == 0) return 0;
+      std::string base_cmd = "SELECT COUNT() FROM "+tbl+" WHERE (";
+      for(size_t i=0; i < ids.size(); i++){
+        base_cmd += "project_id = ?";
+        if(i<ids.size()-1) base_cmd +=" OR ";
+      }
+      if(extra != "") base_cmd += ") AND "+ extra + ";";
+      else base_cmd += ");";
+      sqlite3_stmt * prep_cmd;
+      int err = sqlite3_prepare_v2(DB, base_cmd.c_str(), base_cmd.length(), &prep_cmd, nullptr);
+      for(size_t i = 0; i < ids.size(); i++){
+          std::string id = ids[i].to_string();
+          sqlite3_bind_text(prep_cmd, i+1, id.c_str(), id.length(), SQLITE_TRANSIENT); // id string has scope of loop iteration, so use TRANSIENT to prolong
+      }
+      size_t ct = 0;
+      while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+        ct = sqlite3_column_int64(prep_cmd, 0);
+      }
+      sqlite3_finalize(prep_cmd);
+      return ct;
+    }
     public:
     databaseStore(std::string fileName, bool readOnly, bool verbose=false) : dbFileName(fileName) {
         if(verbose) std::cout<<"Opening Database"<<std::endl; 
@@ -806,6 +838,8 @@ class databaseStore{
         return ret;
     }
 
+    size_t countTrackerEntries(std::vector<proIds::Uuid> const & ids){return countEntriesByIdGeneric("timestamps", ids);}
+
     void deleteTrackerEntry(const timeStamp & stamp){
         const std::string id_str = stamp.projectUid.to_string();
         const long long time = stamp.time;
@@ -949,7 +983,23 @@ class databaseStore{
         err = sqlite3_step(prep_cmd);
         if(err == SQLITE_DONE) err = SQLITE_OK;
         if(err != SQLITE_OK){
-            throw std::runtime_error("Failed to write period");
+            throw std::runtime_error("Failed to update entry");
+        }
+        sqlite3_finalize(prep_cmd);
+    }
+
+    void deleteDigestEntries(proIds::Uuid projectUid){
+        //Delete entries for all periods under given uid
+        std::string cmd = "DELETE FROM time_digests WHERE project_id= ?;";
+        sqlite3_stmt * prep_cmd;
+        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        const std::string & tmp = projectUid.to_string();
+        sqlite3_bind_text(prep_cmd, 1, tmp.c_str(), tmp.length(), SQLITE_STATIC);
+
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            throw std::runtime_error("Failed to delete digests");
         }
         sqlite3_finalize(prep_cmd);
     }
@@ -981,6 +1031,8 @@ class databaseStore{
         return ret;
 
     }
+
+    size_t countDigestEntries(std::vector<proIds::Uuid> const & ids){return countEntriesByIdGeneric("time_digests", ids, "duration != 0");}
 
     void updateTimestampEntriesId(proIds::Uuid current, proIds::Uuid target){
         const std::string & p_old = current.to_string();

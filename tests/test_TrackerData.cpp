@@ -227,6 +227,7 @@ TEST_CASE("Creating OneOff", "[QTAware, Slots]"){
   REQUIRE(descr.find("One Off Wobbly") != std::string::npos);
 }
 
+// --- Checking and verifying
 TEST_CASE("Verifying data consistency", "[QTAware]"){
   auto app = dummyApp();
   TrackerData td{basicConfig()};
@@ -350,6 +351,71 @@ TEST_CASE("Verifying data consitency - deliberately broken", "[QTAware]"){
       REQUIRE_THROWS_AS(td.verifyProjectOrSub(sid),verifyError<trackerTypes::verifyErrorKind::dataMismatch>);
     }
   }
+}
+
+TEST_CASE("Counting use of projects -via stamps"){
+  auto app = dummyApp();
+  auto conf = basicConfig();
+  conf.dataFileName = "./InputData/KnownDatabaseForCounts2.db";
+  conf.read_only = true;
+  TrackerData td{conf};
+
+  td.loadProjects(200000);
+  proIds::Uuid sp_impo = proIds::Uuid("{07e453ad-b698-47b8-aa52-c7ef2306731d}").tag(proIds::uidTag::sub);
+  proIds::Uuid p_test  = proIds::Uuid("{cc467402-ace5-474f-9c58-466f3ba6f117}");
+  proIds::Uuid p_alpha = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+  proIds::Uuid p_beta  = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+  proIds::Uuid p_gamma = proIds::Uuid("{ab467402-acd5-494f-9c58-466f3aa6f119}");
+  proIds::Uuid p_tues  = proIds::Uuid("{9bf5d44a-2921-4666-b33b-053459e2ced6}").tag(proIds::uidTag::oneoff);
+  proIds::Uuid p_bugs  = proIds::Uuid("{d74a08d4-35b4-4b7a-b525-b5da00af6269}").tag(proIds::uidTag::oneoff);
+  proIds::Uuid id_1s   = uniqueIdGenerator().getOnesId();
+
+  //No entries  
+  REQUIRE_FALSE(td.checkTimeOnProjectOrSub(p_test));
+  //Not even a project
+  REQUIRE_FALSE(td.checkTimeOnProjectOrSub(id_1s));
+  // A project - direct time only
+  REQUIRE(td.checkTimeOnProjectOrSub(p_gamma));
+  //A subproject
+  REQUIRE(td.checkTimeOnProjectOrSub(sp_impo));
+  // A project - with subs and both time
+  REQUIRE(td.checkTimeOnProjectOrSub(p_alpha));
+  // A project, only via subs
+  REQUIRE(td.checkTimeOnProjectOrSub(p_beta));
+  //A one off
+  REQUIRE(td.checkTimeOnProjectOrSub(p_tues));
+   //A one off - none
+  REQUIRE_FALSE(td.checkTimeOnProjectOrSub(p_bugs));
+ 
+}
+TEST_CASE("Counting use of projects -via digests"){
+  auto app = dummyApp();
+  auto conf = basicConfig();
+  conf.dataFileName = "./InputData/KnownDatabaseForCounts3.db";
+  TrackerData td{conf};
+
+  td.loadProjects(200000);
+  proIds::Uuid sp_impo = proIds::Uuid("{07e453ad-b698-47b8-aa52-c7ef2306731d}").tag(proIds::uidTag::sub);
+  proIds::Uuid p_alpha = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+  proIds::Uuid p_beta  = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+  proIds::Uuid p_gamma = proIds::Uuid("{ab467402-acd5-494f-9c58-466f3aa6f119}");
+  proIds::Uuid p_tues  = proIds::Uuid("{9bf5d44a-2921-4666-b33b-053459e2ced6}").tag(proIds::uidTag::oneoff);
+  proIds::Uuid p_bugs  = proIds::Uuid("{d74a08d4-35b4-4b7a-b525-b5da00af6269}").tag(proIds::uidTag::oneoff);
+
+  //No need to re-check null cases
+  // A project - direct time only
+  REQUIRE(td.checkTimeOnProjectOrSub(p_gamma));
+  //A subproject
+  REQUIRE(td.checkTimeOnProjectOrSub(sp_impo));
+  // A project - with subs and both time
+  REQUIRE(td.checkTimeOnProjectOrSub(p_alpha));
+  // A project, only via subs
+  REQUIRE(td.checkTimeOnProjectOrSub(p_beta));
+  //A one off
+  REQUIRE(td.checkTimeOnProjectOrSub(p_tues));
+  //Empty entry
+  REQUIRE_FALSE(td.checkTimeOnProjectOrSub(p_bugs));
+
 }
 // ------ Mark, pause, stop etc -----------------------------------------------------------------------
 
@@ -598,6 +664,25 @@ TEST_CASE("Marking duplicates - exceeding range", "[No]"){
   REQUIRE(msg.find("try again later!") != std::string::npos);
 }
 
+TEST_CASE("Checking Status", "[QTAware]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+
+  std::string name = "Project to be marked dfhkaeh";
+  auto id = CreateProjectAndReturnId(td, name);
+  REQUIRE_FALSE(td.checkProjectRunning(id));
+  REQUIRE_FALSE(td.checkProjectRunning(uniqueIdGenerator().getNextId()));
+  td.markProject(id, name, 242);
+  REQUIRE_FALSE(td.checkProjectRunning(uniqueIdGenerator().getNextId()));
+  REQUIRE(td.checkProjectRunning(id));
+  td.stopProject(250);
+  REQUIRE_FALSE(td.checkProjectRunning(uniqueIdGenerator().getNextId()));
+  REQUIRE_FALSE(td.checkProjectRunning(id));
+  td.markProject(id, name, 262);
+  td.pauseProject(270);
+  REQUIRE_FALSE(td.checkProjectRunning(uniqueIdGenerator().getNextId()));
+  REQUIRE(td.checkProjectRunning(id));
+}
 // ------- Summaries and display ---------------------------------------------------------------------
 TEST_CASE("Summarising a project", "[QTAware, Slots]"){
   auto app = dummyApp();
@@ -952,7 +1037,7 @@ TEST_CASE("Known Data - Load projects with active One-Off project", "[QTAware]")
 
 }
 
-// ---------- Merging Projects ---------------------------------------------------------------------
+// ---------- Merging and deleting Projects ---------------------------------------------------------------------
 TEST_CASE("Merging project data - basic checks", "[QTAware]"){
   auto app = dummyApp();
   TrackerData td{basicConfig()};
@@ -1144,6 +1229,51 @@ TEST_CASE("Merging project data - sub to another sub of same parent"){
   }
 }
 
+TEST_CASE("Deleting project fails" "[QTAware]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+  auto theGen = uniqueIdGenerator();
+
+  SECTION("Null id"){
+    REQUIRE_THROWS(td.deleteProject(proIds::NullUid));
+  }
+  SECTION("Marked project"){
+    std::string name = "Project to be marked dfhkaeh";
+    auto id = CreateProjectAndReturnId(td, name);
+    td.markProject(id, name, 242);
+    REQUIRE_THROWS(td.deleteProject(id));
+  }
+}
+TEST_CASE("Deleting project"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+  auto theGen = uniqueIdGenerator();
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::timeStampListReady, &sig, &SignalCatcher::emitTimeStampList);
+
+  std::string name = "Project to be marked dfhkaeh";
+  auto id = CreateProjectAndReturnId(td, name);
+
+  SECTION("Marked project, with force"){
+    td.markProject(id, name, 242);
+    td.deleteProject(id, FORCE);
+    REQUIRE_FALSE(td.checkTimeOnProjectOrSub(id));
+    td.fetchTimestamps(timeWrapper::fromSeconds(0), timeWrapper::fromSeconds(10001));
+    std::vector<timeStampForDisplay> items;
+    items = sig.what(items);
+    //There was a stamp, so this becomes a null
+    REQUIRE(items.size() == 1);
+    REQUIRE(items[0].projectUid == proIds::NullUid);
+  }
+  SECTION("Unmarked project"){
+    td.deleteProject(id, FORCE);
+    REQUIRE_FALSE(td.checkTimeOnProjectOrSub(id));
+    td.fetchTimestamps(timeWrapper::fromSeconds(0), timeWrapper::fromSeconds(10001));
+    std::vector<timeStampForDisplay> items;
+    items = sig.what(items);
+    REQUIRE(items.size() == 0);
+  }
+}
 // ---------- Special functions ---------------------------------------------------------------------
 
 TEST_CASE("Known Data - Timestamps before", "[QTAware]"){

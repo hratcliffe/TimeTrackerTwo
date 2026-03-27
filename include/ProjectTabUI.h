@@ -95,6 +95,14 @@ public:
         layout->addWidget(addButton);
 
         addButton = new QPushButton();
+        addButton->setText("Delete");
+        addButton->setToolTip("Delete this project");
+        addButton->setFixedWidth(100);
+        connect(addButton, &QPushButton::clicked, this, &ProjectTabUI::deleteProjectRequested);
+        layout->addWidget(addButton);
+
+
+        addButton = new QPushButton();
         addButton->setText("Deactivate"); //Remove from selections, leave data intact
         addButton->setFixedWidth(100);
         //connect(addButton, &QPushButton::clicked, this, &mainWindow::???);
@@ -117,6 +125,7 @@ public:
       void addProjectRequested();
       void addSubprojectRequested();
       void mergeProjectRequested();
+      void deleteProjectRequested();
 
 };
 #endif

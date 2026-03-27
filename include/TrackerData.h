@@ -21,6 +21,8 @@ class projectStatus{
     proIds::Uuid uid; /**< \brief Pointer to project, null if none in progress */
     std::string name;
     projectStatusFlag status = projectStatusFlag::none; /**< \brief Status of project */
+    bool isUp(){return status != projectStatusFlag::none;} /**< \brief Whether ANY project is selected (active OR paused)  */
+    bool isUp(proIds::Uuid id){return isUp() && uid == id;}/**< \brief Whether project ID is selected */
 };
 enum class mergeErrorKind{invalid, not_implemented, runtime};
 enum class mergeErrorPath{unknown, proj2proj, sub2parent, sub2sub, sub2other, other};
@@ -126,6 +128,10 @@ Q_OBJECT
     }
     projectDetails projectDetailsRequired(proIds::Uuid id){
       return thePM.getDetails(id);
+    }
+
+    auto trackerEntriesRequired(proIds::Uuid id){
+      return dataHandler->fetchTrackerEntries(id);
     }
 
     //Load existing projects from the data backend
@@ -275,6 +281,30 @@ Q_OBJECT
         if(badSubs) throw verifyError<trackerTypes::verifyErrorKind::dataMismatch>(msg.c_str());
       }
     }
+
+    /**
+     * @brief Check whether given id has any uptime
+     * 
+     * Checks for timestamps, digests, and, if id is a project, for time under and subprojects
+     * 
+     * @param uid 
+     * @return true if there is any time associated with the given id
+     */
+    bool checkTimeOnProjectOrSub(proIds::Uuid uid){
+      if((uid.isTaggedAs(proIds::uidTag::sub) && thePM.isSubProject(uid))|| uid.isTaggedAs(proIds::uidTag::oneoff)){
+        return (dataHandler->countTrackerEntries({uid}) != 0 || dataHandler->countDigestEntries({uid}) != 0);
+      }else if(thePM.isProject(uid)){
+        //Form list of id, plus subs
+        std::vector<proIds::Uuid> ids;
+        ids = thePM.getSubs(uid);
+        ids.push_back(uid);
+        return (dataHandler->countTrackerEntries(ids) != 0 || dataHandler->countDigestEntries(ids) != 0);
+      }else{
+        return false;
+      }
+    }
+
+    bool checkProjectRunning(proIds::Uuid uid){return currentProjectStatus.isUp(uid);}
 
     void markProject(proIds::Uuid uid, std::string name, timecode now){
       //Timestamp project with current 'time' - (NB app time, not necessarily real time)
@@ -607,6 +637,35 @@ Q_OBJECT
     }
 
     //Editing and Manipulation
+
+    /**
+     * @brief Delete a project, sub or one-off
+     *
+     * @pre uid is a valid project.
+     * @pre Either uid has no associated time, OR force is true
+     * @post uid no longer exists and time associated with it has become down-time
+     * @param uid Id to delete, project, oneoff or sub
+     * @param force True - delete along with associated time; False - do not delete if there is associated time
+     */
+    void deleteProject(proIds::Uuid uid, bool force=NO_FORCE){
+      //Re-do the check for being marked
+      bool marked = checkTimeOnProjectOrSub(uid);
+      if(marked && !force) throw std::runtime_error("Project has associated time, cannot delete");
+      //Now either we're safe to delete, or force=true
+      if(marked){
+        dataHandler->rewriteTrackerProjectId(uid, proIds::NullUid);
+      }
+      if(uid.isTaggedAs(proIds::uidTag::none)){
+        dataHandler->deleteProject(uid);
+        thePM.deleteProjectById(uid);
+      }else if(uid.isTaggedAs(proIds::uidTag::oneoff)){
+        dataHandler->deleteOneOffProject(uid);
+      }else if(uid.isTaggedAs(proIds::uidTag::sub)){
+        dataHandler->deleteSubproject(uid);
+        thePM.deleteSubprojectById(uid);
+      }
+      emit projectListUpdateEvent(thePM.getOrderedProjectList());
+   }
     void mergeProject(proIds::Uuid current, proIds::Uuid sub,  proIds::Uuid target, proIds::Uuid sub_target){
       // Merge a project into another
       // Delete project with ID current, and rewrite all of its timestamps to target

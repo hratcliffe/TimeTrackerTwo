@@ -47,8 +47,6 @@ TODO - add option to move a sub, either by fraction or FTE
 // TODO - FINISH: replace 'delete' project button with 'merge', implement
 // TODO - allow actual delete of project with NO stamps
 
-// TODO Put in start/end dates in : summary view, project fetch/display, implement deactivate, refresh projects periodically
-
 // TODO both FTE and frac seem to cut off 1 tick too early at 99
 
 // TODO - some of the classes are HUGE. Cut them down
@@ -70,6 +68,37 @@ TODO - add option to move a sub, either by fraction or FTE
  * DONE Check everything
  * Enforce that the min increment is now a multiple of 0.01%
  */
+
+
+/* TODO
+Start and end dates
+If ADDING via the UI, always use midnight.
+Project has optional start and/or end - either may be set alone
+    Subprojects share parent start and end
+Dates dictate whether something is active and can be marked
+    Perhaps later allow merge and also 'merge' the dates
+Dates should be seen in:
+    summary view (only show for projects active within given range)
+    stamp review ?
+    tracker view via project fetch/display (the buttons)
+    projects tab should add button like 'one-offs to examine older projects
+
+Also:
+    implement deactivate (this is NOT dates, but is an additional factor)
+        Is this stored? It should be
+        Should we also display inactive projects but disallow marking?
+    refresh views of projects periodically against dates
+
+TASKS:
+when generate project lists for tracker, only include active-and-within date
+add a periodic (1 minute?) refresh of tracker display
+add date range selector to summary
+    initially just "past week, past month, past year, all time"
+    NOW FTE percents need to be calculated against the project duration
+hook up projects tab to same refresh as tracker
+add old-project-review to projects tab
+
+*/
 
 
 int main(int argc, char *argv[]) {

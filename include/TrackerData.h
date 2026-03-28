@@ -101,14 +101,18 @@ Q_OBJECT
       //Create a new project from data - adds it to the manager and writes to the backend
       auto id = thePM.addProject(dat);
       dataHandler->writeProject(fullProjectData(id, dat)); // Write to data handler
-      emit projectListUpdateEvent(thePM.getOrderedProjectList());
+      emit projectListNeedsUpdateEvent();
       emit projectTotalUpdateEvent(thePM.allocatedFTE(), thePM.availableFTE());
     }
     void createSubproject(const subprojectData & dat, const proIds::Uuid & parentId){
       //Create a new sub under and existing project
       auto idS = thePM.addSubproject(dat, parentId);
       dataHandler->writeSubproject(fullSubProjectData(idS, dat, parentId)); // Write to data handler
-      emit projectListUpdateEvent(thePM.getOrderedProjectList());
+      emit projectListNeedsUpdateEvent();
+    }
+
+    void projectListUpdate(timecode now){
+      emit projectListIsUpdatedEvent(thePM.getOrderedProjectList(now));
     }
 
     void createOneOff(proIds::Uuid uid, std::string name, std::string descr){
@@ -148,7 +152,7 @@ Q_OBJECT
       for(const auto & it : subprojectList){
         thePM.restoreSubproject(it);
       }
-      emit projectListUpdateEvent(thePM.getOrderedProjectList());
+      emit projectListNeedsUpdateEvent();
       emit projectTotalUpdateEvent(thePM.allocatedFTE(), thePM.availableFTE());
 
       // Check if there is an ongoing project
@@ -669,7 +673,7 @@ Q_OBJECT
         dataHandler->deleteSubproject(uid);
         thePM.deleteSubprojectById(uid);
       }
-      emit projectListUpdateEvent(thePM.getOrderedProjectList());
+      emit projectListNeedsUpdateEvent();
    }
     void mergeProject(proIds::Uuid current, proIds::Uuid sub,  proIds::Uuid target, proIds::Uuid sub_target){
       // Merge a project into another
@@ -780,7 +784,8 @@ Q_OBJECT
     }
 
     signals:
-      void projectListUpdateEvent(std::vector<selectableEntity> const & newList);
+      void projectListNeedsUpdateEvent();
+      void projectListIsUpdatedEvent(std::vector<selectableEntity> const & newList);
       void projectTotalUpdateEvent(eb_float usedFTE, eb_float freeFTE);
       void projectSummaryReady(std::string summary); /**< \brief Signal emitted when a summary is ready, with the summary text */
       void timeSummaryReady(std::vector<timeSummaryItem> summary);

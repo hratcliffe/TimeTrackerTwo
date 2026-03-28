@@ -139,7 +139,8 @@ TEST_CASE("Create and read - with helper", "[QTAware, Slots]"){
 
   SignalCatcher sig;
   //OK - these signals have different types so will not collide
-  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListNeedsUpdateEvent, [&td](){td.projectListUpdate(1);});
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListIsUpdatedEvent, &sig, &SignalCatcher::emitOrderedProjectList);
   QAbstractEventDispatcher::connect(&td, &TrackerData::projectTotalUpdateEvent, &sig, &SignalCatcher::emitEBFloatX2);
   td.createProject(pd);
 
@@ -169,7 +170,8 @@ TEST_CASE("Create and read - subproj", "[QTAware, Slots]"){
   spd.frac.set(0.3);
 
   SignalCatcher sig;
-  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListNeedsUpdateEvent, [&td](){td.projectListUpdate(1);});
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListIsUpdatedEvent, &sig, &SignalCatcher::emitOrderedProjectList);
   td.createSubproject(spd, pid);
 
   std::vector<selectableEntity> list;
@@ -254,7 +256,8 @@ TEST_CASE("Verifying data consistency", "[QTAware]"){
     spd.name = "SubXYZ Created by Tracker Mk3";
     spd.frac.set(0.3);
     SignalCatcher sig;
-    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListNeedsUpdateEvent, [&td](){td.projectListUpdate(1);});
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListIsUpdatedEvent, &sig, &SignalCatcher::emitOrderedProjectList);
     td.createSubproject(spd, pid);
 
     std::vector<selectableEntity> list;
@@ -298,7 +301,8 @@ TEST_CASE("Verifying data consitency - deliberately broken", "[QTAware]"){
     spd.name = "SubXYZ Created by Tracker Mk3";
     spd.frac.set(0.3);
     SignalCatcher sig;
-    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListNeedsUpdateEvent, [&td](){td.projectListUpdate(1);});
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListIsUpdatedEvent, &sig, &SignalCatcher::emitOrderedProjectList);
     td.createSubproject(spd, pid);
 
     std::vector<selectableEntity> list;
@@ -327,7 +331,8 @@ TEST_CASE("Verifying data consitency - deliberately broken", "[QTAware]"){
     spd.name = "SubXYZ Created by Tracker Mk3";
     spd.frac.set(0.3);
     SignalCatcher sig;
-    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListNeedsUpdateEvent, [&td](){td.projectListUpdate(1);});
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListIsUpdatedEvent, &sig, &SignalCatcher::emitOrderedProjectList);
     td.createSubproject(spd, pid);
 
     std::vector<selectableEntity> list;
@@ -453,7 +458,8 @@ TEST_CASE("Marking", "[QTAware, Slots]"){
     spd.frac.set(0.3);
 
     //Awful round-about way to get the ID for a created project
-    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListNeedsUpdateEvent, [&td](){td.projectListUpdate(1);});
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListIsUpdatedEvent, &sig, &SignalCatcher::emitOrderedProjectList);
     td.createSubproject(spd, id);
     std::vector<selectableEntity> list;
     list = sig.what(list);
@@ -981,7 +987,8 @@ TEST_CASE("Known Data - Load projects", "[QTAware]"){
   TrackerData td{basicConfig("./InputData/KnownDatabase.db")};
 
   SignalCatcher sig;
-  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListNeedsUpdateEvent, [&td](){td.projectListUpdate(1);});
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListIsUpdatedEvent, &sig, &SignalCatcher::emitOrderedProjectList);
   QAbstractEventDispatcher::connect(&td, &TrackerData::projectTotalUpdateEvent, &sig, &SignalCatcher::emitEBFloatX2);
 
   td.loadProjects(0);

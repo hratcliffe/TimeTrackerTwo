@@ -230,13 +230,13 @@ class projectManager{
 
     /** \brief Get list of projects
      * 
-     * Returns a COPY vector of the projects. They are in order - so subprojects follow their parent
+     * Returns a COPY vector of the projects. They are in order - so subprojects follow their parent. If activeOnly is true, then only projects which are active by flag, and active by date are included
      */
-    std::vector<selectableEntity> getOrderedProjectList(bool activeOnly=true){
+    std::vector<selectableEntity> getOrderedProjectList(timecode now, bool activeOnly=true){
       std::vector<selectableEntity> ret, proj;
       for(auto & it : projects){
         // Include all OR active projects only
-        if(!activeOnly || it.second.active){
+        if(!activeOnly || isActiveProject(it.first, now)){
           proj.push_back(it.second);
         }
       }

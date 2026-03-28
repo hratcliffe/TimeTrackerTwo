@@ -129,7 +129,10 @@ Q_OBJECT
     connect(currentData, &TrackerData::popAlert, themainWindow, &mainWindow::showSimpleAlert);
 
     // Update the view when the project list changes
-    connect(currentData, &TrackerData::projectListUpdateEvent, themainWindow, &mainWindow::projectListUpdated);
+    //List needs to be updated to now
+    connect(currentData, &TrackerData::projectListNeedsUpdateEvent, [this](){currentData->projectListUpdate(this->clock->now());});
+    //List has changed, refresh display
+    connect(currentData, &TrackerData::projectListIsUpdatedEvent, themainWindow, &mainWindow::projectListUpdated);
     connect(currentData, &TrackerData::projectTotalUpdateEvent, themainWindow, &mainWindow::projectTimeUpdated);
 
     // Connect the project selection to the TrackerData to mark projects

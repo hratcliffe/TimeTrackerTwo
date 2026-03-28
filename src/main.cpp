@@ -33,7 +33,7 @@ TODO - add option to move a sub, either by fraction or FTE
 // TODO - add a 'recent events' Tab and show recent start, stop etca
 // TODO - BETTER: stamp review tab which shows recent marks and allows to remove. Also should allow time travel to insert
 // TODO - if do this, might want to be able to promote 'one-off' to project also if it
-// turned out to be more
+// turned out to be more - OR allow merging one-off onto project?
 
 // TODO - when app opens, DON't mark active project. Instead note last shutdown and start time and offer some way to see these for a correction. Esp. if it has been > 10 hours say?
 // perhaps add an 'ooops' button which goes back to the time of last close to add a stop mark ?

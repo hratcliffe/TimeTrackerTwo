@@ -30,6 +30,7 @@ Q_OBJECT
 
     currentData = new TrackerData(config);
     currentData->writeState("Opened", clock->now());
+    //TODO write ref time IFF file is new
 
     connectSignals();
     [[maybe_unused]] timecode lastClose=0;
@@ -38,7 +39,6 @@ Q_OBJECT
     }catch(badLookup & e){
       //No prior close mark to check
     }
-    //TODO - do something if it's been a while since last closed?
     currentData->loadProjects(clock->now());
 
     disableDigests = config.digestConfig.disableDigests;

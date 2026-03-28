@@ -601,6 +601,8 @@ Q_OBJECT
         total_dur += item.second;
         digest.push_back(timeDigestEntry{-1, item.second, item.first});
       }
+      //TODO - remove this null entry
+      //TODO - perhaps should also create a day-start and day-end entry somewhere?
       digest.push_back(timeDigestEntry{-1, total_dur, proIds::NullUid});
       timeDigestPeriod period{-1, start_of_day, end-start_of_day};
       dataHandler->writeDigestEntries(period, digest);

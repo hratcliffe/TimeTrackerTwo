@@ -16,10 +16,6 @@
 #include "idGenerators.h"
 #include "timeWrapper.h"
 
-using timecode = long long; /**< \brief Type for timecodes, representing seconds since epoch. SIGNED to allow -1 for sentinel below*/
-
-inline const timecode timecodeNull = -1; /**< \brief Sentinel for null time * * Need a sentinel - do not rely on this value, use the named constant */
-
 
 /** \brief Initialisation data for project
 *
@@ -29,8 +25,8 @@ struct projectData{
 
   std::string name;/**< \brief Name of project */
   float FTE;/**< \brief Fraction of FTE this uses */
-  timecode start, end;
-  bool useStart, useEnd;
+  timecode start=-1, end=-1;
+  bool useStart=false, useEnd=false;
 };
 
 inline std::ostream& operator<< (std::ostream& stream, const projectData& data){
@@ -39,44 +35,61 @@ inline std::ostream& operator<< (std::ostream& stream, const projectData& data){
   stream << data.name <<" "<<(int)(data.FTE*100)<<"%";
   return stream;
 }
+inline bool operator==(const projectData &lhs, const projectData &rhs){
+  return lhs.name == rhs.name && lhs.FTE == rhs.FTE && (lhs.useStart == rhs.useStart && lhs.start == rhs.start) && (lhs.useEnd == rhs.useEnd && lhs.end == rhs.end);
+}
+inline bool operator!=(const projectData &lhs, const projectData &rhs){
+  return !(lhs == rhs);
+}
 /** \brief Initialisation data for subproject
 *
 *
 */
-struct subProjectData{
+struct subprojectData{
 
-  std::string name;/**< \brief Name of project */
-  float frac;/**< \brief Fraction of parent this uses */
+  std::string name="";/**< \brief Name of project */
+  float frac=0.0;/**< \brief Fraction of parent this uses */
 };
 
-inline std::ostream& operator<< (std::ostream& stream, const subProjectData& data){
-/** \brief Stream op for subProjectData
+inline std::ostream& operator<< (std::ostream& stream, const subprojectData& data){
+/** \brief Stream op for subprojectData
 */
 
   stream << data.name <<" "<<(int)(data.frac*100)<<"%";
   return stream;
 }
+inline bool operator==(const subprojectData &lhs, const subprojectData &rhs){
+  return lhs.name == rhs.name && lhs.frac == rhs.frac;
+}
+inline bool operator!=(const subprojectData &lhs, const subprojectData &rhs){
+  return !(lhs == rhs);
+}
 struct oneOffProjectData{
 
-  std::string name;/**< \brief Name of project */
-  std::string description;
+  std::string name="";/**< \brief Name of project */
+  std::string description="";
 };
 
 inline std::ostream& operator<< (std::ostream& stream, const oneOffProjectData& data){
-/** \brief Stream op for projectData
+/** \brief Stream op for oneOffProjectData
 */
   stream << data.name <<" "<<data.description;
   return stream;
 }
-
+inline bool operator==(const oneOffProjectData &lhs, const oneOffProjectData &rhs){
+  return lhs.name == rhs.name && lhs.description == rhs.description;
+}
+inline bool operator!=(const oneOffProjectData &lhs, const oneOffProjectData &rhs){
+  return !(lhs == rhs);
+}
 //NOTE: data on project BUT does NOT contain list of subs!
 class fullProjectData{
     public:
-    proIds::Uuid uid; /**< \brief Unique identifier for the project */
-    std::string name; /**< \brief Name of the project */
-    float FTE; /**< \brief Fraction of Full-Time Equivalent this project uses */
-    timecode start, end;
-    bool useStart, useEnd;
+    proIds::Uuid uid=proIds::NullUid; /**< \brief Unique identifier for the project */
+    std::string name=""; /**< \brief Name of the project */
+    float FTE=0.0; /**< \brief Fraction of Full-Time Equivalent this project uses */
+    timecode start=-1, end=-1;
+    bool useStart=false, useEnd=false;
 
     fullProjectData() = default;
     fullProjectData(proIds::Uuid id, projectData const &data)
@@ -87,20 +100,25 @@ inline std::ostream& operator<< (std::ostream& stream, const fullProjectData& da
 */
   stream << data.name <<", "<<data.uid<<", "<<data.FTE;
   if(data.useStart) stream<<" "<<timeWrapper::formatTime(timeWrapper::fromSeconds(data.start));
-  if(data.useStart or data.useEnd) stream<< " - ";
+  if(data.useStart or data.useEnd) stream<< " -";
   if(data.useEnd) stream<<" "<<timeWrapper::formatTime(timeWrapper::fromSeconds(data.end));
   return stream;
 };
-
+inline bool operator==(const fullProjectData &lhs, const fullProjectData &rhs){
+  return lhs.uid == rhs.uid && lhs.name == rhs.name && lhs.FTE == rhs.FTE && lhs.useStart == rhs.useStart && lhs.start == rhs.start && lhs.useEnd == rhs.useEnd && lhs.end == rhs.end;
+}
+inline bool operator!=(const fullProjectData &lhs, const fullProjectData &rhs){
+  return !(lhs == rhs);
+}
 class fullSubProjectData{
     public:
-    proIds::Uuid uid; /**< \brief Unique identifier for the subproject */
-    std::string name; /**< \brief Name of the subproject */
-    float frac; /**< \brief Fraction of the parent project this subproject uses */
-    proIds::Uuid parentUid; /**< \brief Unique identifier for the parent project */
+    proIds::Uuid uid=proIds::NullUid; /**< \brief Unique identifier for the subproject */
+    std::string name=""; /**< \brief Name of the subproject */
+    float frac=0.0; /**< \brief Fraction of the parent project this subproject uses */
+    proIds::Uuid parentUid=proIds::NullUid; /**< \brief Unique identifier for the parent project */
 
     fullSubProjectData() = default;
-    fullSubProjectData(proIds::Uuid id, subProjectData const &data, proIds::Uuid parentId)
+    fullSubProjectData(proIds::Uuid id, subprojectData const &data, proIds::Uuid parentId)
         : uid(id), name(data.name), frac(data.frac), parentUid(parentId) {};
 };
 inline std::ostream& operator<< (std::ostream& stream, const fullSubProjectData& data){
@@ -109,12 +127,17 @@ inline std::ostream& operator<< (std::ostream& stream, const fullSubProjectData&
   stream << data.name <<", "<<data.uid<<", "<<data.frac<<", Parent: "<<data.parentUid;
   return stream;
 };
-
+inline bool operator==(const fullSubProjectData &lhs, const fullSubProjectData &rhs){
+  return lhs.uid == rhs.uid && lhs.name == rhs.name && lhs.frac ==rhs.frac && lhs.parentUid == rhs.parentUid;
+}
+inline bool operator!=(const fullSubProjectData &lhs, const fullSubProjectData &rhs){
+  return !(lhs == rhs);
+}
 class fullOneOffProjectData{
     public:
-    proIds::Uuid uid; // For consistency - note should be 
-    std::string name; /**< \brief Name of the project */
-    std::string description; /**< \brief Short description */
+    proIds::Uuid uid=proIds::NullUid; // For consistency - note should be 
+    std::string name=""; /**< \brief Name of the project */
+    std::string description=""; /**< \brief Short description */
 
     fullOneOffProjectData() = default;
     fullOneOffProjectData(proIds::Uuid id, std::string const &name, std::string const & descr)
@@ -123,12 +146,33 @@ class fullOneOffProjectData{
 inline std::ostream& operator<< (std::ostream& stream, const fullOneOffProjectData& data){
 /** \brief Stream operator for fullProjectData
 */
-  stream << data.name<<" ()"<<data.description<<")";
+  stream << data.name<<", "<<data.uid <<" ("<<data.description<<")";
   return stream;
 };
-
+inline bool operator==(const fullOneOffProjectData &lhs, const fullOneOffProjectData &rhs){
+  return lhs.uid == rhs.uid && lhs.name == rhs.name && lhs.description == rhs.description;
+}
+inline bool operator!=(const fullOneOffProjectData &lhs, const fullOneOffProjectData &rhs){
+  return !(lhs == rhs);
+}
 
 // All the stuff needed to assess/invite user actions on a project
+struct subprojectDetails{
+
+    proIds::Uuid uid=proIds::NullUid; /**< \brief Unique identifier for the project */
+    std::string name=""; /**< \brief Name of the project */
+    float frac=0.0; /**< \brief Fraction of parent */
+    bool active = true;
+};
+inline std::ostream& operator<< (std::ostream& stream, const subprojectDetails& data){
+/** \brief Stream operator for subprojectDetails
+*/
+  stream << data.name<<" "<<data.uid<<" "<<": frac " <<data.frac*100 <<" %";
+  if(!data.active){
+    stream<<"(inactive)";
+  }
+  return stream;
+};
 struct projectDetails{
 
     proIds::Uuid uid=proIds::NullUid; /**< \brief Unique identifier for the project */
@@ -136,10 +180,11 @@ struct projectDetails{
     float FTE=0.0; /**< \brief Fraction of Full-Time Equivalent this project uses */
     int subprojectCount=0; /**< Number of subprojects */
     float assignedSubprojFraction=0.0; /**< Total fraction allocated to subprojects */
+    std::vector<subprojectDetails> subs;/**< OPTIONAL - list of subs */
     bool active = true;
 };
 inline std::ostream& operator<< (std::ostream& stream, const projectDetails& data){
-/** \brief Stream operator for fullProjectData
+/** \brief Stream operator for projectDetails
 */
   stream << data.name<<" "<<data.uid<<" "<<": FTE " <<data.FTE*100 <<" % with "<<data.subprojectCount;
   stream << " subprojects totalling "<<data.assignedSubprojFraction*100 <<" % ";
@@ -193,11 +238,31 @@ inline bool operator>=(const timeStamp &lhs, const timecode &rhs){
   return lhs.time >= rhs;
 };
 inline bool operator==(const timeStamp &lhs, const timecode &rhs){
-  return lhs.time == rhs;;
+  return lhs.time == rhs;
 };
 inline bool operator!=(const timeStamp &lhs, const timecode &rhs){
   return !(lhs == rhs);
 };
+
+class timeStampForDisplay{
+    public:
+    timecode time;
+    std::string formattedTime;
+    proIds::Uuid projectUid;
+    std::string projectName;
+};
+inline std::ostream& operator<< (std::ostream& stream, const timeStampForDisplay& ts){
+/** \brief Stream operator for timeStampForDisplay
+*/
+  stream << "Time: " << ts.formattedTime <<" ("<<ts.time<< "), Project: " <<ts.projectName<<"("<< ts.projectUid<<")";
+  return stream;
+};
+inline bool operator ==(const timeStampForDisplay &lhs, timeStampForDisplay &rhs){
+  return lhs.time == rhs.time && lhs.formattedTime == rhs.formattedTime && lhs.projectUid == rhs.projectUid && lhs.projectName == rhs.projectName;
+};
+inline bool operator !=(const timeStampForDisplay &lhs, timeStampForDisplay &rhs){
+  return !(lhs==rhs);
+}
 
 // For display - time unit in use
 enum class timeSummaryUnit{hour, minute, debug};
@@ -230,7 +295,7 @@ class timeDigestPeriod{
   std::string displayName="";
 };
 inline std::ostream& operator<< (std::ostream& stream, const timeDigestPeriod& ts){
-/** \brief Stream operator for timeStamp
+/** \brief Stream operator for timeDigestPeriod
 */
   stream << ts.displayName<<" Start: " << ts.start <<", Duration: "<<ts.duration;
   return stream;
@@ -243,11 +308,14 @@ class timeDigestEntry{
     proIds::Uuid projectUid; /**< \brief Unique identifier for the entity this digest belongs to */
 };
 inline std::ostream& operator<< (std::ostream& stream, const timeDigestEntry& ts){
-/** \brief Stream operator for timeStamp
+/** \brief Stream operator for timeDigestEntry
 */
   stream << "Day: " << ts.period <<", Duration: "<<ts.duration<< ", Project UID: " << ts.projectUid;
   return stream;
 };
+inline bool operator==(const timeDigestEntry & a, const timeDigestEntry & b){
+  return a.projectUid == b.projectUid && a.period==b.period && a.duration == b.duration;
+}
 
 
 #endif

@@ -5,16 +5,17 @@
 #include "support.h"
 
 #include "appClock.h"
-#include "View.h"
+#include "mainWindow.h"
 #include "TrackerData.h"
 #include "projectbutton.h"
 
 class Controller : public QWidget{
 Q_OBJECT
-  View * theView;
+  mainWindow * themainWindow;
   TrackerData * currentData;
   appClock * clock;
   QTimer * clockTicker;
+  bool disableDigests = false;
   TW_timePoint lastDigestCheckTime;
   TW_duration digestCheckPeriod;
   TW_timePoint lastDigestCreationTime;
@@ -23,43 +24,68 @@ Q_OBJECT
   public:
   Controller(appConfig config){
 
-    theView = new View();
-
-    currentData = new TrackerData(config);
-    connectSignals();
+    themainWindow = new mainWindow();
 
     clock = new appClock();
 
+    currentData = new TrackerData(config);
+    currentData->writeState("Opened", clock->now());
+
+    connectSignals();
+    [[maybe_unused]] timecode lastClose=0;
+    try{
+      lastClose = currentData->readState("Closed");
+    }catch(badLookup & e){
+      //No prior close mark to check
+    }
+    //TODO - do something if it's been a while since last closed?
     currentData->loadProjects(clock->now());
 
+    disableDigests = config.digestConfig.disableDigests;
     //These are the internal parameters for how often we should check
-    auto tmp = currentData->readState("lastDigestCheckTime");
-    if(tmp > 0){
-      lastDigestCheckTime = timeWrapper::fromSeconds(tmp);
-    }else{
-      lastDigestCheckTime = timeWrapper::fromSeconds(1); // A very long time ago...
+    try{
+      auto tmp = currentData->readState("lastDigestCheckTime");
+      if(tmp > 0){
+        lastDigestCheckTime = timeWrapper::fromSeconds(tmp);
+      }else{
+        throw badLookup("Bad check time");
+      }
+    }catch(badLookup & e){
+        lastDigestCheckTime = timeWrapper::fromSeconds(1); // A very long time ago...
     }
-    tmp = currentData->readState("digestCheckPeriod");
-    if(tmp > 0){
-      digestCheckPeriod = TW_duration{tmp};
-    }else{
-      digestCheckPeriod = TW_duration{60*60}; // ~One hour
-      currentData->writeState("digestCheckPeriod", timeWrapper::toSeconds(digestCheckPeriod));
+    try{
+      auto tmp = currentData->readState("digestCheckPeriod");
+      if(tmp > 0){
+        digestCheckPeriod = TW_duration{tmp};
+      }else{
+        throw badLookup("Bad check period");
+      }
+    }catch(badLookup & e){
+        digestCheckPeriod = TW_duration{60*60}; // ~One hour
+        currentData->writeState("digestCheckPeriod", timeWrapper::toSeconds(digestCheckPeriod));
     }
 
+    try{
     //This is the lastTime for which we created a digest
-    tmp = currentData->readState("lastDigestCreationTime");
-    if(tmp > 0){
-      lastDigestCreationTime = timeWrapper::fromSeconds(tmp);
-    }else{
+      auto tmp = currentData->readState("lastDigestCreationTime");
+      if(tmp > 0){
+        lastDigestCreationTime = timeWrapper::fromSeconds(tmp);
+      }else{
+        throw badLookup("Bad creation time");
+      }
+    }catch(badLookup & e){
       lastDigestCreationTime = timeWrapper::fromSeconds(1); // A very long time ago...
     }
-    // This is how many seconds we keep the stamps before digesting
-    tmp = currentData->readState("digestCreationDelay");
-    if(tmp > 0){
-      digestCreationDelay = TW_duration{tmp};
-    }else{
-      digestCreationDelay =  timeWrapper::makeDuration(0, 0, -100); // 100 days
+    try{
+      // This is how many seconds we keep the stamps before digesting
+      auto tmp = currentData->readState("digestCreationDelay");
+      if(tmp > 0){
+        digestCreationDelay = TW_duration{tmp};
+      }else{
+        throw badLookup("Bad creation delay");
+      }
+    }catch(badLookup & e){
+      digestCreationDelay =  timeWrapper::makeDuration(0, 0, 100); // 100 days
       currentData->writeState("digestCreationDelay", timeWrapper::toSeconds(digestCreationDelay));
     }
     // DIGEST strategy:
@@ -88,64 +114,85 @@ Q_OBJECT
     currentData->writeState("lastDigestCreationTime", timeWrapper::toSeconds(lastDigestCreationTime));
     currentData->writeState("digestCreationDelay", timeWrapper::toSeconds(digestCreationDelay));
 
+    currentData->writeState("Closed", clock->now());
   }
 
   void connectSignals(){
-    // Collect all the connections from View to Model (TrackerData)
+    // Collect all the connections from mainWindow to Model (TrackerData)
 
     // Close, and silent close. Close will mark current project as stopped. Silent close will not...
-    connect(theView, &View::closeRequested, [this](bool silent){this->writeState(); currentData->handleCloseRequest(silent, this->clock->now());}); // TODO - is there a tiny race where a digest could trigger during this process?
+    connect(themainWindow->main, &outerWindow::closeRequested, [this](bool silent){this->writeState(); currentData->handleCloseRequest(silent, this->clock->now());}); // TODO - is there a tiny race where a digest could trigger during this process?
 
-    connect(currentData, &TrackerData::readyToClose, theView, &View::exitApp);
+    connect(currentData, &TrackerData::readyToClose, themainWindow, &mainWindow::exitApp);
+
+    //Generic alert
+    connect(currentData, &TrackerData::popAlert, themainWindow, &mainWindow::showSimpleAlert);
 
     // Update the view when the project list changes
-    connect(currentData, &TrackerData::projectListUpdateEvent, theView, &View::projectListUpdated);
-    connect(currentData, &TrackerData::projectTotalUpdateEvent, theView, &View::projectTimeUpdated);
+    connect(currentData, &TrackerData::projectListUpdateEvent, themainWindow, &mainWindow::projectListUpdated);
+    connect(currentData, &TrackerData::projectTotalUpdateEvent, themainWindow, &mainWindow::projectTimeUpdated);
 
     // Connect the project selection to the TrackerData to mark projects
-    connect(theView, &View::projectSelectedTrack, [this](proIds::Uuid uid, std::string name){currentData->markProject(uid, name, this->clock->now());});
+    // Also connects the mainWindow, which can mark as a result of Dialogs
+    connect(themainWindow, &mainWindow::projectSelectedTrack, [this](proIds::Uuid uid, std::string name){currentData->markProject(uid, name, this->clock->now());});
+    connect(themainWindow->trackerTab, &TrackerTabContent::projectSelectedTrack, [this](proIds::Uuid uid, std::string name){currentData->markProject(uid, name, this->clock->now());});
     // And back, to show status
-    connect(currentData, &TrackerData::projectRunningUpdate, theView, &View::updateRunningProjectDisplay);
+    connect(currentData, &TrackerData::projectRunningUpdate, themainWindow, &mainWindow::updateRunningProjectDisplay);
 
     //Connect updates to 'next One Off id'
-    connect(theView, &View::oneOffIdRequired, currentData, &TrackerData::oneOffIdRequired);
-    connect(currentData, &TrackerData::oneOffIdUpdate, theView, &View::updateOneOffId);
+    connect(themainWindow->trackerTab, &TrackerTabContent::oneOffIdRequired, currentData, &TrackerData::oneOffIdRequired);
+    connect(currentData, &TrackerData::oneOffIdUpdate, themainWindow->trackerTab, &TrackerTabContent::updateOneOffId);
 
     //To add a subproject, view needs an up-to-date list of projects - gather this and then call the provided callback
-    connect(theView, &View::projectDetailsRequiredAll, [this](auto functor){functor(theView, currentData->projectDetailsRequired());});
+    connect(themainWindow, &mainWindow::projectDetailsRequiredAll, [this](auto functor){functor(themainWindow, currentData->projectDetailsRequired());});
+    //To delete, we need to verify the marks
+    connect(themainWindow, &mainWindow::projectDetailsRequiredSpecial, [this](auto functor, auto id){functor(themainWindow,  currentData->projectDetailsRequired(id), currentData->checkProjectRunning(id), currentData->checkTimeOnProjectOrSub(id));});
 
     //Pausing a project:
-    connect(theView, &View::pauseRequested, [this](){currentData->pauseProject(this->clock->now());});
-    connect(currentData, &TrackerData::projectPaused, theView, &View::updatePausedProjectDisplay);
+    connect(themainWindow, &mainWindow::pauseRequested, [this](){currentData->pauseProject(this->clock->now());});
+    connect(currentData, &TrackerData::projectPaused, themainWindow, &mainWindow::updatePausedProjectDisplay);
     // Resuming a project
-    connect(theView, &View::resumeRequested, [this](){currentData->resumeProject(this->clock->now());});
-    connect(currentData, &TrackerData::projectRunningUpdate, theView, &View::updateRunningProjectDisplay);
+    connect(themainWindow, &mainWindow::resumeRequested, [this](){currentData->resumeProject(this->clock->now());});
+    connect(currentData, &TrackerData::projectRunningUpdate, themainWindow, &mainWindow::updateRunningProjectDisplay);
     // Stopping a project
-    connect(theView, &View::stopRequested, [this](){currentData->stopProject(this->clock->now());});
-    connect(currentData, &TrackerData::projectStopped, theView, &View::updateStoppedProjectDisplay);
+    connect(themainWindow, &mainWindow::stopRequested, [this](){currentData->stopProject(this->clock->now());});
+    connect(currentData, &TrackerData::projectStopped, themainWindow, &mainWindow::updateStoppedProjectDisplay);
 
     //Project information tab events
-    connect(theView, &View::projectSelectedView, currentData, &TrackerData::generateProjectSummary);
-    connect(theView, &View::toplevelSummarySelected, currentData, &TrackerData::generateToplevelSummary);
-    connect(theView, &View::oneoffSummarySelected, currentData, &TrackerData::generateOneOffSummary);
+    connect(themainWindow->projectTab, &ProjectTabUI::projectSelectedView, currentData, &TrackerData::generateProjectSummary);
+    connect(themainWindow->projectTab, &ProjectTabUI::toplevelSummarySelected, currentData, &TrackerData::generateToplevelSummary);
+    connect(themainWindow->projectTab, &ProjectTabUI::oneoffSummarySelected, currentData, &TrackerData::generateOneOffSummary);
    //All cases update the view the same way
-    connect(currentData, &TrackerData::projectSummaryReady, theView, &View::summaryDisplayUpdated);
+    connect(currentData, &TrackerData::projectSummaryReady, themainWindow->projectTab, &ProjectTabUI::summaryDisplayUpdated);
 
     //Adding project and sub
-    connect(theView, &View::projectAddRequested, currentData, &TrackerData::createProject);
-    connect(theView, &View::subprojectAddRequested, currentData, &TrackerData::createSubproject);
-    connect(theView, &View::projectOneOffAdd, currentData, &TrackerData::createOneOff);
+    connect(themainWindow, &mainWindow::projectAddRequested, currentData, &TrackerData::createProject);
+    connect(themainWindow, &mainWindow::subprojectAddRequested, currentData, &TrackerData::createSubproject);
+    connect(themainWindow, &mainWindow::projectOneOffAdd, currentData, &TrackerData::createOneOff);
+
+    //Making changes to projects etc
+    connect(themainWindow, &mainWindow::mergeRequested, currentData, &TrackerData::mergeProject);
+    connect(themainWindow, &mainWindow::deleteConfirmed, currentData, &TrackerData::deleteProject);
 
     //Time summary view
-    connect(theView, &View::timeSummaryRequested, currentData, &TrackerData::generateTimeSummary);
-    connect(currentData, &TrackerData::timeSummaryReady, theView, &View::timeSummaryUpdated);
+    connect(themainWindow, &mainWindow::timeSummaryRequested, currentData, &TrackerData::generateTimeSummary);
+    connect(currentData, &TrackerData::timeSummaryReady, themainWindow->summaryTab, &SummaryTabUI::timeSummaryUpdated);
 
+    //Review view
+    connect(themainWindow, &mainWindow::reviewRequested, [this](){currentData->generateReviewData(this->clock->now());});
+    connect(currentData, &TrackerData::timeStampListReady, themainWindow->reviewTab, &ReviewTabUI::reviewDisplayUpdated);
+    // Review deletion
+    connect(themainWindow->reviewTab, &ReviewTabUI::listDeletionRequested, currentData, &TrackerData::deleteTimeStampList);
+    connect(currentData, &TrackerData::timeStampListUpdateEvent, themainWindow, &mainWindow::reviewRequested);
+    // Review can cause current status to change
+    connect(themainWindow->reviewTab, &ReviewTabUI::currentStatusUpdatedP, themainWindow, &mainWindow::updateRunningProjectDisplay);
+    connect(themainWindow->reviewTab, &ReviewTabUI::currentStatusUpdatedS, themainWindow, &mainWindow::updateStoppedProjectDisplay);
 
     //Clock ticking
     clockTicker = new QTimer();
     clockTicker->start(1000);
-    connect(clockTicker, &QTimer::timeout, [this](){this->clock->tick(); emit clockUpdated(this->clock->shortTimeString());});
-    connect(this, &Controller::clockUpdated, theView, &View::updateClockDisplay);
+    connect(clockTicker, &QTimer::timeout, [this](){this->clock->tick(); emit clockUpdated(this->clock->displayTimeString());});
+    connect(this, &Controller::clockUpdated, themainWindow, &mainWindow::updateClockDisplay);
 
     //Since clock is already updating every second we can use this to trigger timed events with sufficient fidelity
     //Connecting to 'midnight' rollovers
@@ -153,9 +200,11 @@ Q_OBJECT
 
     //Time traveling:
     //To show a dialog, view needs to know the time now:
-    connect(theView, &View::fetchTimeTravelInfo, [this](){theView->showTimeTravelDialog(this->clock->shortTimeString(), QDateTime::currentDateTime());});
-    connect(theView, &View::timeTravelRequested, [this](QDateTime time){this->clock->travelTo(fromQDateTime(time));});
+    connect(themainWindow, &mainWindow::fetchTimeTravelInfo, [this](){themainWindow->showTimeTravelDialog(this->clock->shortTimeString(), QDateTime::currentDateTime());});
+    connect(themainWindow, &mainWindow::timeTravelRequested, [this](QDateTime time){this->clock->travelTo(fromQDateTime(time));});
 
+    //Offer time-travel as an option
+    connect(currentData, &TrackerData::popTT, themainWindow, &mainWindow::showTTOption);
   }
 
   void checkTimedEvents(){
@@ -165,7 +214,7 @@ Q_OBJECT
     // Create Daily Digests for any data which is between lastDigestCreationTime
     // and now - digestCreationDelay.
     // IF system clock is being changed, then the days are best tracked in 'user timezone' anyway
-    if( timeWrapper::toSeconds(now) >  timeWrapper::toSeconds(lastDigestCheckTime + digestCheckPeriod)){
+    if(!disableDigests && timeWrapper::toSeconds(now) >  timeWrapper::toSeconds(lastDigestCheckTime + digestCheckPeriod)){
       //Time to check if we need to digest anything
       std::cout<<"Time to check for digests!"<<std::endl;
 
@@ -199,8 +248,6 @@ Q_OBJECT
     // Format  "%Y-%m-%d %H:%M:%S"
     std::string time_str;
     time_str = time.toString("yyyy-MM-dd hh:mm:ss").toStdString();
-    //std::cout<<time_str<<std::endl;
-    //std::cout<<timeWrapper::formatTime(timeWrapper::parseTimeZoned(time_str))<<std::endl;
     return timeWrapper::parseTimeZoned(time_str);
   }
 

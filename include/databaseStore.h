@@ -1,6 +1,7 @@
 #ifndef DATABASESTORE_H
 #define DATABASESTORE_H
 
+#include <stdexcept>
 #include <iostream>
 #include <string>
 #include <type_traits>
@@ -9,7 +10,26 @@
 
 #include "dataObjects.h"
 #include "idGenerators.h"
+//TODO - configurable error logging!
+//TODO - more exceptions?
+// TODO - Ensure finalize occurs in error cases!
 
+class badLookup : public std::runtime_error{
+  public:
+  badLookup(const char * msg):runtime_error(msg){;};
+};
+
+class stampCollision : public std::runtime_error{
+    public:
+    long time = -1;
+    stampCollision(const char * msg, long time_in):runtime_error(msg){time=time_in;};
+};
+
+class stampExhaustion : public std::runtime_error{
+    public:
+    size_t ct = 0;
+    stampExhaustion(const char * msg, long ct_in):runtime_error(msg){ct=ct_in;};
+};
 
 class databaseStore{
 
@@ -18,17 +38,17 @@ class databaseStore{
     char *errMsg = nullptr; /**< \brief Error message from SQLite operations */
 
     void enable_foreign_keys(){sqlite3_exec(DB, "PRAGMA foreign_keys = ON", nullptr, nullptr, nullptr);}
-    bool check_tables(){
+    bool check_tables(bool verbose){
 
         auto expected_tables = std::vector<std::string>{"projects", "subprojects", "timestamps", "app_data", "app_state", "oneoffs", "digest_periods", "time_digests"};
         // Get list of tables in the database
         std::string cmd = "SELECT name FROM sqlite_master WHERE type='table';";
         sqlite3_stmt *stmt;
         int ret = sqlite3_prepare_v2(DB, cmd.c_str(), -1, &stmt, nullptr);
-        int count = 0;
+        size_t count = 0;
         while((ret = sqlite3_step(stmt)) == SQLITE_ROW){
             std::string name_in_db = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 0));
-            std::cout << "Table in DB: " << name_in_db << std::endl;
+            if(verbose) std::cout << "Table in DB: " << name_in_db << std::endl;
             if(std::find(expected_tables.begin(), expected_tables.end(), name_in_db) == expected_tables.end()){
                 std::cerr << "Unexpected table found: " << name_in_db << std::endl;
                 throw std::runtime_error("Unexpected table in database");
@@ -50,71 +70,34 @@ class databaseStore{
 
     void create_tables(){
         int err = 0;
-        std::string cmd = "CREATE TABLE IF NOT EXISTS projects(id CHAR(36) PRIMARY KEY, name TEXT, FTE REAL, start_date INTEGER, end_date INTEGER);";
-        err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
-        if(err != SQLITE_OK){
-            std::cerr << "Error creating projects table: " << errMsg << std::endl;
-            sqlite3_free(errMsg);
-            throw std::runtime_error("Failed to create projects table");
-        }
-        cmd = "CREATE TABLE IF NOT EXISTS subprojects(id CHAR(36) PRIMARY KEY, name TEXT, frac REAL, parent_id CHAR(36), FOREIGN KEY(parent_id) REFERENCES projects(id));";
-        err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
-        if(err != SQLITE_OK){
-            std::cerr << "Error creating subprojects table: " << errMsg << std::endl;
-            sqlite3_free(errMsg);
-            throw std::runtime_error("Failed to create subprojects table");
-        }
 
-        cmd = "CREATE TABLE IF NOT EXISTS timestamps(id INTEGER PRIMARY KEY, time INTEGER, project_id CHAR(36));";
-        err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
-        if(err != SQLITE_OK){
-            std::cerr << "Error creating timestamps table: " << errMsg << std::endl;
-            sqlite3_free(errMsg);
-            throw std::runtime_error("Failed to create timestamps table");
-        }
+        std::map<std::string, std::string> cmds;
 
-        cmd = "CREATE TABLE IF NOT EXISTS digest_periods(id INTEGER PRIMARY KEY, start INTEGER, duration INTEGER);";
-        err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
-        if(err != SQLITE_OK){
-            std::cerr << "Error creating digest_periods table: " << errMsg << std::endl;
-            sqlite3_free(errMsg);
-            throw std::runtime_error("Failed to create digest_periods table");
-        }
+        cmds["projects"] = "CREATE TABLE IF NOT EXISTS projects(id CHAR(36) PRIMARY KEY, name TEXT, FTE REAL, start_date INTEGER, end_date INTEGER);";
+        cmds["subprojects"] = "CREATE TABLE IF NOT EXISTS subprojects(id CHAR(36) PRIMARY KEY, name TEXT, frac REAL, parent_id CHAR(36), FOREIGN KEY(parent_id) REFERENCES projects(id));";
 
+        // NOTE: ideally would have a foreign key here BUT since it can be either a project OR a sub OR a one-off
+        // that would require an additional table
+        cmds["timestamps"] = "CREATE TABLE IF NOT EXISTS timestamps(id INTEGER PRIMARY KEY, time INTEGER, project_id CHAR(36), UNIQUE(time));";
+        cmds["digest_periods"] = "CREATE TABLE IF NOT EXISTS digest_periods(id INTEGER PRIMARY KEY, start INTEGER, duration INTEGER);";
         //NOTE project id can be a project OR a subproject
-        cmd = "CREATE TABLE IF NOT EXISTS time_digests(id INTEGER PRIMARY KEY, period_id INTEGER, duration INTEGER, project_id CHAR(36), FOREIGN KEY(period_id) REFERENCES digest_periods(id) UNIQUE(period_id, project_id));";
-         err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
-        if(err != SQLITE_OK){
-            std::cerr << "Error creating timedigests table: " << errMsg << std::endl;
-            sqlite3_free(errMsg);
-            throw std::runtime_error("Failed to create timedigests table");
-        }
+        cmds["time_digests"] = "CREATE TABLE IF NOT EXISTS time_digests(id INTEGER PRIMARY KEY, period_id INTEGER, duration INTEGER, project_id CHAR(36), FOREIGN KEY(period_id) REFERENCES digest_periods(id) UNIQUE(period_id, project_id));";
 
         // Table for logging names/info about oneoff projects - expect SHORT description
-        cmd = "CREATE TABLE IF NOT EXISTS oneoffs(id CHAR(36) PRIMARY KEY, name TEXT, descr TEXT);";
-        err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
-        if(err != SQLITE_OK){
-            std::cerr << "Error creating oneoffs table: " << errMsg << std::endl;
-            sqlite3_free(errMsg);
-            throw std::runtime_error("Failed to create oneoffs table");
-        }
+        cmds["oneoffs"] = "CREATE TABLE IF NOT EXISTS oneoffs(id CHAR(36) PRIMARY KEY, name TEXT, descr TEXT);";
 
-        cmd = "CREATE TABLE IF NOT EXISTS app_data(key TEXT PRIMARY KEY, value TEXT);";
-        err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
-        if(err != SQLITE_OK){
-            std::cerr << "Error creating app_data table: " << errMsg << std::endl;
+        cmds["app_data"] = "CREATE TABLE IF NOT EXISTS app_data(key TEXT PRIMARY KEY, value TEXT);";
+        cmds["app_state"] = "CREATE TABLE IF NOT EXISTS app_state(key TEXT PRIMARY KEY, value INTEGER);";
+        for(const auto & item: cmds ){
+          const std::string tbl = item.first;
+          const std::string cmd = item.second;
+          err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
+          if(err != SQLITE_OK){
+            std::cerr << "Error creating "<< tbl<<" table: " << errMsg << std::endl;
             sqlite3_free(errMsg);
-            throw std::runtime_error("Failed to create app_data table");
+            throw std::runtime_error("Failed to create "+tbl+" table");
+          }
         }
-
-        cmd = "CREATE TABLE IF NOT EXISTS app_state(key TEXT PRIMARY KEY, value INTEGER);";
-        err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
-        if(err != SQLITE_OK){
-            std::cerr << "Error creating app_state table: " << errMsg << std::endl;
-            sqlite3_free(errMsg);
-            throw std::runtime_error("Failed to create app_state table");
-        }
-
         // TODO - extended descriptions table - could add all sorts of extra info
     }
 
@@ -129,28 +112,89 @@ class databaseStore{
         std::cout << "All tables deleted successfully." << std::endl;
 
     }
+
+    /**
+     * @brief Generic implementation for counting by project_id
+     * 
+     * Reduces duplication when counting by id. DO NOT use with unsafe string for tbl. 
+     * 
+     * @param tbl Table name for count
+     * @param ids Vector of project_ids
+     * @returns Count of entries
+     */
+    size_t countEntriesByIdGeneric(std::string tbl, std::vector<proIds::Uuid> const & ids, std::string extra=""){
+      if(ids.size() == 0) return 0;
+      std::string base_cmd = "SELECT COUNT() FROM "+tbl+" WHERE (";
+      for(size_t i=0; i < ids.size(); i++){
+        base_cmd += "project_id = ?";
+        if(i<ids.size()-1) base_cmd +=" OR ";
+      }
+      if(extra != "") base_cmd += ") AND "+ extra + ";";
+      else base_cmd += ");";
+      sqlite3_stmt * prep_cmd;
+      int err = sqlite3_prepare_v2(DB, base_cmd.c_str(), base_cmd.length(), &prep_cmd, nullptr);
+      for(size_t i = 0; i < ids.size(); i++){
+          std::string id = ids[i].to_string();
+          sqlite3_bind_text(prep_cmd, i+1, id.c_str(), id.length(), SQLITE_TRANSIENT); // id string has scope of loop iteration, so use TRANSIENT to prolong
+      }
+      size_t ct = 0;
+      while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+        ct = sqlite3_column_int64(prep_cmd, 0);
+      }
+      sqlite3_finalize(prep_cmd);
+      return ct;
+    }
     public:
-    databaseStore(std::string fileName) : dbFileName(fileName) {
-        std::cout<<"Opening Database"<<std::endl; 
+    databaseStore(std::string fileName, bool readOnly, bool verbose=false) : dbFileName(fileName) {
+        if(verbose) std::cout<<"Opening Database"<<std::endl; 
         sqlite3_config(SQLITE_CONFIG_SERIALIZED);
-        int exit = sqlite3_open((dbFileName).c_str(), &DB); 
+        int exit = SQLITE_OK;
+        if(readOnly){
+          exit = sqlite3_open_v2((dbFileName).c_str(), &DB, SQLITE_OPEN_READONLY, NULL);
+        }else{
+          exit = sqlite3_open_v2((dbFileName).c_str(), &DB, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
+        }
         if(exit != SQLITE_OK){
             std::cerr << "Error opening database: " << sqlite3_errmsg(DB) << std::endl;
             throw std::runtime_error("Failed to open database");
         }
-        std::cout<<"Opened Database"<<std::endl;
-
+        // READWRITE will not fail if permissions are read-only. Have to check:
+        if(!readOnly && sqlite3_db_readonly(DB, "main") == 1){
+          throw std::runtime_error("Database is read-only");
+        }else if(readOnly && sqlite3_db_readonly(DB, "main") == 0){
+          throw std::runtime_error("Intended to open read-only, but is writeable");
+        }
+        if(verbose) std::cout<<"Opened Database"<<std::endl;
+        if(!readOnly) sqlite3_extended_result_codes(DB, 1);
         // Enable foreign keys
         enable_foreign_keys();
         // Check if tables exist, create if not
 
-        bool tables_ready = check_tables(); // Check if tables exist - throws if bad, false if not all present
+        bool tables_ready = check_tables(verbose); // Check if tables exist - throws if bad, false if not all present
         if(!tables_ready) create_tables(); // Create the tables if they don't exist but we had no errors
     }
     ~databaseStore(){
         if(DB) sqlite3_close(DB);
         // TODO - isn't this wrong? DB may be already destroyed...
     } 
+    void closeDB(){
+        if(DB) sqlite3_close(DB);
+        DB = nullptr;
+        throw std::runtime_error("Database was closed by user, cannot continue");
+    }
+    bool isConnected(){return DB != nullptr;}
+    void clearDB(){
+        // Accident-protected but possible:
+        static bool force = false;
+        if(force){
+            force = false;
+            delete_all_tables();
+        }else{
+            force = true;
+            throw std::runtime_error("You asked to delete tables - calling this a second time will actually do it!!!");
+        }
+    }
+    bool tablesReady(bool verbose=true){return check_tables(verbose);}
 
     template <typename T>
     void writeItem(std::string key, T value){
@@ -166,7 +210,7 @@ class databaseStore{
             err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
             sqlite3_bind_text(prep_cmd, 2, value.c_str(), value.length(), SQLITE_STATIC);
         }else{
-            assert(false);
+            static_assert(false);
         }
         sqlite3_bind_text(prep_cmd, 1, key.c_str(), key.length(), SQLITE_STATIC);
         err = sqlite3_step(prep_cmd);
@@ -187,24 +231,27 @@ class databaseStore{
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_text(prep_cmd, 1, key.c_str(), key.length(), SQLITE_STATIC);
         if((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
-           item = sqlite3_column_int64(prep_cmd, 0);
+          item = sqlite3_column_int64(prep_cmd, 0);
+          sqlite3_finalize(prep_cmd);
         }else{
-            item = 0; // TODO - what to do for bad key?
+           sqlite3_finalize(prep_cmd);
+            throw badLookup("Key not found");
         }
       }else if constexpr(std::is_same<T, std::string>::value){
-        std::string cmd = "SELECT value FROM app_config WHERE key = ?;";
+        std::string cmd = "SELECT value FROM app_data WHERE key = ?;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_text(prep_cmd, 1, key.c_str(), key.length(), SQLITE_STATIC);
         if((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
           item = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0));
+          sqlite3_finalize(prep_cmd);
         }else{
-            item = ""; // TODO - what to do for bad key?
+          sqlite3_finalize(prep_cmd);
+          throw badLookup("Key not found");
         }
       }else{
-        assert(false);
+        static_assert(false);
       }
-
       return item;
     }
 
@@ -242,7 +289,7 @@ class databaseStore{
         }
         sqlite3_finalize(prep_cmd);
     }
-    void writeSubProject(const fullSubProjectData & dat){
+    void writeSubproject(const fullSubProjectData & dat){
 
         //Unpacking
         const std::string & id = dat.uid.to_string();
@@ -290,6 +337,15 @@ class databaseStore{
         }
         sqlite3_finalize(prep_cmd);
     }
+
+    /** @brief Write a timstamp
+     * 
+     * @param stamp Timestamp to write
+     * @pre Stamp time is not already marked
+     * @post A new entry for the given time and ID is created. The database connection does not _become_ unusable.
+     * @throws runtime_error if there are database problems
+     * @throws stampCollision if the time is already marked
+     */
     void writeTrackerEntry(const timeStamp & stamp){
 
         //Unpacking
@@ -299,14 +355,65 @@ class databaseStore{
         std::string cmd;
         sqlite3_stmt * prep_cmd;
         int err = 0;
-        cmd = "insert into timestamps(time, project_id) values(?, ?)"; // No conflict clause here - if we want to avoid overlaps that is a task for the data model
+        cmd = "insert into timestamps(time, project_id) values(?, ?)";
         err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_int64(prep_cmd, 1, time);
         sqlite3_bind_text(prep_cmd, 2, project_id.c_str(), project_id.length(), SQLITE_STATIC);
         err = sqlite3_step(prep_cmd);
         if(err == SQLITE_DONE) err = SQLITE_OK;
-        if(err != SQLITE_OK){
+        if(err == SQLITE_CONSTRAINT_UNIQUE){
+            sqlite3_finalize(prep_cmd);
+            throw stampCollision(("Stamp collides with existing entry "+std::to_string(time)).c_str(), time);
+        }else if(err != SQLITE_OK){
+            sqlite3_finalize(prep_cmd);
             throw std::runtime_error("Failed to write tracker entry");
+        }else{
+            sqlite3_finalize(prep_cmd);
+        }
+    }
+
+    void deleteProject(proIds::Uuid const & id){
+        const std::string id_str = id.to_string();
+        std::string cmd;
+        sqlite3_stmt * prep_cmd;
+        int err = 0;
+        cmd = "DELETE FROM projects WHERE id = ?;";
+        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            throw std::runtime_error("Failed to delete project");
+        }
+        sqlite3_finalize(prep_cmd);
+    }
+    void deleteSubproject(proIds::Uuid const & id){
+        const std::string id_str = id.to_string();
+        std::string cmd;
+        sqlite3_stmt * prep_cmd;
+        int err = 0;
+        cmd = "DELETE FROM subprojects WHERE id = ?;";
+        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            throw std::runtime_error("Failed to delete subproject");
+        }
+        sqlite3_finalize(prep_cmd);
+    }
+    void deleteOneOff(proIds::Uuid const & id){
+        const std::string id_str = id.to_string();
+        std::string cmd;
+        sqlite3_stmt * prep_cmd;
+        int err = 0;
+        cmd = "DELETE FROM oneoffs WHERE id = ?;";
+        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            throw std::runtime_error("Failed to delete one off");
         }
         sqlite3_finalize(prep_cmd);
     }
@@ -387,7 +494,7 @@ class databaseStore{
         // date should NOT be null- it will be used
 
         // Assuming for now that '0' is the null date
-        std::string cmd = "SELECT id, name, FTE, start_date, end_date FROM projects WHERE (start_date <= {} or start_date == {}) AND (end_date >= {} OR end_date == {}) ORDER by name;";
+        std::string cmd = "SELECT id, name, FTE, start_date, end_date FROM projects WHERE (start_date <= ? or start_date == ?) AND (end_date >= ? OR end_date == ?) ORDER by name;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_int64(prep_cmd, 1, date);
@@ -475,7 +582,7 @@ class databaseStore{
 
         // Create a suitable COUNT of ids subclauses with '?' placeholder
         std::stringstream ss;
-        for(int i = 0; i<ids.size()-1 ; i++) ss<<" parent_id == ? OR";
+        for(size_t i = 0; i<ids.size()-1 ; i++) ss<<" parent_id == ? OR";
         if(ids.size() > 0) ss<<" parent_id == ? "; // Last one has no 'OR' - if only one supplied, only this clause applies
 
         // Patch together complete command
@@ -483,7 +590,7 @@ class databaseStore{
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
 
         //Bind the actual ids
-        for(int i = 0; i < ids.size(); i++){
+        for(size_t i = 0; i < ids.size(); i++){
             std::string id = ids[i].to_string();
             sqlite3_bind_text(prep_cmd, i+1, id.c_str(), id.length(), SQLITE_TRANSIENT); // id string has scope of loop iteration, so use TRANSIENT to prolong
         }
@@ -544,7 +651,7 @@ class databaseStore{
         return ret;
     }
     std::vector<fullOneOffProjectData> fetchOneOffsInRange(timecode start, timecode end){
-        std::string cmd =  "SELECT ts.time, oo.id, oo.name, oo.descr FROM timestamps AS ts INNER JOIN oneoffs AS oo ON ts.project_id = oo.id WHERE ts.time > ? and ts.time < ?;";
+        std::string cmd =  "SELECT ts.time, oo.id, oo.name, oo.descr FROM timestamps AS ts INNER JOIN oneoffs AS oo ON ts.project_id = oo.id WHERE ts.time > ? and ts.time < ? ORDER BY ts.time;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_int64(prep_cmd, 1, start);
@@ -587,6 +694,81 @@ class databaseStore{
         return ret;
     }
 
+    /** @brief Check whether time is marked
+     * 
+     * Checks whether there is already a stamp in range [time-interval, time+interval]
+     * @param time The time to check
+     * @param interval Range above and below
+     * @returns True if interval is occupied, else false
+     * @throws runtime_error if lookup fails for any reason
+     * @pre Interval is >= 0
+     * @post Check is performed. If interval < 0 result is always false. The database connection does not _become_ unusable.
+    */
+    bool checkTrackerTimeMarked(timecode time, timecode interval=0){
+      // Check if given time HAS an entry - i.e. if there is anything between [time-interval, time+interval]
+      std::string cmd = "SELECT time, project_id from timestamps t WHERE t.time >= ? AND t.time <= ? LIMIT 1;";
+      sqlite3_stmt * prep_cmd;
+      int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+      sqlite3_bind_int64(prep_cmd, 1, time-interval);
+      sqlite3_bind_int64(prep_cmd, 2, time+interval);
+      bool row_fnd=false;
+      while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+        row_fnd = true;
+      }
+      if(err != SQLITE_DONE){
+        sqlite3_finalize(prep_cmd);
+        throw std::runtime_error("Failed to fetch tracker entries");
+      }else{
+        sqlite3_finalize(prep_cmd);
+        return row_fnd;
+      }
+    }
+    /**
+     * @brief Get the first usable timecode after 'time'
+     * 
+     * Gets the lowest unmarked timecode in [time,).
+     * @param time Desired time
+     * @pre Time >=0
+     * @post The closest unmarked timecode greater than time is returned. The database connection does not _become_ unusable.
+     * @throws Database error OR stampExhaustion error if no free timecode is found after a max number are checked
+     * @return timecode
+     */
+    timecode getFirstAvailableAfter(timecode time){
+      const int lim = 100;
+      std::string cmd = "SELECT time, project_id from timestamps t WHERE t.time >= ? ORDER BY t.time ASC LIMIT ?;";
+      sqlite3_stmt * prep_cmd;
+      int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+      sqlite3_bind_int64(prep_cmd, 1, time);
+      sqlite3_bind_int64(prep_cmd, 2, lim);
+
+      timecode to_chk = time, occ = 0;
+      int ct = 0;
+      bool free = false;
+      while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+        occ = sqlite3_column_int64(prep_cmd, 0);
+        ct ++;
+        if(occ == to_chk){
+            to_chk ++; // Try next
+        }else{
+            free = true;
+            break;
+        }
+      }
+      sqlite3_finalize(prep_cmd);
+      if((free && err == SQLITE_ROW) || ct < lim){
+        // Found a free one between two rows in the set, before running out of rows
+        // OR reached the end of our fetch - therefore the next code is free
+        return to_chk;
+      }else if(! free){
+        // Did not find one!
+        throw stampExhaustion("Failed to find a free stamp", lim);
+      }else if(err != SQLITE_DONE){
+        // Other errors
+        throw std::runtime_error("Failed to fetch tracker entries");
+      }
+      return 0;
+    }
+
     std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1){
         //TODO - should the Uid tags be handled down here?
       //TODO - is there an elegant way to do this with prepared statements?
@@ -619,6 +801,28 @@ class databaseStore{
         return ret;
     }
 
+    std::vector<timeStamp> fetchTrackerEntries(proIds::Uuid const & id){
+      const std::string id_str = id.to_string();
+
+      std::string cmd = "SELECT time, project_id from timestamps t WHERE project_id = ? ORDER BY time;";
+      sqlite3_stmt * prep_cmd;
+      int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+      sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
+
+      std::vector<timeStamp> ret;
+      while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            timeStamp stamp;
+            stamp.time = sqlite3_column_int64(prep_cmd, 0);
+            stamp.projectUid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1)));
+            ret.push_back(stamp);
+        }
+        if(err != SQLITE_DONE){
+            throw std::runtime_error("Failed to fetch tracker entries");
+        }
+        sqlite3_finalize(prep_cmd);
+        return ret;
+    }
+
     timeStamp fetchLatestTrackerEntry(){
         std::string cmd = "SELECT time, project_id from timestamps t ORDER BY time DESC LIMIT 1;";
         sqlite3_stmt * prep_cmd;
@@ -632,6 +836,26 @@ class databaseStore{
         }
         sqlite3_finalize(prep_cmd);
         return ret;
+    }
+
+    size_t countTrackerEntries(std::vector<proIds::Uuid> const & ids){return countEntriesByIdGeneric("timestamps", ids);}
+
+    void deleteTrackerEntry(const timeStamp & stamp){
+        const std::string id_str = stamp.projectUid.to_string();
+        const long long time = stamp.time;
+        std::string cmd;
+        sqlite3_stmt * prep_cmd;
+        int err = 0;
+        cmd = "DELETE FROM timestamps WHERE time = ? and project_id = ?;";
+        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_int64(prep_cmd, 1, time);
+        sqlite3_bind_text(prep_cmd, 2, id_str.c_str(), id_str.length(), SQLITE_STATIC);
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            throw std::runtime_error("Failed to delete timestamp");
+        }
+        sqlite3_finalize(prep_cmd);
     }
 
     void deleteTrackerInInterval(timecode start, timecode end){
@@ -759,7 +983,23 @@ class databaseStore{
         err = sqlite3_step(prep_cmd);
         if(err == SQLITE_DONE) err = SQLITE_OK;
         if(err != SQLITE_OK){
-            throw std::runtime_error("Failed to write period");
+            throw std::runtime_error("Failed to update entry");
+        }
+        sqlite3_finalize(prep_cmd);
+    }
+
+    void deleteDigestEntries(proIds::Uuid projectUid){
+        //Delete entries for all periods under given uid
+        std::string cmd = "DELETE FROM time_digests WHERE project_id= ?;";
+        sqlite3_stmt * prep_cmd;
+        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        const std::string & tmp = projectUid.to_string();
+        sqlite3_bind_text(prep_cmd, 1, tmp.c_str(), tmp.length(), SQLITE_STATIC);
+
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            throw std::runtime_error("Failed to delete digests");
         }
         sqlite3_finalize(prep_cmd);
     }
@@ -767,9 +1007,10 @@ class databaseStore{
     std::vector<timeDigestEntry> fetchDigestEntries(timecode start, timecode end){
         //Fetching the entries for ALL PERIODS in the range
         // IMPORTANT : end here means the end of the period - this fetches digests WHOLLY within the interval!
+        // Start and end are INCLUSIVE
 
-        std::string cmd = "select td.duration, td.period_id, project_id from time_digests as td inner join digest_periods as dp on td.period_id=dp.id where dp.start > ? and dp.start+dp.duration < ?;";
-;
+        std::string cmd = "select td.duration, td.period_id, project_id from time_digests as td inner join digest_periods as dp on td.period_id=dp.id where dp.start >= ? and dp.start+dp.duration <= ?;";
+
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_int64(prep_cmd, 1, start);
@@ -789,6 +1030,70 @@ class databaseStore{
         sqlite3_finalize(prep_cmd);
         return ret;
 
+    }
+
+    size_t countDigestEntries(std::vector<proIds::Uuid> const & ids){return countEntriesByIdGeneric("time_digests", ids, "duration != 0");}
+
+    void updateTimestampEntriesId(proIds::Uuid current, proIds::Uuid target){
+        const std::string & p_old = current.to_string();
+        const std::string & p_new = target.to_string();
+
+        std::string cmd = "UPDATE timestamps SET project_id = ? WHERE project_id = ?;";
+        sqlite3_stmt * prep_cmd;
+        int err = 0;
+        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, p_new.c_str(), p_new.length(), SQLITE_STATIC); // First param - value to SET
+        sqlite3_bind_text(prep_cmd, 2, p_old.c_str(), p_old.length(), SQLITE_STATIC);
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            throw std::runtime_error("Failed modify project ID in timestamps");
+        }
+        sqlite3_finalize(prep_cmd);
+
+    }
+    void updateDigestEntriesId(proIds::Uuid current, proIds::Uuid target){
+        const std::string & p_old = current.to_string();
+        const std::string & p_new = target.to_string();
+        //Need to select those with current id, sum their time to that in target FOR THE SAME period
+
+        // Loop for minor reduction in duplication - be EXTREMELY careful that the parameter binds
+        // are the correct way around!!
+        if(current != proIds::NullUid && target != proIds::NullUid){
+          //Produce the sum
+          //Merge  BUT _into id to be dropped_ - This produces a combined record if-and-only-if the target and previous exists
+          std::string cmd1 = "INSERT INTO time_digests(period_id, duration, project_id) SELECT targ.period_id, targ.duration+prev.duration, prev.project_id from time_digests as targ inner join time_digests as prev where targ.project_id=? and prev.project_id=? and targ.period_id = prev.period_id ON CONFLICT(period_id, project_id) DO UPDATE SET duration=excluded.duration;";
+          // Now Rewrite the id - if there was no existing record target to merge with, this creates the single one by renaming the old one
+          std::string cmd2 = "INSERT INTO time_digests(period_id, duration, project_id) SELECT period_id, duration, ? FROM time_digests WHERE project_id = ? ON CONFLICT(period_id, project_id) DO UPDATE SET project_id = project_id, duration = excluded.duration;";
+          
+          for(std::string cmd: {cmd1, cmd2}){
+            sqlite3_stmt * prep_cmd;
+            int err = 0;
+            err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+            sqlite3_bind_text(prep_cmd, 1, p_new.c_str(), p_new.length(), SQLITE_STATIC);
+            sqlite3_bind_text(prep_cmd, 2, p_old.c_str(), p_old.length(), SQLITE_STATIC);
+            err = sqlite3_step(prep_cmd);
+            if(err == SQLITE_DONE) err = SQLITE_OK;
+            if(err != SQLITE_OK){
+                std::cout<<sqlite3_errmsg(DB)<<std::endl;
+              throw std::runtime_error("Failed to modify project ID in time digests");
+            }
+            sqlite3_finalize(prep_cmd);
+          }
+          //FINALLY can do the delete of the rewritten stamps
+          std::string cmd = "DELETE FROM time_digests WHERE project_id = ?;";
+            sqlite3_stmt * prep_cmd;
+            int err = 0;
+            err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+            sqlite3_bind_text(prep_cmd, 1, p_old.c_str(), p_old.length(), SQLITE_STATIC); // First param - value to SET
+            err = sqlite3_step(prep_cmd);
+            if(err == SQLITE_DONE) err = SQLITE_OK;
+            if(err != SQLITE_OK){
+                std::cout<<sqlite3_errmsg(DB)<<std::endl;
+              throw std::runtime_error("Failed to modify project ID in time digests");
+            }
+            sqlite3_finalize(prep_cmd);
+        }
     }
 
 };

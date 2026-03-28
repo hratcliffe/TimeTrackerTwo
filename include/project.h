@@ -83,10 +83,11 @@ class subproject: public projectLike{
     subproject(const fullSubProjectData & data){
       name = data.name;
       frac = data.frac;
+      if(!data.uid.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Subproject must have sub tag");
       uid = data.uid;
       parentUid = data.parentUid;
     }
-    subproject(subProjectData data, proIds::Uuid uid_in, proIds::Uuid parentUid_in){
+    subproject(subprojectData data, proIds::Uuid uid_in, proIds::Uuid parentUid_in){
         name = data.name;
         frac = data.frac;
         if(!uid_in.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Subproject must have sub tag");
@@ -114,8 +115,6 @@ class project : public projectLike{
 
     bool active; /**< \brief Flag to allow project to be deactivated for any reason*/
     float FTE;/**< \brief Fraction of FTE for this project */
-    bool hasStart=false, hasEnd=false; /**< Whether or not there is a start or end */
-    timecode start=timecodeNull, end=timecodeNull; /**< Time for the start and end */
     std::vector<proIds::Uuid> subprojects;/**< \brief Subprojects belonging to this project */
   public:
     project() = default;
@@ -143,6 +142,8 @@ class project : public projectLike{
     ~project()=default;
 
     float getFTE(){return FTE;}
+    void activate(){active = true;}
+    void deactivate(){active = false;}
     std::string describe()override{
       return !active ? "\nProject is inactive\n" : name+" "+ std::to_string((int)(FTE*100))+" % FTE\n "+ std::to_string(subprojects.size()) + " subprojects";
     }

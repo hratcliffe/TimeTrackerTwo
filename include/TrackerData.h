@@ -21,7 +21,24 @@ class projectStatus{
     proIds::Uuid uid; /**< \brief Pointer to project, null if none in progress */
     std::string name;
     projectStatusFlag status = projectStatusFlag::none; /**< \brief Status of project */
+    bool isUp(){return status != projectStatusFlag::none;} /**< \brief Whether ANY project is selected (active OR paused)  */
+    bool isUp(proIds::Uuid id){return isUp() && uid == id;}/**< \brief Whether project ID is selected */
 };
+enum class mergeErrorKind{invalid, not_implemented, runtime};
+enum class mergeErrorPath{unknown, proj2proj, sub2parent, sub2sub, sub2other, other};
+enum class verifyErrorKind{none, badId, missing, dataMismatch};
+};
+template<trackerTypes::verifyErrorKind T_kind>
+class verifyError : public std::runtime_error{
+  public:
+  const trackerTypes::verifyErrorKind kind = T_kind;
+  explicit verifyError(const char * msg):runtime_error(msg){;}
+};
+class trackerMergeError : public std::runtime_error{
+  public:
+  const trackerTypes::mergeErrorKind kind;
+  const trackerTypes::mergeErrorPath path;
+  explicit trackerMergeError(const char * msg, trackerTypes::mergeErrorKind kind_in, trackerTypes::mergeErrorPath path_in=trackerTypes::mergeErrorPath::unknown):runtime_error(msg), kind(kind_in), path(path_in) {;}
 };
 
 class TrackerData: public QWidget{
@@ -31,17 +48,36 @@ Q_OBJECT
   trackerTypes::projectStatus currentProjectStatus; /**< \brief Current project status*/
   dataIO * dataHandler = nullptr; /**< \brief Data handler for reading/writing data */
 
+  timeStampIssueConfig stampConfig;
+
+  void reapplyTags(timeStamp & t){
+    // Timestamps come from DB without proper tags. Make sure they are in place
+    if(thePM.isSubProject(t.projectUid)){
+      t.projectUid.tag(proIds::uidTag::sub);
+    }else if(!thePM.isProject(t.projectUid)){
+      t.projectUid.tag(proIds::uidTag::oneoff);
+    }
+  }
+  void reapplyTags(std::vector<timeStamp> & tv){
+    for(auto & t: tv){
+      reapplyTags(t);
+    }
+  }
+
   public:
 
     TrackerData(appConfig config){
+      //TODO - flatfile would be really hard, but could allow support for other DBs so don't
+      // remove this entirely, just adjust
       if(config.backend == dataBackendType::database){
-        dataHandler = new databaseIO(config.dataFileName);
+        dataHandler = new databaseIO(config.dataFileName, config.read_only);
       }else if(config.backend == dataBackendType::flatfile){
         //dataHandler = new flatfileIO(config.dataFileName);
         throw std::runtime_error("Flat file backend not implemented");
       }else{
         throw std::runtime_error("Unknown data backend type specified in config");
       }
+      stampConfig = config.stampConfig;
     };
 
     ~TrackerData(){if(dataHandler) delete dataHandler;};
@@ -68,7 +104,7 @@ Q_OBJECT
       emit projectListUpdateEvent(thePM.getOrderedProjectList());
       emit projectTotalUpdateEvent(thePM.allocatedFTE(), thePM.availableFTE());
     }
-    void createSubproject(const subProjectData & dat, const proIds::Uuid & parentId){
+    void createSubproject(const subprojectData & dat, const proIds::Uuid & parentId){
       //Create a new sub under and existing project
       auto idS = thePM.addSubproject(dat, parentId);
       dataHandler->writeSubproject(fullSubProjectData(idS, dat, parentId)); // Write to data handler
@@ -81,6 +117,7 @@ Q_OBJECT
     }
 
     void oneOffIdRequired(){
+      /** Inform the View of the ID for a fresh, future one-off project */
       proIds::Uuid id = thePM.getNextOneOffId();
       emit oneOffIdUpdate(id);
     }
@@ -93,12 +130,15 @@ Q_OBJECT
       return thePM.getDetails(id);
     }
 
+    auto trackerEntriesRequired(proIds::Uuid id){
+      return dataHandler->fetchTrackerEntries(id);
+    }
+
     //Load existing projects from the data backend
     // TODO - use start and end dates
     void loadProjects(timecode now){
       if(! dataHandler) throw std::runtime_error("No Data Backend Found");
 
-      std::cout<<"Loading projects from backend"<<std::endl;
       auto projectList = dataHandler->fetchProjectList();
       auto subprojectList = dataHandler->fetchSubprojectList();
 
@@ -116,9 +156,20 @@ Q_OBJECT
         auto latest = dataHandler->fetchLatestTrackerEntry();
         if(latest.projectUid != proIds::NullUid){
           // Project in progress. Place a mark
-          //TODO - if it has been a long time, offer an option to place an end mark?
-          std::cout<<"Starting with active project :"<<thePM.getName(latest.projectUid)<<std::endl;
-          markProject(latest.projectUid, thePM.getName(latest.projectUid), now);
+          reapplyTags(latest);
+          if(latest.time+ stampConfig.aLongTime < now){
+            //It's been a while
+            std::stringstream ss;
+            ss<<"It's been about "<< displayFloatHalves((now-latest.time)/timeFactors::hour)<<" hours since you started "<<thePM.getName(latest.projectUid);
+            emit popTT(ss.str(), "That's right", "Oops, let me fix that");
+          }
+          if(latest.projectUid.isTaggedAs(proIds::uidTag::oneoff)){
+            // Need to get the name for mark
+            auto proj = dataHandler->readOneOffProject(latest.projectUid);
+            markProject(latest.projectUid, proj.name, now);
+          }else{
+            markProject(latest.projectUid, thePM.getName(latest.projectUid), now);
+          }
         }
       }catch (const std::runtime_error &e){
         //Probably there is no timestamp entry - pass
@@ -126,23 +177,187 @@ Q_OBJECT
 
     }
 
+    /**
+     * @brief Check project manager against backend
+     * 
+     * Verifies that given project or subproject matches in the project manager and
+     * the data backend. If uid is tagged as 'sub' the lookup assumes a subproject.
+     * 
+     * @pre uid is a valid id
+     * @post A suitable error is raised - either project/sub is missing, or data backend
+     * does not match project manager
+     * @param uid Uuid to check
+     */
+    void verifyProjectOrSub(proIds::Uuid uid){
+      const float float_margin = 1e-4; //Constant for A==B in FP
+      if(uid.isTaggedAs(proIds::uidTag::oneoff)){
+        throw verifyError<trackerTypes::verifyErrorKind::badId>("One off project cannot be verified this way");
+      }else if(uid.isTaggedAs(proIds::uidTag::sub)){
+        subprojectDetails det;
+        fullSubProjectData dat;
+        bool foundPM=false, foundDB=false;
+        std::string msg="";
+        if(thePM.isSubProject(uid)){
+          foundPM = true;
+          det = thePM.getSubDetails(uid);
+        }else{
+          msg += " PM-Not a SubProject;";
+        }
+        try{
+          dat = dataHandler->readSubproject(uid);
+          foundDB = true;
+        }catch(std::runtime_error & e){
+          msg += e.what();
+          msg += " ;";
+        }
+        //Now - do we have both data?
+        if(!foundPM || ! foundDB) throw verifyError<trackerTypes::verifyErrorKind::missing>(msg.c_str());
+          //OK, now compare main details
+          bool detailsBad = false;
+          if(det.name != dat.name){
+            msg += " Name mismatch ";
+            detailsBad = true;
+          }
+          if(std::abs(det.frac - dat.frac) > float_margin){
+            msg += " Fraction mismatch ";
+            detailsBad = true;
+          }
+          auto pid = thePM.getParentId(uid);
+          if(pid != dat.parentUid){
+            msg += " Parent-id mismatch ";
+            detailsBad = true;
+          }
+        if(detailsBad){
+          throw verifyError<trackerTypes::verifyErrorKind::dataMismatch>(msg.c_str());
+        }
+      }else{
+        //First check existence
+        projectDetails det;
+        fullProjectData dat;
+        bool foundPM=false, foundDB=false;
+        std::string msg="";
+        if(thePM.isProject(uid)){
+          foundPM = true;
+          det = thePM.getDetails(uid);
+        }else{
+          msg += " PM-Not a Project;";
+        }
+        try{
+          dat = dataHandler->readProject(uid);
+          foundDB = true;
+        }catch(std::runtime_error & e){
+          msg += e.what();
+          msg += " ;";
+        }
+        //Now - do we have both data?
+        if(!foundPM || ! foundDB) throw verifyError<trackerTypes::verifyErrorKind::missing>(msg.c_str());
+        //OK, now compare main details
+        bool detailsBad = false;
+        if(det.name != dat.name){
+          msg += " Name mismatch ";
+          detailsBad = true;
+        }
+        if( std::abs(det.FTE - dat.FTE) > float_margin){
+          msg += " FTE mismatch ";
+          detailsBad = true;
+        }
+        if(detailsBad) throw verifyError<trackerTypes::verifyErrorKind::dataMismatch>(msg.c_str());
+
+        bool badSubs = false;
+        try{
+          //TODO - wont detect sub in DB but not in pm...
+          for(auto sub : det.subs){
+            auto subDB = dataHandler->readSubproject(sub.uid);
+            if(subDB.name != sub.name) throw std::runtime_error(" Sub name bad ");
+            if( std::abs(subDB.frac - sub.frac) > float_margin) throw std::runtime_error(" Sub frac bad ");
+            if(subDB.parentUid != thePM.getParentId(sub.uid)) throw std::runtime_error(" Sub parent bad ");
+         }
+        }catch(std::runtime_error & e){
+          msg += e.what();
+          msg += " ;";
+          badSubs = true;
+          //Continue - check them all before throwing
+        }
+        if(badSubs) throw verifyError<trackerTypes::verifyErrorKind::dataMismatch>(msg.c_str());
+      }
+    }
+
+    /**
+     * @brief Check whether given id has any uptime
+     * 
+     * Checks for timestamps, digests, and, if id is a project, for time under and subprojects
+     * 
+     * @param uid 
+     * @return true if there is any time associated with the given id
+     */
+    bool checkTimeOnProjectOrSub(proIds::Uuid uid){
+      if((uid.isTaggedAs(proIds::uidTag::sub) && thePM.isSubProject(uid))|| uid.isTaggedAs(proIds::uidTag::oneoff)){
+        return (dataHandler->countTrackerEntries({uid}) != 0 || dataHandler->countDigestEntries({uid}) != 0);
+      }else if(thePM.isProject(uid)){
+        //Form list of id, plus subs
+        std::vector<proIds::Uuid> ids;
+        ids = thePM.getSubs(uid);
+        ids.push_back(uid);
+        return (dataHandler->countTrackerEntries(ids) != 0 || dataHandler->countDigestEntries(ids) != 0);
+      }else{
+        return false;
+      }
+    }
+
+    bool checkProjectRunning(proIds::Uuid uid){return currentProjectStatus.isUp(uid);}
+
     void markProject(proIds::Uuid uid, std::string name, timecode now){
       //Timestamp project with current 'time' - (NB app time, not necessarily real time)
+      if(uid.isTaggedAs(proIds::uidTag::oneoff) || (uid.isTaggedAs(proIds::uidTag::sub) && thePM.isSubProject(uid)) || thePM.isActiveProject(uid)){
+        auto stamp = timeStamp{now, uid};
+        currentProjectStatus.uid = uid;
+        currentProjectStatus.status = trackerTypes::projectStatusFlag::active;
+        currentProjectStatus.name = name;
+        try{
+          dataHandler->writeTrackerEntry(stamp); // Write to data handler
+          emit projectRunningUpdate(name); // Notify view that a project is running
+        }catch(stampCollision & e){
+          //That time is marked. Check whether we can correct
+          bool alert = true;
+          if(stampConfig.ignoreCollisions){
+            try{
+              auto fixed = dataHandler->getFirstAvailableAfter(stamp.time);
+              if( (fixed - stamp.time) <= stampConfig.maxBump){
+                stamp.time = fixed;
+                dataHandler->writeTrackerEntry(stamp);
+                alert = false;
+                emit projectRunningUpdate(name);
+              }
+            }catch(stampExhaustion & ee){
+              std::stringstream ss;
+              ss<<"The "<<ee.ct<<" seconds after "<<stamp.time<<" are all already marked\n. Review your marks under the Review tab and try again later!";
+              emit popAlert(ss.str(), "Got It!");
+              alert = false; // Don't need the alert below
+            }
+          }
+          if(alert){
+            emit popAlert("Hey - are you really tracking down to the second!?!\n Wait a moment and try again!", "Got It!");
+          }
+        }
+      }else{
+        throw std::runtime_error("Attempting to Mark a nonexistent project");
+      }
+    }
 
-      auto stamp = timeStamp{now, uid};
-      std::cout << "Marking project "<<name<< " UID: " << uid << " "<<timeWrapper::formatTime(timeWrapper::fromSeconds(stamp.time))<< std::endl;
- 
-      currentProjectStatus.uid = uid;
-      currentProjectStatus.status = trackerTypes::projectStatusFlag::active;
-      currentProjectStatus.name = name;
-      dataHandler->writeTrackerEntry(stamp); // Write to data handler
-      emit projectRunningUpdate(name); // Notify view that a project is running
-
+    void flashProject(){
+      if(currentProjectStatus.status == trackerTypes::projectStatusFlag::active){
+        if(currentProjectStatus.uid.isTaggedAs(proIds::uidTag::oneoff)){
+          emit projectRunningFlash(currentProjectStatus.name); //If it's a one-off, use stored name
+        }else{
+          emit projectRunningFlash(thePM.getName(currentProjectStatus.uid));
+        }
+      }else{
+        emit projectRunningFlash(""); // Blank
+      }
     }
 
     void stopProject(timecode now){
       if(currentProjectStatus.status == trackerTypes::projectStatusFlag::active){
-        std::cout << "Stopping project with UID: " << currentProjectStatus.uid << std::endl;
         currentProjectStatus.status = trackerTypes::projectStatusFlag::none;
         emit projectStopped(); // Notify view that no project is running
         dataHandler->writeTrackerEntry({now, proIds::NullUid});
@@ -150,7 +365,6 @@ Q_OBJECT
     }
     void pauseProject(timecode now){
       if(currentProjectStatus.status == trackerTypes::projectStatusFlag::active){
-        std::cout << "Pausing project with UID: " << currentProjectStatus.uid << std::endl;
         currentProjectStatus.status = trackerTypes::projectStatusFlag::paused;
         if(currentProjectStatus.uid.isTaggedAs(proIds::uidTag::oneoff)){
           emit projectPaused(currentProjectStatus.name); //If it's a one-off, use stored name
@@ -162,7 +376,6 @@ Q_OBJECT
     }
     void resumeProject(timecode now){
       if(currentProjectStatus.status == trackerTypes::projectStatusFlag::paused){
-        std::cout << "Resuming project with UID: " << currentProjectStatus.uid << std::endl;
         currentProjectStatus.status = trackerTypes::projectStatusFlag::active;
         if(currentProjectStatus.uid.isTaggedAs(proIds::uidTag::oneoff)){
           emit projectRunningUpdate(currentProjectStatus.name); //If it's a one-off, use stored name
@@ -174,7 +387,6 @@ Q_OBJECT
     }
 
     void generateProjectSummary(proIds::Uuid uid){
-      std::cout << "Generating summary for project with UID: " << uid << std::endl;
       std::string summary = thePM.summariseProject(uid);
       emit projectSummaryReady(summary); // Notify view that a project summary is ready
     }
@@ -199,6 +411,41 @@ Q_OBJECT
 
     }
 
+    void fetchTimestamps(TW_timePoint start, TW_timePoint end){
+      // Fetching a list of time, (tagged) uid, name, suitable for e.g. display
+      auto stamps = dataHandler->fetchTrackerEntries(timeWrapper::toSeconds(start), timeWrapper::toSeconds(end));
+      reapplyTags(stamps);
+      std::vector<timeStampForDisplay> list;
+      auto oneOfflist = dataHandler->fetchOneOffProjectsInTimeRange(timeWrapper::toSeconds(start), timeWrapper::toSeconds(end));
+      for(const auto & stamp: stamps){
+        timeStampForDisplay t;
+        t.time = stamp.time; t.projectUid = stamp.projectUid;
+        t.formattedTime = timeWrapper::formatTime(timeWrapper::fromSeconds(t.time));
+        if(stamp.projectUid == proIds::NullUid){
+          t.projectName = "";
+        }else if(stamp.projectUid.isTaggedAs(proIds::uidTag::oneoff)){
+          auto check = [stamp](const fullOneOffProjectData & o){return stamp.projectUid == o.uid;};
+          auto it = std::find_if(oneOfflist.begin(), oneOfflist.end(), check);
+          if(it != oneOfflist.end()){
+            t.projectName = it->name;
+          }
+        }else{
+          t.projectName = thePM.getName(stamp.projectUid);
+        }
+        list.push_back(t);
+      }
+      emit timeStampListReady(list);
+    }
+
+    void generateReviewData(timecode now){
+      auto end = timeWrapper::fromSeconds(now);
+      auto start_cand = timeWrapper::addDuration(end, 0,0,-100);
+      // Make CERTAIN that this is not negative. For current implementation that would be the 70s, but
+      // best to check
+      auto start = timeWrapper::toSeconds(start_cand) > 0 ? start_cand : timeWrapper::fromSeconds(1);
+      fetchTimestamps(start, end);
+    }
+ 
     void generateTimeSummary(timeSummaryUnit units){
       std::vector<timeSummaryItem> summary;
       // A vector of items to be displayed in order - expect display to add newlines between items
@@ -218,14 +465,12 @@ Q_OBJECT
         emit timeSummaryReady(summary);
         return;
       }
-      std::cout<<"Fetched "<<timestamps.size()<<" timestamps"<<std::endl;
       //TODO - should this always go until now? C.f. previous - time range selection?
       timecode window = timeWrapper::toSeconds(timeWrapper::now()) - timestamps[0].time; 
       std::map<proIds::Uuid, timecode> durations = timestampProcessor::stampsToDurations(timestamps);
 
       //Next add in durations from digests
       auto digests = dataHandler->fetchDigestEntriesForTime(0, timeWrapper::toSeconds(timeWrapper::now()));
-      std::cout<<"Fetched "<<digests.size()<<" digests"<<std::endl;
       for(auto & item : digests){
         if(durations.count(item.projectUid) > 0){
           durations[item.projectUid] += item.duration;
@@ -233,11 +478,6 @@ Q_OBJECT
           durations[item.projectUid] = item.duration;
         }
       }
-
-      for(auto & item: durations){
-        std::cout<<item.first<<" "<<item.second<<std::endl;
-      }
-
 
       std::string unit_str = unitToString(units);
       timecode unit_factor = unitToDivisor(units);
@@ -248,7 +488,7 @@ Q_OBJECT
 
       timecode uptime = 0, oneoffs = 0;
       for(auto & item : durations){
-        uptime += item.second;
+        if(item.first != proIds::NullUid) uptime += item.second;
         if(!thePM.isProject(item.first) && !thePM.isSubProject(item.first) && item.first != proIds::NullUid){
           oneoffs += item.second;
         } 
@@ -332,6 +572,8 @@ Q_OBJECT
     void generateDailyDigest(TW_timePoint start_tp){
       //Generate the 'per-day' version of the timestamps for the GMT day starting at start
       // ALSO adds a special entry for the TOTAL duration covered under the NULL uuid
+      // TODO - total duration is sum of the rest - why store it?
+      //TODO - perhaps should also create a day-start and day-end entry somewhere?
       // TODO - timezones?
       // TODO If it exists already, it should be replaced
 
@@ -362,6 +604,7 @@ Q_OBJECT
       digest.push_back(timeDigestEntry{-1, total_dur, proIds::NullUid});
       timeDigestPeriod period{-1, start_of_day, end-start_of_day};
       dataHandler->writeDigestEntries(period, digest);
+      emit timeDigestReady(digest);
    }
 
     int checkForTimeStampsBefore(TW_timePoint end){
@@ -383,17 +626,152 @@ Q_OBJECT
     }
 
     void handleCloseRequest(bool silent, timecode now){
+      //TODO write state for last-closed time
       if(silent){
-        // Just ensure data is saved and exit
-        std::cout << "Silent close requested. Saving data..." << std::endl;
-        if(currentProjectStatus.status == trackerTypes::projectStatusFlag::active) std::cout<<"Leaving Project Active: "<<thePM.getName(currentProjectStatus.uid)<<std::endl; //TODO - can we persist a pause?
-
+        // Just exit
+        // TODO - can we persist a pause?
       }else{
-        std::cout<<" Closing requested. Saving data..." << std::endl;
         stopProject(now);
-
       }
       emit readyToClose(); // Done, ready to shutdown now
+    }
+
+    //Editing and Manipulation
+
+    /**
+     * @brief Delete a project, sub or one-off
+     *
+     * @pre uid is a valid project.
+     * @pre Either uid has no associated time, OR force is true
+     * @post uid no longer exists and time associated with it has become down-time
+     * @param uid Id to delete, project, oneoff or sub
+     * @param force True - delete along with associated time; False - do not delete if there is associated time
+     */
+    void deleteProject(proIds::Uuid uid, bool force=NO_FORCE){
+      //Re-do the check for being marked
+      bool marked = checkTimeOnProjectOrSub(uid);
+      if(marked && !force) throw std::runtime_error("Project has associated time, cannot delete");
+      //Now either we're safe to delete, or force=true
+      if(marked){
+        dataHandler->rewriteTrackerProjectId(uid, proIds::NullUid);
+      }
+      if(uid.isTaggedAs(proIds::uidTag::none)){
+        dataHandler->deleteProject(uid);
+        thePM.deleteProjectById(uid);
+      }else if(uid.isTaggedAs(proIds::uidTag::oneoff)){
+        dataHandler->deleteOneOffProject(uid);
+      }else if(uid.isTaggedAs(proIds::uidTag::sub)){
+        dataHandler->deleteSubproject(uid);
+        thePM.deleteSubprojectById(uid);
+      }
+      emit projectListUpdateEvent(thePM.getOrderedProjectList());
+   }
+    void mergeProject(proIds::Uuid current, proIds::Uuid sub,  proIds::Uuid target, proIds::Uuid sub_target){
+      // Merge a project into another
+      // Delete project with ID current, and rewrite all of its timestamps to target
+      /* CASES:
+        Current is Project, Target is Project
+        Current is Subproject, Target is another sub of same parent
+        current is sub, target is its parent
+        Current is sub, target is sub of another
+        Current is sub, target is another project, NOT parent
+        NOTE: do we also want to support idea of promoting sub to parent?
+      */
+      //Checking for simply bad
+      if(current == proIds::NullUid || target == proIds::NullUid){
+        throw trackerMergeError("Null uids are not valid", trackerTypes::mergeErrorKind::invalid);
+      }else if(current == target && sub == sub_target){
+        throw trackerMergeError("Cannot merge with itself", trackerTypes::mergeErrorKind::invalid);
+      };
+
+      bool current_has_subs = false;
+      if(current.isProj()){
+        current_has_subs = (thePM.subprojectCount(current) > 0);
+      }
+      if((current.isProj() && sub.isNull()) && (target.isProj() && sub_target.isNull()) && !current_has_subs){
+        try{
+          //Rewrite the timestamps
+          dataHandler->rewriteTrackerProjectId(current, target);
+          //Fetch the FTE for current and add it to target
+          auto targetData = dataHandler->readProject(target);
+          targetData.FTE += thePM.getFTE(current);
+          thePM.setFTE(target, targetData.FTE);
+
+          dataHandler->updateProject(targetData);
+          // Delete the details in DB
+          dataHandler->deleteProject(current);
+          // Delete from map
+          thePM.deleteProjectById(current);
+        }catch(std::runtime_error & e){
+          throw trackerMergeError(e.what(), trackerTypes::mergeErrorKind::runtime, trackerTypes::mergeErrorPath::proj2proj);
+        }
+      }else if((current.isProj() && sub.isNull()) && (target.isProj() && sub_target.isNull()) && current_has_subs){
+        try{
+          //Rewrite the timestamps
+          dataHandler->rewriteTrackerProjectId(current, target);
+
+          //Fetch the FTE for current NOT USED BY SUBS and add it to target
+          auto free_frac = thePM.availableSubFrac(current);
+          auto targetData = dataHandler->readProject(target);
+
+          targetData.FTE += (thePM.getFTE(current) * free_frac); // Transferring parent-not-sub FTE
+          thePM.setFTE(target, targetData.FTE);
+
+          //Transferring subs
+          // Note TOTAL FTE will change with each one we do....
+          auto subs = thePM.getSubs(current);
+          for(auto sub_id : subs){
+            thePM.moveSubproject(current, sub_id, target);
+          }
+          //Now write the updated subs, including the Ids
+          auto t_subs = thePM.getSubs(target);
+          for(auto sub_id : t_subs){
+            auto details = thePM.getSubDetails(sub_id);
+            auto data = dataHandler->readSubproject(sub_id);
+            data.frac = details.frac;
+            data.parentUid = target; // Rewrites id for those we've moved
+            dataHandler->updateSubproject(data);
+          }
+          targetData.FTE = thePM.getFTE(target);
+          dataHandler->updateProject(targetData);
+          // Delete the details in DB
+          dataHandler->deleteProject(current);
+          // Delete from map
+          thePM.deleteProjectById(current);
+        }catch(std::runtime_error & e){
+          throw trackerMergeError(e.what(), trackerTypes::mergeErrorKind::runtime, trackerTypes::mergeErrorPath::sub2sub);
+        }
+
+      }else if(current.isProj() && !sub.isNull() && target.isProj() && !sub_target.isNull()){
+        auto firstParent = thePM.getParentId(current);
+        if(firstParent == thePM.getParentId(target)){
+          //Rewrite the timestamps
+          dataHandler->rewriteTrackerProjectId(sub, sub_target);
+          // Combine the fractions
+          auto targetData = dataHandler->readSubproject(sub_target);
+          targetData.frac += thePM.getFrac(sub);
+          thePM.deleteSubprojectById(sub);
+          thePM.setFrac(sub_target, targetData.frac);
+          dataHandler->updateSubproject(targetData);
+
+          // Delete the details in DB
+          dataHandler->deleteSubproject(sub);
+        }else{
+            throw trackerMergeError("Not implemented merge for this case (non shared parent)", trackerTypes::mergeErrorKind::not_implemented, trackerTypes::mergeErrorPath::sub2sub);
+        }
+      }else{
+        throw trackerMergeError("Not implemented merge for this case", trackerTypes::mergeErrorKind::not_implemented);
+      }
+      generateProjectSummary(target); // Effectively, a refresh
+    }
+
+    void deleteTimeStampList(std::vector<timeStamp> & stmps){
+      // Delete a list of timestamps
+      //This MIGHT be able to be batched down to dataIO level, but unlikely, so just loop
+      for(auto stmp: stmps){
+        dataHandler->deleteTrackerEntry(stmp);
+      }
+      emit timeStampListUpdateEvent();
     }
 
     signals:
@@ -401,10 +779,16 @@ Q_OBJECT
       void projectTotalUpdateEvent(float usedFTE, float freeFTE);
       void projectSummaryReady(std::string summary); /**< \brief Signal emitted when a summary is ready, with the summary text */
       void timeSummaryReady(std::vector<timeSummaryItem> summary);
+      void timeDigestReady(std::vector<timeDigestEntry> digest);
+      void timeStampListReady(std::vector<timeStampForDisplay> stamps);
+      void timeStampListUpdateEvent(); /**< \brief Indicate that anything showing a list of stamps needs to refresh */
       void projectRunningUpdate(std::string name); /**< \brief Signal emitted when a project is running, with the name of the project */
+      void projectRunningFlash(std::string name); /**< \brief Signal emitted when requested showing if a project is running, with the name of the project, or empty if stopped/paused etc */
       void projectPaused(std::string name); /**< \brief Signal emitted when a project is paused, with the name of the project */
       void projectStopped(); /**< \brief Signal emitted when no project is running */
       void readyToClose(); /**< \brief Signal emitted when data is saved and app is ready to close */
       void oneOffIdUpdate(proIds::Uuid);
+      void popAlert(std::string, std::string);
+      void popTT(std::string, std::string, std::string);
 };
 #endif // ____trackerData__

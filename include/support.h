@@ -11,11 +11,20 @@
 
 
 #include <stdio.h>
+#include <iostream>
 #include <cstdlib>
 #include <vector>
 #include <string>
 #include <sstream>
 #include <iomanip>
+
+using timecode = long long; /**< \brief Type for timecodes, representing seconds since epoch. SIGNED to allow -1 for sentinel below*/
+
+inline const timecode timecodeNull = -1; /**< \brief Sentinel for null time * * Need a sentinel - do not rely on this value, use the named constant */
+
+// Definitions to make call-sites clearer
+const bool FORCE=true;
+const bool NO_FORCE = false;
 
 const std::string appVersion = "0.2.0";
 const std::string appName = "Time Tracker Two";
@@ -37,13 +46,28 @@ namespace dateLimits{
 }
 
 enum class dataBackendType{
+  none, /**< \brief Default invalid value */
   flatfile, /**< \brief Flat file data backend */
   database /**< \brief Database data backend */
 };
 
+struct appDigestConfig{
+  timecode digestCheckPeriod =-1;
+  timecode digestCreationDelay = -1;
+  bool disableDigests = false;
+};
+struct timeStampIssueConfig{
+  bool ignoreCollisions = true; /**< @brief Indicates to silently bump a non-unique time stamp to later, by up to maxBump */
+  timecode maxBump = 2; /**< Max value for silent de-duplication. Setting to 0 is effectively the same as ignore=false but does more work on the way*/
+  timecode aLongTime = 60*60*12; /**< An unexpected length of time to be on a single project */
+};
+
 struct appConfig{
+  bool read_only = false; /**< \brief App backend should be opened in read-only mode (Many operations will fail) */
   std::string dataFileName = "";
   dataBackendType backend = dataBackendType::database; /**< \brief Type of data backend to use */
+  appDigestConfig digestConfig;
+  timeStampIssueConfig stampConfig;
 };
 
 inline std::string displayFloat(float value, int dp=2){
@@ -58,9 +82,9 @@ inline std::string displayFloatHalves(float value){
   return displayFloat(std::floor(value * 2 + 0.5)/2.0, 1);
 }
 inline std::string displayFloatQuarters(float value){
-  //Create string for given float to nearest 0.5
+  //Create string for given float to nearest 0.25
   float flt = std::floor(value * 4 + 0.5);
-  float rem = std::remainder(flt, 4);
+  float rem = std::abs(std::remainder(flt, 4));
   return displayFloat(flt/4.0, (rem == 1 or rem == 3) ? 2: 1);
 }
 

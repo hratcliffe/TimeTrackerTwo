@@ -2,6 +2,7 @@
 #define ____timeWrapper__
 
 #include <chrono>
+#include <iostream>
 #include <ctime> // Still need some C-style stuff for dates
 #include <iomanip>
 #include <sstream>
@@ -78,7 +79,6 @@ class timeWrapper{
     static timePoint midnightBefore(timePoint tp){
       std::time_t theTime = clock::to_time_t(tp);
       auto timeInfo = localtime(&theTime);
-      std::cout<<timeInfo->tm_hour<<" "<<timeInfo->tm_min<<std::endl;
       timeInfo->tm_hour = 0;
       timeInfo->tm_min = 0;
       timeInfo->tm_sec = 0;
@@ -87,7 +87,6 @@ class timeWrapper{
     static timePoint startOfMonth(timePoint tp){
       std::time_t theTime = clock::to_time_t(tp);
       auto timeInfo = localtime(&theTime);
-      std::cout<<timeInfo->tm_hour<<" "<<timeInfo->tm_min<<std::endl;
       timeInfo->tm_mday = 1;
       timeInfo->tm_hour = 0;
       timeInfo->tm_min = 0;
@@ -95,13 +94,6 @@ class timeWrapper{
       return clock::from_time_t(mktime(timeInfo));
     }
 
-    static timePoint addDuration(timePoint pt, long minutes, long hours, long days){
-      duration offset{0};
-      offset += std::chrono::minutes(minutes);
-      offset += std::chrono::hours(hours);
-      offset += std::chrono::hours(days*24);
-      return pt + offset;
-    }
     static duration makeDuration(long minutes, long hours, long days){
       duration offset{0};
       offset += std::chrono::minutes(minutes);
@@ -110,6 +102,18 @@ class timeWrapper{
       return offset;
     }
 
+    static timePoint addDuration(timePoint pt, long minutes, long hours, long days){
+      return pt + makeDuration(minutes, hours, days);
+    }
+
+    static duration getDifference(timePoint tp, timePoint tp2){
+      // Seconds from tp to tp2
+      auto s1 = timeWrapper::toSeconds(tp);
+      auto s2 = timeWrapper::toSeconds(tp2);
+      duration total{0};
+      total += std::chrono::seconds(s2-s1);
+      return total;
+    }
 
   };
 

@@ -11,12 +11,13 @@
 class dataIO{
 
   public:
-    dataIO(){;};
-    dataIO(std::string fileName){;}; /**< \brief Constructor with file name */
+    dataIO()=default;
+    explicit dataIO(std::string fileName, bool readOnly = false); /**< \brief Constructor with file name */
     dataIO(const dataIO &other) = delete;
-    virtual ~dataIO(){;};
+    virtual ~dataIO()=default;
 
-    virtual void writeReferenceTime(timecode time) = 0; /**< \brief Write a reference time for verification later*/
+    virtual void writeReferenceTime() = 0; /**< \brief Write a reference time for verification later*/
+    virtual std::string readReferenceTime() = 0; /**< \brief Get the reference time string */
 
     virtual void writeAppState(std::string key, long long value) = 0;/**< \brief Write a state value */
     virtual long long readAppState(std::string key) = 0;/**< \brief Read a state value */
@@ -25,10 +26,16 @@ class dataIO{
 
     virtual void writeProject(fullProjectData const& dat) = 0;
     virtual fullProjectData readProject(proIds::Uuid const & id) = 0;
+    virtual void deleteProject(proIds::Uuid const & id) = 0;
+    // For update, take fullProjectData so can read, update and pass back
+    virtual void updateProject(fullProjectData const & dat) = 0;
     virtual void writeSubproject(fullSubProjectData const & dat) = 0;
     virtual fullSubProjectData readSubproject(proIds::Uuid const & id) = 0;
+    virtual void deleteSubproject(proIds::Uuid const & id) = 0;
+    virtual void updateSubproject(fullSubProjectData const & dat) = 0;
     virtual void writeOneOffProject(fullOneOffProjectData const &dat) = 0;
     virtual fullOneOffProjectData readOneOffProject(proIds::Uuid const &id) = 0;
+    virtual void deleteOneOffProject(proIds::Uuid const & id) = 0;
 
     virtual void writeTrackerEntry(timeStamp const & stamp) = 0;
 
@@ -40,10 +47,16 @@ class dataIO{
     virtual std::vector<fullOneOffProjectData> fetchOneOffProjectsInTimeRange(timecode start, timecode end) = 0;
 
     virtual timeStamp fetchTrackerAt(timecode time) = 0; /**< \brief Fetch the stamp 'active at' given time */
+    virtual bool checkTrackerTimeMarked(timecode time, timecode interval=0) = 0; /**< Check whether given time is already marked */
+    virtual timecode getFirstAvailableAfter(timecode time) = 0;
+
     virtual std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1) = 0; /**< \brief Fetch ORDERED tracker entries from the data source, optionally within a time range */
+    virtual std::vector<timeStamp> fetchTrackerEntries(proIds::Uuid const & id) = 0; /**< \brief Fetch ORDERED tracker entries for specific id */
     virtual timeStamp fetchLatestTrackerEntry() = 0;/**< \brief Fetch the latest (most recent) tracker entry */
+    virtual size_t countTrackerEntries(std::vector<proIds::Uuid> const & ids) = 0;/**< \brief Count the number of timestamps under the given list of ids */
 
     virtual void deleteTrackerInInterval(timecode start, timecode end) = 0;/**< \brief Delete tracker entries in the given range*/
+    virtual void deleteTrackerEntry(const timeStamp & stamp) = 0;/**< \brief Delete specific timestamp */
 
     //Digests
     virtual void writeDigestEntries(timeDigestPeriod period, std::vector<timeDigestEntry> entries) = 0;/**< \brief Write the daily digests of time spent, assuming not previously written */
@@ -51,12 +64,11 @@ class dataIO{
     virtual std::vector<timeDigestEntry> fetchDigestEntries(timeDigestPeriod period) = 0; /**< \brief Fetch the daily digests of time spent*/
     virtual void updateDigestEntry(timeDigestEntry) = 0;/**< \brief Update an entry (unique on period_id+uid) */
     virtual std::vector<timeDigestEntry> fetchDigestEntriesForTime(timecode start = -1, timecode end=-1)=0;/**<\brief Fetch all the digests which fall in the given time range */
-};
+    virtual size_t countDigestEntries(std::vector<proIds::Uuid> const & ids) = 0;/**< \brief Count the number of timestamps under the given list of ids */
 
-class flatfileIO : public dataIO{
-  public:
-    flatfileIO(){;};
-    ~flatfileIO(){;};
+    // Manipulation and editing
+    virtual void rewriteTrackerProjectId(proIds::Uuid current, proIds::Uuid target) = 0;
+
 };
 
 /**
@@ -71,11 +83,26 @@ class databaseIO : public dataIO{
 
   public:
     databaseIO()=delete;
-    databaseIO(std::string fileName): dbStore(fileName){;}; /**< \brief Constructor with file name */
+    databaseIO(std::string fileName, bool readOnly): dbStore(fileName, readOnly){;}; /**< \brief Constructor with file name */
     ~databaseIO(){;};
-    void writeReferenceTime(timecode time) override {
-      // Implementation for writing reference time to database
-      std::cerr<<"Writing reference time not implemented yet."<<std::endl;
+    void closeDB(){dbStore.closeDB();}
+    void writeReferenceTime() override {
+      // Writing a formatted time string
+      // Cross-check since we work in time-codes
+      try{
+        auto ref = readAppConfig("ZeroTime");
+      }catch(badLookup & e){
+        //Ref time does not exist, write it
+        writeAppConfig("ZeroTime", timeWrapper::formatTime(timeWrapper::fromSeconds(0)));
+      }
+    }
+    std::string readReferenceTime() override {
+      try{
+        auto ref = readAppConfig("ZeroTime");
+        return ref;
+      }catch(badLookup & e){
+        return "Reference time not yet written";
+      }
     }
 
     void writeAppState(std::string key, long long value) override{
@@ -99,13 +126,26 @@ class databaseIO : public dataIO{
       // Implementation for reading project data from database
       return dbStore.readProject(id);
     }
+    void deleteProject(proIds::Uuid const & id) override{
+      dbStore.deleteProject(id);
+    }
+    void updateProject(fullProjectData const & dat) override{
+      // For Database, we already have the uniqueness and on-conflict
+      dbStore.writeProject(dat);
+    }
     void writeSubproject(fullSubProjectData const &dat) override {
       // Implementation for writing subproject data to database
-        dbStore.writeSubProject(dat);
+        dbStore.writeSubproject(dat);
     }
     fullSubProjectData readSubproject(proIds::Uuid const & id) override {
       // Implementation for reading subproject data from database
         return dbStore.readSubproject(id);
+    }
+    void deleteSubproject(proIds::Uuid const & id) override{
+      dbStore.deleteSubproject(id);
+    }
+    void updateSubproject(fullSubProjectData const & dat) override{
+      dbStore.writeSubproject(dat);
     }
 
     void writeOneOffProject(fullOneOffProjectData const & dat) override{
@@ -113,6 +153,9 @@ class databaseIO : public dataIO{
     }
     fullOneOffProjectData readOneOffProject(proIds::Uuid const &id) override{
         return dbStore.readOneOff(id);
+    }
+    void deleteOneOffProject(proIds::Uuid const & id)override{
+      dbStore.deleteOneOff(id);
     }
 
     void writeTrackerEntry(timeStamp const & stamp) override {
@@ -145,15 +188,32 @@ class databaseIO : public dataIO{
     timeStamp fetchTrackerAt(timecode time) override{
       return dbStore.fetchTrackerAt(time);
     }
+    bool checkTrackerTimeMarked(timecode time, timecode interval=0)override{
+      return dbStore.checkTrackerTimeMarked(time, interval);
+    }
+    timecode getFirstAvailableAfter(timecode time)override{
+      return dbStore.getFirstAvailableAfter(time);
+    }
 
     std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1) override {
       // Implementation for fetching tracker entries from database
       return dbStore.fetchTrackerEntries(start, end);
     }
+    std::vector<timeStamp> fetchTrackerEntries(proIds::Uuid const & id) override{
+       return dbStore.fetchTrackerEntries(id);
+    }
+
     timeStamp fetchLatestTrackerEntry() override{
       return dbStore.fetchLatestTrackerEntry();
     }
 
+    size_t countTrackerEntries(std::vector<proIds::Uuid> const & ids) override{
+      return dbStore.countTrackerEntries(ids);
+    }
+
+    void deleteTrackerEntry(const timeStamp & stamp) override{
+      dbStore.deleteTrackerEntry(stamp);
+    };
     void deleteTrackerInInterval(timecode start, timecode end) override{
       dbStore.deleteTrackerInInterval(start, end);
     }
@@ -174,7 +234,22 @@ class databaseIO : public dataIO{
     std::vector<timeDigestEntry> fetchDigestEntriesForTime(timecode start = -1, timecode end=-1) override{
       return dbStore.fetchDigestEntries(start, end);
     }
+    size_t countDigestEntries(std::vector<proIds::Uuid> const & ids) override{
+      return dbStore.countDigestEntries(ids);
+    }
 
+
+    // Editing and manipulation
+    void rewriteTrackerProjectId(proIds::Uuid current, proIds::Uuid target) override{
+      // Rewrite the Uid for timestamp and digest entries from current to target
+      dbStore.updateTimestampEntriesId(current, target);
+      // TODO - this doesn't work - need to MERGE the digests
+      if(target != proIds::NullUid){
+        dbStore.updateDigestEntriesId(current, target);
+      }else{
+        dbStore.deleteDigestEntries(current);
+      }
+    }
 
 };
 

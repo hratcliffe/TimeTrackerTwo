@@ -59,7 +59,7 @@ namespace proIds{
       /** \brief Apply tag
         @param tag Tag to apply
       */
-      void tag(uidTag tag){this->Itag = tag;}
+      uidWrapper & tag(uidTag tag){this->Itag = tag; return *this;}
 
       bool isTaggedAs(uidTag tag)const{
         /** \brief Check if tagged as
@@ -83,6 +83,13 @@ namespace proIds{
       */
       bool isExactEq(const uidWrapper &other)const{return qID == other.qID && Itag == other.Itag;};
       friend std::ostream& operator<<(std::ostream& stream, const uidWrapper& uid);
+
+      bool isProj(){
+        return !isNull() && Itag == uidTag::none;
+      }
+      bool isNull(){
+        return this->qID == QUuid();
+      }
 
       bool operator<(const uidWrapper &other)const{
         /** \brief Less than operator
@@ -139,7 +146,7 @@ class IdGenerator{
     /** \brief Get null unique id*/
     virtual proIds::Uuid getNextId() = 0;
     /** \brief Get null id*/
-    virtual proIds::Uuid getNullId(){return proIds::NullUid;};
+    virtual proIds::Uuid getNullId() = 0; //{return proIds::NullUid;};
 
     virtual proIds::Uuid getOnesId() = 0;
 

@@ -650,6 +650,10 @@ Q_OBJECT
      * @param force True - delete along with associated time; False - do not delete if there is associated time
      */
     void deleteProject(proIds::Uuid uid, bool force=NO_FORCE){
+      // Can't delete project if it is running
+      if(checkProjectRunning(uid)){
+        throw std::runtime_error("Trying to delete a running project - aborting");
+      }
       //Re-do the check for being marked
       bool marked = checkTimeOnProjectOrSub(uid);
       if(marked && !force) throw std::runtime_error("Project has associated time, cannot delete");

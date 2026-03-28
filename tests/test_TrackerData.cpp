@@ -1256,14 +1256,16 @@ TEST_CASE("Deleting project"){
 
   SECTION("Marked project, with force"){
     td.markProject(id, name, 242);
+    td.stopProject(250);
     td.deleteProject(id, FORCE);
     REQUIRE_FALSE(td.checkTimeOnProjectOrSub(id));
     td.fetchTimestamps(timeWrapper::fromSeconds(0), timeWrapper::fromSeconds(10001));
     std::vector<timeStampForDisplay> items;
     items = sig.what(items);
     //There was a stamp, so this becomes a null
-    REQUIRE(items.size() == 1);
+    REQUIRE(items.size() == 2);
     REQUIRE(items[0].projectUid == proIds::NullUid);
+    REQUIRE(items[1].projectUid == proIds::NullUid); // This is the stop stamp
   }
   SECTION("Unmarked project"){
     td.deleteProject(id, FORCE);
@@ -1272,6 +1274,11 @@ TEST_CASE("Deleting project"){
     std::vector<timeStampForDisplay> items;
     items = sig.what(items);
     REQUIRE(items.size() == 0);
+  }
+  SECTION("Running Project"){
+    td.markProject(id, name, 242);
+    REQUIRE_THROWS(td.deleteProject(id, NO_FORCE));
+    REQUIRE_THROWS(td.deleteProject(id, FORCE));
   }
 }
 // ---------- Special functions ---------------------------------------------------------------------

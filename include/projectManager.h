@@ -175,10 +175,24 @@ class projectManager{
     //IMPORTANT - these do not expect Tagged Ids since we do not know what we have
     bool isProject(proIds::Uuid id ){return projects.count(id) > 0;};
     bool isSubProject(proIds::Uuid id ){return subprojects.count(id) > 0;};
-    bool isActiveProject(proIds::Uuid id){
+    bool isActiveProject(proIds::Uuid id, timecode now=-1){
       if(isProject(id)){
-        return projects[id].active;
+        auto & proj = projects[id];
+        if(!proj.active){
+          //Forced in-active for some reason
+          return false;
+        }else{
+          //Checking dates:
+          if(now != -1 && proj.hasStart && proj.start > now){
+            return false;
+          }
+          if(now!=-1 && proj.hasEnd && proj.end < now){
+            return false;
+          }
+          return true;
+        }
       }else{
+        //Not even a project...
         throw std::runtime_error("Cannot check active state - not a valid project");
       }
     }

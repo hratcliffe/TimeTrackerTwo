@@ -73,8 +73,8 @@ class databaseStore{
 
         std::map<std::string, std::string> cmds;
 
-        cmds["projects"] = "CREATE TABLE IF NOT EXISTS projects(id CHAR(36) PRIMARY KEY, name TEXT, FTE REAL, start_date INTEGER, end_date INTEGER);";
-        cmds["subprojects"] = "CREATE TABLE IF NOT EXISTS subprojects(id CHAR(36) PRIMARY KEY, name TEXT, frac REAL, parent_id CHAR(36), FOREIGN KEY(parent_id) REFERENCES projects(id));";
+        cmds["projects"] = "CREATE TABLE IF NOT EXISTS projects(id CHAR(36) PRIMARY KEY, name TEXT, FTE INTEGER, start_date INTEGER, end_date INTEGER);";
+        cmds["subprojects"] = "CREATE TABLE IF NOT EXISTS subprojects(id CHAR(36) PRIMARY KEY, name TEXT, frac INTEGER, parent_id CHAR(36), FOREIGN KEY(parent_id) REFERENCES projects(id));";
 
         // NOTE: ideally would have a foreign key here BUT since it can be either a project OR a sub OR a one-off
         // that would require an additional table
@@ -260,16 +260,16 @@ class databaseStore{
         //Unpacking
         const std::string & id = dat.uid.to_string();
         const std::string & name = dat.name;
-        const double FTE = dat.FTE;
+        const int FTE = dat.FTE.value;
 
         std::string cmd;
         sqlite3_stmt * prep_cmd;
         int err = 0;
-        cmd = "insert into projects values(?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, FTE=excluded.FTE, start_date=excluded.start_date, end_date=excluded.end_date;"; // TODO check the conflict clause
+        cmd = "insert into projects (id, name, FTE, start_date, end_date) values(?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, FTE=excluded.FTE, start_date=excluded.start_date, end_date=excluded.end_date;";
         err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_text(prep_cmd, 1, id.c_str(), id.length(), SQLITE_STATIC);
         sqlite3_bind_text(prep_cmd, 2, name.c_str(), name.length(), SQLITE_STATIC);
-        sqlite3_bind_double(prep_cmd, 3, FTE);
+        sqlite3_bind_int(prep_cmd, 3, FTE);
         if(dat.useStart){
             sqlite3_bind_int64(prep_cmd, 4, dat.start);
         }else{
@@ -287,24 +287,23 @@ class databaseStore{
             std::cerr<< sqlite3_errmsg(DB) << std::endl;
             throw std::runtime_error("Failed to write project");
         }
-        sqlite3_finalize(prep_cmd);
+        sqlite3_finalize(prep_cmd); //tODO finalize inside error case also
     }
     void writeSubproject(const fullSubProjectData & dat){
 
         //Unpacking
         const std::string & id = dat.uid.to_string();
         const std::string & name = dat.name;
-        const double frac = dat.frac;
+        const int frac = dat.frac.value;
         const std::string & parent_id = dat.parentUid.to_string();
-
         std::string cmd;
         sqlite3_stmt * prep_cmd;
         int err = 0;
-        cmd = "insert into subprojects values(?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, frac=excluded.frac, parent_id=excluded.parent_id;"; // TODO check the conflict clause
+        cmd = "insert into subprojects(id, name, frac, parent_id) values(?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, frac=excluded.frac, parent_id=excluded.parent_id;";
         err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_text(prep_cmd, 1, id.c_str(), id.length(), SQLITE_STATIC);
         sqlite3_bind_text(prep_cmd, 2, name.c_str(), name.length(), SQLITE_STATIC);
-        sqlite3_bind_double(prep_cmd, 3, frac);
+        sqlite3_bind_int(prep_cmd, 3, frac);
         sqlite3_bind_text(prep_cmd, 4, parent_id.c_str(), parent_id.length(), SQLITE_STATIC);
         err = sqlite3_step(prep_cmd);
         if(err == SQLITE_DONE) err = SQLITE_OK;
@@ -430,7 +429,7 @@ class databaseStore{
         if((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
             ret.uid = id;
             ret.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0));
-            ret.FTE = sqlite3_column_double(prep_cmd, 1);
+            ret.FTE.set(sqlite3_column_int(prep_cmd, 1));
             tmp = sqlite3_column_int64(prep_cmd, 2);
             if(tmp != 0){ // TODO fix 0 to true null
               ret.start = tmp;
@@ -464,7 +463,7 @@ class databaseStore{
             fullProjectData proj;
             proj.uid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0)));
             proj.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1));
-            proj.FTE = sqlite3_column_double(prep_cmd, 2);
+            proj.FTE.set(sqlite3_column_int(prep_cmd, 2));
             timecode tmp = sqlite3_column_int64(prep_cmd, 3);
             if(tmp != 0){ // TODO fix 0 to true null
               proj.start = tmp;
@@ -507,7 +506,7 @@ class databaseStore{
             fullProjectData proj;
             proj.uid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0)));
             proj.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1));
-            proj.FTE = sqlite3_column_double(prep_cmd, 2);
+            proj.FTE.set(sqlite3_column_int(prep_cmd, 2));
             timecode tmp = sqlite3_column_int64(prep_cmd, 3);
             if(tmp != 0){ // TODO fix 0 to true null
               proj.start = tmp;
@@ -545,7 +544,7 @@ class databaseStore{
         if((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
             ret.uid = id;
             ret.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0));
-            ret.frac = sqlite3_column_double(prep_cmd, 1);
+            ret.frac.set(sqlite3_column_int(prep_cmd, 1));
             ret.parentUid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 2)));
         }else{
             throw std::runtime_error("Failed to read subproject");
@@ -563,7 +562,7 @@ class databaseStore{
             subproj.uid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0)));
             subproj.uid.tag(proIds::uidTag::sub);
             subproj.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1));
-            subproj.frac = sqlite3_column_double(prep_cmd, 2);
+            subproj.frac.set(sqlite3_column_int(prep_cmd, 2));
             subproj.parentUid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 3)));
             ret.push_back(subproj);
         }
@@ -601,7 +600,7 @@ class databaseStore{
             subproj.uid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0)));
             subproj.uid.tag(proIds::uidTag::sub);
             subproj.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1));
-            subproj.frac = sqlite3_column_double(prep_cmd, 2);
+            subproj.frac.set(sqlite3_column_int(prep_cmd, 2));
             subproj.parentUid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 3)));
             ret.push_back(subproj);
         }

@@ -33,9 +33,9 @@ public:
     int i=0;
     std::vector<std::string> labels, legendText;
     for(auto & item : details){
-      if(item.second.FTE > 0.0){
-        series->append(item.second.name.c_str(), item.second.FTE*100);
-        labels.push_back(displayFloat(item.second.FTE*100)+" %");
+      if(item.second.FTE != eb_float{0}){
+        series->append(item.second.name.c_str(), (float)item.second.FTE*100);
+        labels.push_back(integerPercent(item.second.FTE)+" %");
         legendText.push_back(item.second.name);
         //auto & slice = series->at(qsizetype(i));
         //slice.setLabel((displayFloat(item.second.FTE*100)+" %").c_str());

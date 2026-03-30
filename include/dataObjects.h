@@ -24,7 +24,7 @@
 struct projectData{
 
   std::string name;/**< \brief Name of project */
-  float FTE;/**< \brief Fraction of FTE this uses */
+  eb_float FTE;/**< \brief Fraction of FTE this uses */
   timecode start=-1, end=-1;
   bool useStart=false, useEnd=false;
 };
@@ -32,7 +32,7 @@ struct projectData{
 inline std::ostream& operator<< (std::ostream& stream, const projectData& data){
 /** \brief Stream op for projectData
 */
-  stream << data.name <<" "<<(int)(data.FTE*100)<<"%";
+  stream << data.name <<" "<<integerPercent(data.FTE)<<"%";
   return stream;
 }
 inline bool operator==(const projectData &lhs, const projectData &rhs){
@@ -48,14 +48,14 @@ inline bool operator!=(const projectData &lhs, const projectData &rhs){
 struct subprojectData{
 
   std::string name="";/**< \brief Name of project */
-  float frac=0.0;/**< \brief Fraction of parent this uses */
+  eb_float frac{0};/**< \brief Fraction of parent this uses */
 };
 
 inline std::ostream& operator<< (std::ostream& stream, const subprojectData& data){
 /** \brief Stream op for subprojectData
 */
 
-  stream << data.name <<" "<<(int)(data.frac*100)<<"%";
+  stream << data.name <<" "<<integerPercent(data.frac)<<"%";
   return stream;
 }
 inline bool operator==(const subprojectData &lhs, const subprojectData &rhs){
@@ -87,7 +87,7 @@ class fullProjectData{
     public:
     proIds::Uuid uid=proIds::NullUid; /**< \brief Unique identifier for the project */
     std::string name=""; /**< \brief Name of the project */
-    float FTE=0.0; /**< \brief Fraction of Full-Time Equivalent this project uses */
+    eb_float FTE{0}; /**< \brief Fraction of Full-Time Equivalent this project uses */
     timecode start=-1, end=-1;
     bool useStart=false, useEnd=false;
 
@@ -114,7 +114,7 @@ class fullSubProjectData{
     public:
     proIds::Uuid uid=proIds::NullUid; /**< \brief Unique identifier for the subproject */
     std::string name=""; /**< \brief Name of the subproject */
-    float frac=0.0; /**< \brief Fraction of the parent project this subproject uses */
+    eb_float frac{0}; /**< \brief Fraction of the parent project this subproject uses */
     proIds::Uuid parentUid=proIds::NullUid; /**< \brief Unique identifier for the parent project */
 
     fullSubProjectData() = default;
@@ -161,13 +161,13 @@ struct subprojectDetails{
 
     proIds::Uuid uid=proIds::NullUid; /**< \brief Unique identifier for the project */
     std::string name=""; /**< \brief Name of the project */
-    float frac=0.0; /**< \brief Fraction of parent */
+    eb_float frac{0}; /**< \brief Fraction of parent */
     bool active = true;
 };
 inline std::ostream& operator<< (std::ostream& stream, const subprojectDetails& data){
 /** \brief Stream operator for subprojectDetails
 */
-  stream << data.name<<" "<<data.uid<<" "<<": frac " <<data.frac*100 <<" %";
+  stream << data.name<<" "<<data.uid<<" "<<": frac " << integerPercent(data.frac) <<" %";
   if(!data.active){
     stream<<"(inactive)";
   }
@@ -177,17 +177,17 @@ struct projectDetails{
 
     proIds::Uuid uid=proIds::NullUid; /**< \brief Unique identifier for the project */
     std::string name=""; /**< \brief Name of the project */
-    float FTE=0.0; /**< \brief Fraction of Full-Time Equivalent this project uses */
+    eb_float FTE{0}; /**< \brief Fraction of Full-Time Equivalent this project uses */
     int subprojectCount=0; /**< Number of subprojects */
-    float assignedSubprojFraction=0.0; /**< Total fraction allocated to subprojects */
+    eb_float assignedSubprojFraction{0}; /**< Total fraction allocated to subprojects */
     std::vector<subprojectDetails> subs;/**< OPTIONAL - list of subs */
     bool active = true;
 };
 inline std::ostream& operator<< (std::ostream& stream, const projectDetails& data){
 /** \brief Stream operator for projectDetails
 */
-  stream << data.name<<" "<<data.uid<<" "<<": FTE " <<data.FTE*100 <<" % with "<<data.subprojectCount;
-  stream << " subprojects totalling "<<data.assignedSubprojFraction*100 <<" % ";
+  stream << data.name<<" "<<data.uid<<" "<<": FTE " <<integerPercent(data.FTE) <<" % with "<<data.subprojectCount;
+  stream << " subprojects totalling "<<integerPercent(data.assignedSubprojFraction) <<" % ";
   if(!data.active){
     stream<<"(inactive)";
   }

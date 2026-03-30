@@ -71,10 +71,10 @@ proIds::Uuid InferIDFromName(const std::map<proIds::Uuid, projectDetails> & map,
   return proIds::NullUid;
 }
 
-proIds::Uuid CreateProjectAndReturnId(TrackerData & td, std::string name, float FTE=0.4){
+proIds::Uuid CreateProjectAndReturnId(TrackerData & td, std::string name, float FTE = 0.4){
   projectData pd;
   pd.name = name;
-  pd.FTE = FTE;
+  pd.FTE.set(FTE);
   pd.useStart = false;
   pd.useEnd = false;
 
@@ -91,7 +91,7 @@ TEST_CASE("Create and read", "[QTAware]"){
 
   projectData pd;
   pd.name = "XYZ Created by Tracker";
-  pd.FTE = 0.4;
+  pd.FTE.set(0.4);
   pd.useStart = false;
   pd.useEnd = false;
 
@@ -103,7 +103,7 @@ TEST_CASE("Create and read", "[QTAware]"){
   auto pid = InferIDFromName(descr, pd.name);
   REQUIRE(pid != proIds::NullUid);
   REQUIRE(descr[pid].name == pd.name); //Double check
-  REQUIRE_THAT(descr[pid].FTE, WithinAbs(0.4, margin));
+  REQUIRE(descr[pid].FTE == 0.4);
 }
 
 TEST_CASE("Create and read - specific", "[QTAware]"){
@@ -112,7 +112,7 @@ TEST_CASE("Create and read - specific", "[QTAware]"){
 
   projectData pd;
   pd.name = "XYZ Created by Tracker Mk2";
-  pd.FTE = 0.7;
+  pd.FTE.set(0.7);
   pd.useStart = false;
   pd.useEnd = false;
 
@@ -124,7 +124,7 @@ TEST_CASE("Create and read - specific", "[QTAware]"){
   REQUIRE(pid != proIds::NullUid);
   auto p_descr = td.projectDetailsRequired(pid);
   REQUIRE(p_descr.name == pd.name);
-  REQUIRE_THAT(p_descr.FTE, WithinAbs(pd.FTE, margin));
+  REQUIRE(p_descr.FTE == pd.FTE);
 }
 
 TEST_CASE("Create and read - with helper", "[QTAware, Slots]"){
@@ -133,14 +133,14 @@ TEST_CASE("Create and read - with helper", "[QTAware, Slots]"){
 
   projectData pd;
   pd.name = "XYZ Created by Tracker Mk3";
-  pd.FTE = 0.54;
+  pd.FTE.set(0.54);
   pd.useStart = false;
   pd.useEnd = false;
 
   SignalCatcher sig;
   //OK - these signals have different types so will not collide
   QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
-  QAbstractEventDispatcher::connect(&td, &TrackerData::projectTotalUpdateEvent, &sig, &SignalCatcher::emitDoubleX2);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectTotalUpdateEvent, &sig, &SignalCatcher::emitEBFloatX2);
   td.createProject(pd);
 
   std::vector<selectableEntity> list;
@@ -149,10 +149,10 @@ TEST_CASE("Create and read - with helper", "[QTAware, Slots]"){
   REQUIRE(list[0].name == pd.name);
   REQUIRE(list[0].level == 0);
 
-  double dummy=0.0;
+  eb_float dummy{0.0};
   auto fte = sig.what(dummy, dummy);
-  REQUIRE_THAT(fte.first, WithinAbs(0.54, margin));
-  REQUIRE_THAT(fte.second, WithinAbs(0.46, margin));
+  REQUIRE(fte.first == 0.54);
+  REQUIRE(fte.second == 0.46);
 
 }
 TEST_CASE("Create and read - subproj", "[QTAware, Slots]"){
@@ -166,7 +166,7 @@ TEST_CASE("Create and read - subproj", "[QTAware, Slots]"){
 
   subprojectData spd;
   spd.name = "SubXYZ Created by Tracker Mk3";
-  spd.frac = 0.3;
+  spd.frac.set(0.3);
 
   SignalCatcher sig;
   QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
@@ -242,17 +242,17 @@ TEST_CASE("Verifying data consistency", "[QTAware]"){
   SECTION("With subs"){
     subprojectData spd;
     spd.name = "SubXYZ Created by Tracker Mk3";
-    spd.frac = 0.3;
+    spd.frac.set(0.3);
     td.createSubproject(spd, pid);
     spd.name = "SubXYZ  Yet again";
-    spd.frac = 0.3;
+    spd.frac.set(0.3);
     td.createSubproject(spd, pid);
     REQUIRE_NOTHROW(td.verifyProjectOrSub(pid));
   }
   SECTION("Checking a sub"){
     subprojectData spd;
     spd.name = "SubXYZ Created by Tracker Mk3";
-    spd.frac = 0.3;
+    spd.frac.set(0.3);
     SignalCatcher sig;
     QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
     td.createSubproject(spd, pid);
@@ -289,14 +289,14 @@ TEST_CASE("Verifying data consitency - deliberately broken", "[QTAware]"){
   }
   SECTION("No subs - FTE wrong"){
     fullProjectData pd = theDB.readProject(pid);
-    pd.FTE /= 2.0;
+    pd.FTE.set((float) pd.FTE/ 2.0);
     theDB.updateProject(pd);
     REQUIRE_THROWS_AS(td.verifyProjectOrSub(pid),verifyError<trackerTypes::verifyErrorKind::dataMismatch>);
   }
   SECTION("Checking sub of parent"){
     subprojectData spd;
     spd.name = "SubXYZ Created by Tracker Mk3";
-    spd.frac = 0.3;
+    spd.frac.set(0.3);
     SignalCatcher sig;
     QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
     td.createSubproject(spd, pid);
@@ -311,7 +311,7 @@ TEST_CASE("Verifying data consitency - deliberately broken", "[QTAware]"){
       REQUIRE_THROWS_AS(td.verifyProjectOrSub(pid),verifyError<trackerTypes::verifyErrorKind::dataMismatch>);
     }
     SECTION("Change frac"){
-      sd.frac /=1.2;
+      sd.frac.set((float)(sd.frac)/1.2);
       theDB.updateSubproject(sd);
       REQUIRE_THROWS_AS(td.verifyProjectOrSub(pid),verifyError<trackerTypes::verifyErrorKind::dataMismatch>);
     }
@@ -325,7 +325,7 @@ TEST_CASE("Verifying data consitency - deliberately broken", "[QTAware]"){
   SECTION("Checking single sub"){
     subprojectData spd;
     spd.name = "SubXYZ Created by Tracker Mk3";
-    spd.frac = 0.3;
+    spd.frac.set(0.3);
     SignalCatcher sig;
     QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
     td.createSubproject(spd, pid);
@@ -340,7 +340,7 @@ TEST_CASE("Verifying data consitency - deliberately broken", "[QTAware]"){
       REQUIRE_THROWS_AS(td.verifyProjectOrSub(sid),verifyError<trackerTypes::verifyErrorKind::dataMismatch>);
     }
     SECTION("Change frac"){
-      sd.frac /=1.2;
+      sd.frac.set((float)sd.frac/1.2);
       theDB.updateSubproject(sd);
       REQUIRE_THROWS_AS(td.verifyProjectOrSub(sid),verifyError<trackerTypes::verifyErrorKind::dataMismatch>);
     }
@@ -450,7 +450,7 @@ TEST_CASE("Marking", "[QTAware, Slots]"){
     subprojectData spd;
     std::string sub_name ="SubXYZ Created by Tracker Mk3";
     spd.name = sub_name;
-    spd.frac = 0.3;
+    spd.frac.set(0.3);
 
     //Awful round-about way to get the ID for a created project
     QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
@@ -982,7 +982,7 @@ TEST_CASE("Known Data - Load projects", "[QTAware]"){
 
   SignalCatcher sig;
   QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
-  QAbstractEventDispatcher::connect(&td, &TrackerData::projectTotalUpdateEvent, &sig, &SignalCatcher::emitDoubleX2);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectTotalUpdateEvent, &sig, &SignalCatcher::emitEBFloatX2);
 
   td.loadProjects(0);
 
@@ -1002,10 +1002,10 @@ TEST_CASE("Known Data - Load projects", "[QTAware]"){
   {auto check = [](selectableEntity & se){return se.name == "Important Title" && se.uid.to_string() == "{07e453ad-b698-47b8-aa52-c7ef2306731d}" && se.level == 1;};
   REQUIRE(std::find_if(list.begin(), list.end(), check) != list.end());}
 
-  double dummy=0.0;
+  eb_float dummy{0.0};
   auto fte = sig.what(dummy, dummy);
-  REQUIRE_THAT(fte.first, WithinAbs(0.75, margin));
-  REQUIRE_THAT(fte.second, WithinAbs(0.25, margin));
+  REQUIRE(fte.first == 0.75);
+  REQUIRE(fte.second == 0.25);
 
 }
 TEST_CASE("Known Data - Load projects with active project", "[QTAware]"){
@@ -1057,7 +1057,7 @@ TEST_CASE("Merging project data - basic checks", "[QTAware]"){
   }
 }
 
-TEST_CASE("Merging project data - project to another project - move from has subs", "[QTAware, Slots]"){
+TEST_CASE("Merging project data - project to another project - move from has subs", "[Abc]"){
   auto app = dummyApp();
   TrackerData td{basicConfig("./Scratch/KnownDatabaseForMerge.db")};
   td.loadProjects(1); // No start-end times so load for any time...

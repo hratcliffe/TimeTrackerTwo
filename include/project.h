@@ -73,7 +73,7 @@ class projectLike{
 class subproject: public projectLike{
   friend class projectManager;
   private:
-    float frac; /**< \brief Fraction of parent time on this sub */
+    eb_float frac; /**< \brief Fraction of parent time on this sub */
     proIds::Uuid parentUid; /**< \brief Unique identifier for parent project*/
 
   public:
@@ -97,10 +97,10 @@ class subproject: public projectLike{
     operator selectableEntity()override{return selectableEntity{name, uid, 1};} //Level 1 in display hierarchy
 
     proIds::Uuid getParentUid() const{return parentUid;}; /**< \brief Get the unique id of the parent project */
-    float getFrac(){return frac;}
+    eb_float getFrac(){return frac;}
     std::string describe()override{
       /** \brief String description of subproject */
-      return "Subproject "+name + '\n' + std::to_string((int)(frac*100))+" %\n";
+      return "Subproject "+name + '\n' + integerPercent(frac)+" %\n";
     }
 };
 
@@ -114,7 +114,7 @@ class project : public projectLike{
   private:
 
     bool active; /**< \brief Flag to allow project to be deactivated for any reason*/
-    float FTE;/**< \brief Fraction of FTE for this project */
+    eb_float FTE;/**< \brief Fraction of FTE for this project */
     std::vector<proIds::Uuid> subprojects;/**< \brief Subprojects belonging to this project */
   public:
     project() = default;
@@ -141,11 +141,11 @@ class project : public projectLike{
     void addSubproject(proIds::Uuid sub_id){subprojects.push_back(sub_id);}
     ~project()=default;
 
-    float getFTE(){return FTE;}
+    eb_float getFTE(){return FTE;}
     void activate(){active = true;}
     void deactivate(){active = false;}
     std::string describe()override{
-      return !active ? "\nProject is inactive\n" : name+" "+ std::to_string((int)(FTE*100))+" % FTE\n "+ std::to_string(subprojects.size()) + " subprojects";
+      return !active ? "\nProject is inactive\n" : name+" "+ integerPercent(FTE)+" % FTE\n "+ std::to_string(subprojects.size()) + " subprojects";
     }
 };
 

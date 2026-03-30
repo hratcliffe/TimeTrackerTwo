@@ -189,7 +189,6 @@ Q_OBJECT
      * @param uid Uuid to check
      */
     void verifyProjectOrSub(proIds::Uuid uid){
-      const float float_margin = 1e-4; //Constant for A==B in FP
       if(uid.isTaggedAs(proIds::uidTag::oneoff)){
         throw verifyError<trackerTypes::verifyErrorKind::badId>("One off project cannot be verified this way");
       }else if(uid.isTaggedAs(proIds::uidTag::sub)){
@@ -218,7 +217,7 @@ Q_OBJECT
             msg += " Name mismatch ";
             detailsBad = true;
           }
-          if(std::abs(det.frac - dat.frac) > float_margin){
+          if(det.frac != dat.frac){
             msg += " Fraction mismatch ";
             detailsBad = true;
           }
@@ -257,7 +256,7 @@ Q_OBJECT
           msg += " Name mismatch ";
           detailsBad = true;
         }
-        if( std::abs(det.FTE - dat.FTE) > float_margin){
+        if( det.FTE != dat.FTE ){
           msg += " FTE mismatch ";
           detailsBad = true;
         }
@@ -269,7 +268,7 @@ Q_OBJECT
           for(auto sub : det.subs){
             auto subDB = dataHandler->readSubproject(sub.uid);
             if(subDB.name != sub.name) throw std::runtime_error(" Sub name bad ");
-            if( std::abs(subDB.frac - sub.frac) > float_margin) throw std::runtime_error(" Sub frac bad ");
+            if(subDB.frac != sub.frac) throw std::runtime_error(" Sub frac bad ");
             if(subDB.parentUid != thePM.getParentId(sub.uid)) throw std::runtime_error(" Sub parent bad ");
          }
         }catch(std::runtime_error & e){
@@ -392,8 +391,8 @@ Q_OBJECT
     }
     void generateToplevelSummary(){
       std::stringstream ss;
-      ss<<thePM.projectCount()<<" projects active \n "<<(int)(thePM.allocatedFTE()*100);
-      ss<<" % FTE allocated\n "<<(int)(thePM.availableFTE()*100)<<" % FTE available\n";
+      ss<<thePM.projectCount()<<" projects active \n "<<integerPercent(thePM.allocatedFTE());
+      ss<<" % FTE allocated\n "<<integerPercent(thePM.availableFTE())<<" % FTE available\n";
       emit projectSummaryReady(ss.str());
     }
     void generateOneOffSummary(){
@@ -529,7 +528,7 @@ Q_OBJECT
         summary.push_back(item);
 
         float frac = (float)(time+subTimes)/(float)uptime; //See above - uptime cannot be zero here
-        float FTE = proj->getFTE();
+        float FTE = (float)proj->getFTE();
         timeSummaryStatus tag = timeSummaryStatus::onTarget;
         if(frac - FTE > targetThresholdFTE){
           tag = timeSummaryStatus::overTarget;
@@ -547,12 +546,12 @@ Q_OBJECT
             auto subOnlyTime = durations.count(sub->getUid()) > 0 ? durations[sub->getUid()]: 0;
             tag = timeSummaryStatus::onTarget;
             frac = (float)subOnlyTime/(float)(time+subTimes); // Cannot be zero per if above
-            if(frac - sub->getFrac() > targetThresholdFractionFrac){
+            if( (frac - (float)sub->getFrac()) > targetThresholdFractionFrac){
               tag = timeSummaryStatus::overTarget;
-            }else if(sub->getFrac() - frac > targetThresholdFractionFrac){
+            }else if((float)sub->getFrac() - frac > targetThresholdFractionFrac){
               tag = timeSummaryStatus::underTarget;
             }
-            item = {"Fraction on sub " + displayFloat(frac*100, 0) +"% (target " +displayFloat(sub->getFrac()*100,0)+"%)", tag};
+            item = {"Fraction on sub " + displayFloat(frac*100, 0) +"% (target " +displayFloat((float)sub->getFrac()*100,0)+"%)", tag};
             summary.push_back(item);
           }
         }else if(subs.size() > 0){
@@ -720,7 +719,7 @@ Q_OBJECT
           auto free_frac = thePM.availableSubFrac(current);
           auto targetData = dataHandler->readProject(target);
 
-          targetData.FTE += (thePM.getFTE(current) * free_frac); // Transferring parent-not-sub FTE
+          targetData.FTE += eb_float{(float)thePM.getFTE(current) * (float)free_frac}; // Transferring parent-not-sub FTE
           thePM.setFTE(target, targetData.FTE);
 
           //Transferring subs
@@ -782,7 +781,7 @@ Q_OBJECT
 
     signals:
       void projectListUpdateEvent(std::vector<selectableEntity> const & newList);
-      void projectTotalUpdateEvent(float usedFTE, float freeFTE);
+      void projectTotalUpdateEvent(eb_float usedFTE, eb_float freeFTE);
       void projectSummaryReady(std::string summary); /**< \brief Signal emitted when a summary is ready, with the summary text */
       void timeSummaryReady(std::vector<timeSummaryItem> summary);
       void timeDigestReady(std::vector<timeDigestEntry> digest);

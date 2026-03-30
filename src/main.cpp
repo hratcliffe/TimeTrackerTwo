@@ -60,6 +60,17 @@ TODO - add option to move a sub, either by fraction or FTE
 
 //TODO - when time-travelling, clock does not get rid of the ;App string after 'return to now' - should this use 'restore to now' function?
 // If time-travel, the L footer does not update to the project at that time
+/**
+ * Floats are too mucky - instead limit both FTE and Frac to 0.01 % intervals and work in integers from 0 to 10,000 This allows down to 1/4 % and 1/8th capacity  100->50->25->12.5->6.25 
+ * 
+ * Tasks:
+ *DONE  Create global constant for norm. (permyriad)
+ *DONE set data objects to use it
+ *DONE Change database
+ * DONE Check everything
+ * Enforce that the min increment is now a multiple of 0.01%
+ */
+
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);

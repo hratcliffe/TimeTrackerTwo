@@ -58,7 +58,7 @@ Q_OBJECT
     ReportTabUI * reportTab;
     ReviewTabUI * reviewTab;
 
-    float usedFTE = 0.0, freeFTE=0.0; //Tracks FTE fractions
+    eb_float usedFTE{0}, freeFTE{0}; //Tracks FTE fractions
     viewProperties prop; //TODO - should there be any way to alter this? - maybe settings and some presets?
 
   mainWindow(){
@@ -182,13 +182,23 @@ Q_OBJECT
 
       //When a project is selected, update the available fraction input from the details list
       //NOTE: ID must be present in details because we filled them in from it above
-      connect(addUi.ParentDropdown, &QComboBox::currentIndexChanged, [&addUi, &details](int index){proIds::Uuid parent = proIds::Uuid(addUi.ParentDropdown->currentData().toString().toStdString()); auto pdetails = details[parent]; float perc = (1.0 - pdetails.assignedSubprojFraction)*100; addUi.PercentField->setMaximum(perc); addUi.PercentField->setValue(perc/2.0); addUi.PercentHint->setText(displayFloatHalves(perc).c_str());});
+      auto dropDownUpdate = [&addUi, &details](int index){
+        proIds::Uuid parent = proIds::Uuid(addUi.ParentDropdown->currentData().toString().toStdString());
+        auto pdetails = details[parent];
+        float perc = (oneMinus(pdetails.assignedSubprojFraction).value/eb_float::fromPercent);
+        addUi.PercentField->setMaximum(perc);
+        addUi.PercentField->setSingleStep(1); // One percent
+        addUi.PercentField->setValue(perc/2.0);
+        addUi.PercentHint->setText(displayFloatHalves(perc).c_str());
+      };
+      connect(addUi.ParentDropdown, &QComboBox::currentIndexChanged, dropDownUpdate);
 
       bool result = addDialog->exec();
 
       //If OK was clicked, signal to add a project
       if(result){
-        float frac = (float)addUi.PercentField->value()/100.0;
+        eb_float frac;
+        frac.set(addUi.PercentField->value()*eb_float::fromPercent);
         proIds::Uuid parent = proIds::Uuid(addUi.ParentDropdown->currentData().toString().toStdString());
         emit subprojectAddRequested(subprojectData{addUi.NameField->text().toStdString(), frac}, parent);
 
@@ -236,12 +246,12 @@ Q_OBJECT
         if(mergeUi.SelectionDropdown->currentIndex() > 0){
           proIds::Uuid current = proIds::Uuid(mergeUi.SelectionDropdown->currentData().toString().toStdString());
           auto pdetails = details[current];
-          t_FTE = pdetails.FTE;
+          t_FTE = (float)pdetails.FTE;
           hint_tmp = displayFloatHalves(t_FTE*100)+ "% FTE";
           mergeUi.SelectionHint->setText(hint_tmp.c_str());
           if(mergeUi.SelectionDropdownSub->currentIndex() > 0){
             proIds::Uuid sub = proIds::Uuid(mergeUi.SelectionDropdownSub->currentData().toString().toStdString());
-            float frac = (*std::find_if(pdetails.subs.begin(), pdetails.subs.end(), [&sub](const subprojectDetails& s){return s.uid == sub;})).frac;
+            float frac = (float)(*std::find_if(pdetails.subs.begin(), pdetails.subs.end(), [&sub](const subprojectDetails& s){return s.uid == sub;})).frac;
             t_FTE *= frac;
             hint_tmp = displayFloatHalves(frac*100)+ "% of parent";
             mergeUi.SelectionSubHint->setText(hint_tmp.c_str());
@@ -251,12 +261,12 @@ Q_OBJECT
         if(mergeUi.TargetDropdown->currentIndex() > 0){
           proIds::Uuid target = proIds::Uuid(mergeUi.TargetDropdown->currentData().toString().toStdString());
           auto pdetails = details[target];
-          t_FTE = pdetails.FTE;
+          t_FTE = (float)pdetails.FTE;
           hint_tmp = displayFloatHalves(t_FTE*100)+ "% FTE";
           mergeUi.TargetHint->setText(hint_tmp.c_str());
           if(mergeUi.TargetDropdownSub->currentIndex() > 0){
             proIds::Uuid sub = proIds::Uuid(mergeUi.TargetDropdownSub->currentData().toString().toStdString());
-            float frac = (*std::find_if(pdetails.subs.begin(), pdetails.subs.end(), [&sub](const subprojectDetails& s){return s.uid == sub;})).frac;
+            float frac = (float)(*std::find_if(pdetails.subs.begin(), pdetails.subs.end(), [&sub](const subprojectDetails& s){return s.uid == sub;})).frac;
             t_FTE *= frac;
             hint_tmp = displayFloatHalves(frac*100)+ "% of parent";
             mergeUi.TargetSubHint->setText(hint_tmp.c_str());
@@ -340,7 +350,7 @@ Q_OBJECT
      
     }
 
-    void projectTimeUpdated(float usedFTE, float freeFTE){this->usedFTE = usedFTE; this->freeFTE = freeFTE;}
+    void projectTimeUpdated(eb_float usedFTE, eb_float freeFTE){this->usedFTE = usedFTE; this->freeFTE = freeFTE;}
 
     void updateRunningProjectDisplay(std::string name){
       updateLFooter(name);
@@ -361,7 +371,7 @@ Q_OBJECT
 
     void showAddDialog(){
 
-      if(freeFTE < 0.01){ //TODO - this should be the minimum FTE increment from app settings
+      if(freeFTE == 0.0){ //TODO - this should be the minimum FTE increment from app settings
         QMessageBox box;
         box.setText("Maximum FTE already reached. Deactivate some projects or increase maximum");
         box.exec();
@@ -371,7 +381,9 @@ Q_OBJECT
       auto addDialog = new QDialog(this);
       Ui::addProjectDialog addUi;
       addUi.setupUi(addDialog);
-      addUi.FTEField->setMaximum(freeFTE*100);
+      addUi.FTEField->setMaximum((float)(freeFTE.value/100));
+      addUi.FTEField->setValue(addUi.FTEField->maximum()/2.0);
+      addUi.FTEField->setSingleStep(1);
       addUi.startSelect->setDate(toQDateTime(timeWrapper::startOfMonth(timeWrapper::now())).date());
       addUi.endSelect->setDate(toQDateTime(timeWrapper::startOfMonth(timeWrapper::now())).date());
 
@@ -385,7 +397,8 @@ Q_OBJECT
 
       //If OK was clicked, signal to add a project
       if(result){
-        float FTE = (float)addUi.FTEField->value()/100.0;
+        eb_float FTE;
+        FTE.set(addUi.FTEField->value() * eb_float::fromPercent);
         timecode start = timeWrapper::toSeconds(fromQDateTime(addUi.startSelect->dateTime()));
         timecode end = timeWrapper::toSeconds(fromQDateTime(addUi.endSelect->dateTime()));
         emit projectAddRequested(projectData{addUi.nameField->text().toStdString(), FTE, start, end, addUi.startEnabled->isChecked(), addUi.endEnabled->isChecked()});

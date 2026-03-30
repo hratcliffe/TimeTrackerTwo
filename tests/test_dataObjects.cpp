@@ -7,7 +7,7 @@
 // Mostly stream operators and equality ops
 TEST_CASE("Project data comparators", "[Basic]"){
   projectData pd;
-  float fte = 0.24;
+  eb_float fte{0.24};
   pd.name = "Wibble";
   pd.FTE = fte;
   pd.useEnd = false;
@@ -15,7 +15,7 @@ TEST_CASE("Project data comparators", "[Basic]"){
   projectData pdd = pd;
 
   projectData pd2;
-  pd2.FTE = 0.71;
+  pd2.FTE.set(0.71);
   pd2.name = "Llama";
   pd2.useEnd = true;
   pd2.useStart = true;
@@ -33,7 +33,7 @@ TEST_CASE("Project data comparators", "[Basic]"){
   SECTION("FTE"){
     pd2.FTE = pd.FTE;
     REQUIRE(pd2 != pd);
-    pdd.FTE = 0.11;
+    pdd.FTE.set(0.11);
     REQUIRE(pd != pdd);
   }
   SECTION("Start"){
@@ -55,7 +55,7 @@ TEST_CASE("Project data comparators", "[Basic]"){
 }
 TEST_CASE("Full project data comparators", "[Basic]"){
   fullProjectData pd;
-  float fte = 0.24;
+  eb_float fte{0.24};
   pd.name = "Wibble";
   pd.FTE = fte;
   pd.useEnd = false;
@@ -63,7 +63,7 @@ TEST_CASE("Full project data comparators", "[Basic]"){
   pd.uid = uniqueIdGenerator().getNextId();
   fullProjectData pdd = pd;
   fullProjectData pd2;
-  pd2.FTE = 0.71;
+  pd2.FTE.set(0.71);
   pd2.name = "Llama";
   pd2.useEnd = true;
   pd2.useStart = true;
@@ -88,7 +88,7 @@ TEST_CASE("Full project data comparators", "[Basic]"){
   SECTION("FTE"){
     pd2.FTE = pd.FTE;
     REQUIRE(pd2 != pd);
-    pdd.FTE = 0.11;
+    pdd.FTE.set(0.11);
     REQUIRE(pd != pdd);
   }
   SECTION("Start"){
@@ -111,12 +111,12 @@ TEST_CASE("Full project data comparators", "[Basic]"){
 
 TEST_CASE("Subproject data comparators", "[Basic]"){
   subprojectData pd;
-  float frac = 0.24;
+  eb_float frac{0.24};
   pd.name = "Wibble";
   pd.frac = frac;
   subprojectData pdd = pd;
   subprojectData pd2;
-  pd2.frac = 0.71;
+  pd2.frac.set(0.71);
   pd2.name = "Llama";
 
   REQUIRE(pd == pdd);
@@ -130,19 +130,19 @@ TEST_CASE("Subproject data comparators", "[Basic]"){
   SECTION("FTE"){
     pd2.frac = pd.frac;
     REQUIRE(pd2 != pd);
-    pdd.frac = 0.11;
+    pdd.frac.set(0.11);
     REQUIRE(pd != pdd);
   }
 }
 TEST_CASE("Full Subproject data comparators", "[Basic]"){
   fullSubProjectData pd;
-  float frac = 0.24;
+  eb_float frac{0.24};
   pd.name = "Wibble";
   pd.frac = frac;
   pd.uid = uniqueIdGenerator().getNextId().tag(proIds::uidTag::sub);
   fullSubProjectData pdd = pd;
   fullSubProjectData pd2;
-  pd2.frac = 0.71;
+  pd2.frac.set(0.71);
   pd2.name = "Llama";
   pd2.uid = uniqueIdGenerator().getNextId().tag(proIds::uidTag::sub);
 
@@ -163,7 +163,7 @@ TEST_CASE("Full Subproject data comparators", "[Basic]"){
   SECTION("FTE"){
     pd2.frac = pd.frac;
     REQUIRE(pd2 != pd);
-    pdd.frac = 0.11;
+    pdd.frac.set(0.11);
     REQUIRE(pd != pdd);
   }
 }
@@ -342,7 +342,7 @@ TEST_CASE("TimeStampForDisplay Stream", "[Stream]"){
 TEST_CASE("Project and Sub", "[Stream]"){
   projectData pd;
   std::stringstream ss;
-  float fte = 0.7;
+  eb_float fte{0.7};
   pd.name = "Wibble";
   pd.FTE = fte;
   ss<<pd;
@@ -350,7 +350,7 @@ TEST_CASE("Project and Sub", "[Stream]"){
   REQUIRE(ss.str().find("70%") != std::string::npos);
 
   subprojectData sd;
-  float frac = 0.1;
+  eb_float frac{0.1};
   sd.name = "SubWibble";
   sd.frac = frac;
   ss.str("");
@@ -370,7 +370,7 @@ TEST_CASE("Project and Sub", "[Stream]"){
 
 TEST_CASE("Full Project", "[Stream]"){
   projectData pd;
-  float fte = 0.24;
+  eb_float fte{0.24};
   pd.name = "Wibble";
   pd.FTE = fte;
   
@@ -425,7 +425,7 @@ TEST_CASE("Full Project", "[Stream]"){
 }
 TEST_CASE("Full Sub", "[Stream]"){
   subprojectData sd;
-  float frac = 0.11;
+  eb_float frac{0.11};
   sd.name = "Wibble";
   sd.frac = frac;
   
@@ -464,11 +464,11 @@ TEST_CASE("Full One Off", "[Stream]"){
 
 TEST_CASE("Project Details", "[Stream]"){
   projectDetails pd;
-  float fte = 0.24;
+  eb_float fte{0.24};
   pd.name = "Wibble";
   pd.FTE = fte;
   pd.subprojectCount = 9;
-  pd.assignedSubprojFraction = 0.7;
+  pd.assignedSubprojFraction.set(0.7);
   
   uniqueIdGenerator theGen;
   auto id = theGen.getNextId();
@@ -490,7 +490,7 @@ TEST_CASE("Project Details", "[Stream]"){
 }
 TEST_CASE("SubProject Details", "[Stream]"){
   subprojectDetails sd;
-  float frac = 0.27;
+  eb_float frac{0.27};
   sd.name = "Wibble";
   sd.frac = frac;
   

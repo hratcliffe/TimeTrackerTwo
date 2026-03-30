@@ -58,7 +58,7 @@ TEST_CASE("Int -Reading Known Data - Project", "[Database]"){
   auto pd = theDB.readProject(id);
 
   REQUIRE(pd.name == "Project Alpha");
-  REQUIRE_THAT(pd.FTE, WithinAbs(0.5, margin));
+  REQUIRE(pd.FTE == 0.5);
   REQUIRE(pd.uid == id);
   //TODO - start and end
 }
@@ -68,7 +68,7 @@ TEST_CASE("Int -Reading Known Data - Sub", "[Database]"){
   auto sd = theDB.readSubproject(id);
 
   REQUIRE(sd.name == "Documentation");
-  REQUIRE_THAT(sd.frac, WithinAbs(0.3, margin));
+  REQUIRE(sd.frac == 0.3);
   REQUIRE(sd.uid == id);
   REQUIRE(sd.parentUid == proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}"));
 }
@@ -96,14 +96,14 @@ TEST_CASE("Int -List fetch - projects", "[Database]"){
   {
   auto pd = projList[0];
   REQUIRE(pd.name == "Project Alpha");
-  REQUIRE_THAT(pd.FTE, WithinAbs(0.5, margin));
+  REQUIRE(pd.FTE == 0.5);
   REQUIRE(pd.uid == id);
   //TODO - start and end
   }
   {
   auto pd = projList[1];
   REQUIRE(pd.name == "Project Beta");
-  REQUIRE_THAT(pd.FTE, WithinAbs(0.25, margin));
+  REQUIRE(pd.FTE == 0.25);
   REQUIRE(pd.uid == id2);
   //TODO - start and end
   }
@@ -121,13 +121,13 @@ TEST_CASE("Int -List fetch - project active", "[Database]"){
   {
   auto pd = projList[0];
   REQUIRE(pd.name == "Project Alpha");
-  REQUIRE_THAT(pd.FTE, WithinAbs(0.5, margin));
+  REQUIRE(pd.FTE == 0.5);
   REQUIRE(pd.uid == id);
   }
   {
   auto pd = projList[1];
   REQUIRE(pd.name == "Project Beta");
-  REQUIRE_THAT(pd.FTE, WithinAbs(0.25, margin));
+  REQUIRE(pd.FTE == 0.25);
   REQUIRE(pd.uid == id2);
   }
 }
@@ -143,15 +143,15 @@ TEST_CASE("Int -List fetch - subprojects", "[Database]"){
   auto lst = theDB.fetchSubprojectList();
   REQUIRE(lst.size() == 3);
   {
-    auto cmp = [id, pid](fullSubProjectData & sd){ return sd.uid == id && sd.parentUid == pid && sd.name =="Documentation" && std::abs(sd.frac - 0.3) < margin;};
+    auto cmp = [id, pid](fullSubProjectData & sd){ return sd.uid == id && sd.parentUid == pid && sd.name =="Documentation" && sd.frac == 0.3;};
     REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
   }
   {
-    auto cmp = [id2, pid](fullSubProjectData & sd){ return sd.uid == id2 && sd.parentUid == pid && sd.name =="Testing" && std::abs(sd.frac - 0.7) < margin;};
+    auto cmp = [id2, pid](fullSubProjectData & sd){ return sd.uid == id2 && sd.parentUid == pid && sd.name =="Testing" && (sd.frac == 0.7);};
     REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
   }
   {
-    auto cmp = [id3, pid2](fullSubProjectData & sd){ return sd.uid == id3 && sd.parentUid == pid2 && sd.name == "Important Title" && std::abs(sd.frac - 0.23) < margin;};
+    auto cmp = [id3, pid2](fullSubProjectData & sd){ return sd.uid == id3 && sd.parentUid == pid2 && sd.name == "Important Title" && (sd.frac == 0.23);};
     REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
   }
 
@@ -166,11 +166,11 @@ TEST_CASE("Int -List fetch - subprojects by parent", "[Database]"){
   auto lst = theDB.fetchSubprojectListForParents({pid});// Takes a vector, pass single-el-vec
   REQUIRE(lst.size() == 2);
   {
-    auto cmp = [id, pid](fullSubProjectData & sd){ return sd.uid == id && sd.parentUid == pid && sd.name =="Documentation" && std::abs(sd.frac - 0.3) < margin;};
+    auto cmp = [id, pid](fullSubProjectData & sd){ return sd.uid == id && sd.parentUid == pid && sd.name =="Documentation" && (sd.frac == 0.3);};
     REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
   }
   {
-    auto cmp = [id2, pid](fullSubProjectData & sd){ return sd.uid == id2 && sd.parentUid == pid && sd.name =="Testing" && std::abs(sd.frac - 0.7) < margin;};
+    auto cmp = [id2, pid](fullSubProjectData & sd){ return sd.uid == id2 && sd.parentUid == pid && sd.name =="Testing" && (sd.frac == 0.7);};
     REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
   }
   //Nothing assoc with the other parent
@@ -225,7 +225,7 @@ fullProjectData writeProjI(databaseIO & theDB, proIds::Uuid & pid){
 
   fullProjectData pd;
   pd.name = "Written Project";
-  pd.FTE = 0.4;
+  pd.FTE.set(0.4);
   pd.useStart = false;
   pd.useEnd = false;
   pd.start = -1;
@@ -260,7 +260,7 @@ TEST_CASE("Int -Writing Sub Project", "[Database]"){
 
   fullSubProjectData sd;
   sd.name = "Written SubProject";
-  sd.frac = 0.3;
+  sd.frac.set(0.3);
   sd.uid = id;
   sd.parentUid = pid;
 
@@ -317,7 +317,7 @@ TEST_CASE("Int -Deleting Sub Project", "[Database]"){
 
   fullSubProjectData sd;
   sd.name = "Written SubProject";
-  sd.frac = 0.3;
+  sd.frac.set(0.3);
   sd.uid = id;
   sd.parentUid = pid;
 
@@ -375,7 +375,7 @@ TEST_CASE("Int -Edit subproject", "[Database]"){
 
   fullSubProjectData sd;
   sd.name = "Written Subproject";
-  sd.frac = 0.3;
+  sd.frac.set(0.3);
   sd.uid = id;
   sd.parentUid = pid;
 
@@ -383,7 +383,7 @@ TEST_CASE("Int -Edit subproject", "[Database]"){
 
   //Write with a modification
   sd.name = "Modified Subproject";
-  sd.frac = 0.21;
+  sd.frac.set(0.21);
   theDB.updateSubproject(sd);
 
   // Read it back:

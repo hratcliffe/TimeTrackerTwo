@@ -29,6 +29,100 @@ const bool NO_FORCE = false;
 const std::string appVersion = "0.2.0";
 const std::string appName = "Time Tracker Two";
 
+// Exact float.
+struct exactBoundedFloat{
+  static constexpr int permyriad = 10000; // Normalisation constant
+  static constexpr double halfinc = 0.5; // Float corresponding to half a tick
+  static constexpr int fromPercent = 100; //Factor to get value from a percent
+  static constexpr int toPercent = 100; // Factor to turn value into percent
+  int value = 0;
+  exactBoundedFloat():value(0){;}
+  explicit exactBoundedFloat(int val){set(val);}
+  explicit exactBoundedFloat(double val){set(val);} // Temporary, consider removing
+  explicit operator float()const{return (double)(value)/(double)permyriad;}
+  void set(int value_in){
+    if(value_in >= 0 && value_in <= permyriad){
+      value = value_in;
+    }else{
+      throw std::runtime_error("Bad value in setter");
+    }
+  }
+  void set(double approx_in){
+    int val = std::floor((approx_in * permyriad)+halfinc); // NINT
+    set(val);
+  }
+  exactBoundedFloat operator+=(const exactBoundedFloat & a){
+    set(value + a.value);
+    return *this;
+  }
+  exactBoundedFloat operator-=(const exactBoundedFloat & a){
+    set(value - a.value);
+    return *this;
+  }
+};
+inline exactBoundedFloat operator+(exactBoundedFloat a, const exactBoundedFloat & b){
+  return a += b;
+}
+inline exactBoundedFloat operator-(exactBoundedFloat a, const exactBoundedFloat & b){
+  return a -= b;
+}
+inline bool operator==(const exactBoundedFloat & a, const exactBoundedFloat & b){
+  return a.value == b.value;
+}
+inline bool operator!=(const exactBoundedFloat & a, const exactBoundedFloat & b){
+  return a.value != b.value;
+}
+inline bool operator<=(const exactBoundedFloat & a, const exactBoundedFloat & b){
+  return a.value <= b.value;
+}
+inline bool operator<(const exactBoundedFloat & a, const exactBoundedFloat & b){
+  return a.value < b.value;
+}
+inline bool operator>=(const exactBoundedFloat & a, const exactBoundedFloat & b){
+  return a.value >= b.value;
+}
+inline bool operator>(const exactBoundedFloat & a, const exactBoundedFloat & b){
+  return a.value > b.value;
+}
+inline bool operator==(const exactBoundedFloat & a, const float & b){
+  return std::abs((float)a - b) < 1e-5;
+}
+inline std::ostream& operator<< (std::ostream& stream, const exactBoundedFloat & flt){
+  stream<<((float) flt);
+  return stream;
+}
+// Equivalent of 1.0 - a
+inline exactBoundedFloat oneMinus(exactBoundedFloat a){
+  a.set(a.permyriad -a.value);
+  return a;
+}
+using eb_float = exactBoundedFloat;
+inline std::string exactPercent(exactBoundedFloat val){
+  if(val.value == 0) return "0.00"; //Easier to handle this case specially
+  int leading_digs = (val.value == 10000 ? 3 : (val.value > 999 ? 2 : 1)); //Display as 0.xyz
+  std::stringstream ss;
+  ss<<val.value;
+  std::string str = ss.str();
+  if(val.value < 100) str = '0'+str; //Restore leading zero
+  if(val.value < 10) str = '0'+str; //Another
+  //Insert decimal pt
+  str = str.substr(0, leading_digs)+'.'+str.substr(leading_digs, str.size());
+  return str;
+}
+/**
+ * @brief Return the number with no dp
+ *
+ * Rounds, not trunc
+ * @param val 
+ * @return 
+ */
+inline std::string integerPercent(exactBoundedFloat val){
+  std::stringstream ss;
+  int tmp = (int)((float)val*100 +0.5);
+  ss<< tmp;
+  return ss.str();
+}
+
 /** \brief Time constants
 *
 * Factors for quick conversions from seconds etc. For important time values use timeWrapper

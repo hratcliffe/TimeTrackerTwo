@@ -265,7 +265,7 @@ class databaseStore{
         std::string cmd;
         sqlite3_stmt * prep_cmd;
         int err = 0;
-        cmd = "insert into projects values(?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, FTE=excluded.FTE, start_date=excluded.start_date, end_date=excluded.end_date;"; // TODO check the conflict clause
+        cmd = "insert into projects(id, name, FTE, start_date, end_date) values(?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, FTE=excluded.FTE, start_date=excluded.start_date, end_date=excluded.end_date;";
         err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_text(prep_cmd, 1, id.c_str(), id.length(), SQLITE_STATIC);
         sqlite3_bind_text(prep_cmd, 2, name.c_str(), name.length(), SQLITE_STATIC);
@@ -300,7 +300,7 @@ class databaseStore{
         std::string cmd;
         sqlite3_stmt * prep_cmd;
         int err = 0;
-        cmd = "insert into subprojects values(?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, frac=excluded.frac, parent_id=excluded.parent_id;"; // TODO check the conflict clause
+        cmd = "insert into subprojects(id, name, frac, parent_id) values(?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, frac=excluded.frac, parent_id=excluded.parent_id;";
         err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_text(prep_cmd, 1, id.c_str(), id.length(), SQLITE_STATIC);
         sqlite3_bind_text(prep_cmd, 2, name.c_str(), name.length(), SQLITE_STATIC);

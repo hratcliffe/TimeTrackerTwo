@@ -573,6 +573,7 @@ class databaseStore{
         return ret;
     }
     std::vector<fullSubProjectData> fetchSubprojectListForParents(std::vector<proIds::Uuid> ids){
+        if(ids.size() == 0) return std::vector<fullSubProjectData>();
         //In general the list should be short, so filter on the client side. If list can be large, consider
         // filtering after fetch to avoid unwieldy query.
         std::string cmd = "SELECT id, name, frac, parent_id FROM subprojects WHERE";

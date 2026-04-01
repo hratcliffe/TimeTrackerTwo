@@ -201,17 +201,14 @@ class projectManager{
       return gen->getNextId(proIds::uidTag::oneoff);
     }
 
-    void restoreProject(const fullProjectData & dat, timecode now){
+    void restoreProject(const fullProjectData & dat, [[maybe_unused]] timecode now){
       //Restore a project from e.g. file - i.e. one that already HAS a uid
       auto id = dat.uid;
       if(id == proIds::NullUid) throw std::runtime_error("Cannot restore project with Null Uid");
       if(!id.isTaggedAs(proIds::uidTag::none)) throw std::runtime_error("Id is not for a project");
       if(projects.count(id) > 0) throw std::runtime_error("Project already exists, not restoring");
       project tmp = project(dat);
-      bool active = true;
-      if(tmp.hasStart && tmp.start > now) active = false;
-      if(tmp.hasEnd && tmp.end < now) active = false;
-      tmp.active = active;
+      tmp.active = true;//Active is independent of dates
       projects[id] = tmp;
     }
 

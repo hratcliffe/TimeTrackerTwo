@@ -86,6 +86,7 @@ Dates should be seen in:
 Also:
     implement deactivate (this is NOT dates, but is an additional factor)
         Is this stored? It should be
+            Use additional table with time of marking logged - maybe state, last-up, last-down, total-downtime
         Should we also display inactive projects but disallow marking?
     refresh views of projects periodically against dates
 

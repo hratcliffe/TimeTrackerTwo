@@ -320,7 +320,7 @@ TEST_CASE("Restoring Time-specified Project", "[Basic]"){
     pm.restoreProject(pd, 10);
     REQUIRE(pm.projectCount() == 1);
     REQUIRE(pm.getName(pd.uid) == pd.name);
-    REQUIRE(pm.isActiveProject(pd.uid));
+    REQUIRE(pm.isActiveProject(pd.uid, 10));
   }
   SECTION("End time - active"){
     pd.useEnd = true;
@@ -329,7 +329,7 @@ TEST_CASE("Restoring Time-specified Project", "[Basic]"){
     pm.restoreProject(pd, 10);
     REQUIRE(pm.projectCount() == 1);
     REQUIRE(pm.getName(pd.uid) == pd.name);
-    REQUIRE(pm.isActiveProject(pd.uid));
+    REQUIRE(pm.isActiveProject(pd.uid, 10));
   }
   SECTION("Start time - in-active"){
     pd.useEnd = false;
@@ -338,7 +338,7 @@ TEST_CASE("Restoring Time-specified Project", "[Basic]"){
     pm.restoreProject(pd, 3);
     REQUIRE(pm.projectCount() == 1);
     REQUIRE(pm.getName(pd.uid) == pd.name);
-    REQUIRE_FALSE(pm.isActiveProject(pd.uid));
+    REQUIRE_FALSE(pm.isActiveProject(pd.uid, 3));
   }
   SECTION("End time - active"){
     pd.useEnd = true;
@@ -347,7 +347,7 @@ TEST_CASE("Restoring Time-specified Project", "[Basic]"){
     pm.restoreProject(pd, 20);
     REQUIRE(pm.projectCount() == 1);
     REQUIRE(pm.getName(pd.uid) == pd.name);
-    REQUIRE_FALSE(pm.isActiveProject(pd.uid));
+    REQUIRE_FALSE(pm.isActiveProject(pd.uid, 20));
   }
 }
 TEST_CASE("Restoring Time-specified Project - inactive", "[Basic]"){
@@ -363,7 +363,7 @@ TEST_CASE("Restoring Time-specified Project - inactive", "[Basic]"){
   pm.restoreProject(pd, 10);
   REQUIRE(pm.projectCount() == 1);
   REQUIRE(pm.getName(pd.uid) == pd.name);
-  REQUIRE_FALSE(pm.isActiveProject(pd.uid));
+  REQUIRE_FALSE(pm.isActiveProject(pd.uid, 10));
 }
 //Now describe, to check the active flag works
 

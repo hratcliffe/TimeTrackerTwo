@@ -143,8 +143,12 @@ Q_OBJECT
     void loadProjects(timecode now){
       if(! dataHandler) throw std::runtime_error("No Data Backend Found");
 
-      auto projectList = dataHandler->fetchProjectList();
-      auto subprojectList = dataHandler->fetchSubprojectList();
+      //Fetch only active projects
+      auto projectList = dataHandler->fetchProjectListActiveAt(now);
+      std::vector<proIds::Uuid> ids;
+      for(auto p : projectList){ids.push_back(p.uid);};
+      //Fetch only corresponding subs
+      auto subprojectList = dataHandler->fetchSubprojectListForParents(ids);
 
       for(const auto & it : projectList){
         thePM.restoreProject(it, now);
@@ -152,7 +156,8 @@ Q_OBJECT
       for(const auto & it : subprojectList){
         thePM.restoreSubproject(it);
       }
-      emit projectListNeedsUpdateEvent();
+      //Remove middleman here
+      emit projectListIsUpdatedEvent(thePM.getOrderedProjectList(now));
       emit projectTotalUpdateEvent(thePM.allocatedFTE(), thePM.availableFTE());
 
       // Check if there is an ongoing project

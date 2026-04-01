@@ -1043,6 +1043,46 @@ TEST_CASE("Known Data - Load projects with active One-Off project", "[QTAware]")
   REQUIRE(str == "Tuesday Coffee");
 
 }
+TEST_CASE("Known Data - Load projects with start and end dates", "[QTAware]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./InputData/KnownDatabaseDates.db")};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListIsUpdatedEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectTotalUpdateEvent, &sig, &SignalCatcher::emitEBFloatX2);
+
+  SECTION("Both up"){
+    td.loadProjects(150);
+    std::vector<selectableEntity> list;
+    list = sig.what(list);
+    REQUIRE(list.size() == 5);
+    //Assume if size if right, content probably is here
+  }
+  SECTION("Before Start"){
+    td.loadProjects(50);
+    std::vector<selectableEntity> list;
+    list = sig.what(list);
+    REQUIRE(list.size() == 2);
+    {auto check = [](selectableEntity & se){return se.name == "Project Beta" && se.uid.to_string() == "{8af5d44a-2921-4666-b33b-053459e2ced6}" && se.level == 0;};
+    REQUIRE(std::find_if(list.begin(), list.end(), check) != list.end());}
+    //Subprojects:
+    {auto check = [](selectableEntity & se){return se.name == "Important Title" && se.uid.to_string() == "{07e453ad-b698-47b8-aa52-c7ef2306731d}" && se.level == 1;};
+    REQUIRE(std::find_if(list.begin(), list.end(), check) != list.end());}
+  }
+  SECTION("After end"){
+    td.loadProjects(250);
+    std::vector<selectableEntity> list;
+    list = sig.what(list);
+    REQUIRE(list.size() == 3);
+    {auto check = [](selectableEntity & se){return se.name == "Project Alpha" && se.uid.to_string() == "{cc467402-acd5-494f-9c58-466f3aa6f117}" && se.level == 0;};
+    REQUIRE(std::find_if(list.begin(), list.end(), check) != list.end());}
+    //Subprojects:
+    {auto check = [](selectableEntity & se){return se.name == "Documentation" && se.uid.to_string() == "{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}" && se.level == 1;};
+    REQUIRE(std::find_if(list.begin(), list.end(), check) != list.end());}
+    {auto check = [](selectableEntity & se){return se.name == "Testing" && se.uid.to_string() == "{de58a6f8-d0bb-46c8-af18-aed15e92060c}" && se.level == 1;};
+    REQUIRE(std::find_if(list.begin(), list.end(), check) != list.end());}
+  }
+}
 
 // ---------- Merging and deleting Projects ---------------------------------------------------------------------
 TEST_CASE("Merging project data - basic checks", "[QTAware]"){

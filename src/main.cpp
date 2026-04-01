@@ -92,6 +92,11 @@ Also:
 
 TASKS:
 when generate project lists for tracker, only include active-and-within date
+fix/test read/write of dates
+    true null
+    test read/write at DB store
+    test further up
+    add read/write of plain 'active' status
 add a periodic (1 minute?) refresh of tracker display
 add date range selector to summary
     initially just "past week, past month, past year, all time"

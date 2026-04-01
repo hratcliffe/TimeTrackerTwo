@@ -270,15 +270,12 @@ class databaseStore{
         sqlite3_bind_text(prep_cmd, 1, id.c_str(), id.length(), SQLITE_STATIC);
         sqlite3_bind_text(prep_cmd, 2, name.c_str(), name.length(), SQLITE_STATIC);
         sqlite3_bind_int(prep_cmd, 3, FTE);
+        //Unbound parameters are NULL which is what we want here
         if(dat.useStart){
             sqlite3_bind_int64(prep_cmd, 4, dat.start);
-        }else{
-            sqlite3_bind_int64(prep_cmd, 4, 0); // TODO fix null date
         }
         if(dat.useEnd){
             sqlite3_bind_int64(prep_cmd, 5, dat.end);
-        }else{
-            sqlite3_bind_int64(prep_cmd, 5, 0); // TODO fix null date
         }
 
         err = sqlite3_step(prep_cmd);
@@ -425,22 +422,20 @@ class databaseStore{
         sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
         
         fullProjectData ret;
-        timecode tmp;
         if((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
             ret.uid = id;
             ret.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0));
             ret.FTE.set(sqlite3_column_int(prep_cmd, 1));
-            tmp = sqlite3_column_int64(prep_cmd, 2);
-            if(tmp != 0){ // TODO fix 0 to true null
-              ret.start = tmp;
+            //Checking for null on start_date (and end_date below)
+            if(sqlite3_column_type(prep_cmd, 2) != SQLITE_NULL){
+              ret.start = sqlite3_column_int64(prep_cmd, 2);
               ret.useStart = true;
             }else{
               ret.start = timecodeNull;
               ret.useStart = false;
             }
-            tmp = sqlite3_column_int64(prep_cmd, 3);
-            if(tmp != 0){ // TODO fix 0 to true null
-              ret.end = tmp;
+            if(sqlite3_column_type(prep_cmd, 3) != SQLITE_NULL){
+              ret.end = sqlite3_column_int64(prep_cmd, 3);
               ret.useEnd = true;
             }else{
               ret.end = timecodeNull;

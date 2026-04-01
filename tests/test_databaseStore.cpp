@@ -256,7 +256,7 @@ fullProjectData writeProj(databaseStore & theDB, proIds::Uuid & pid){
   pd.FTE.set(0.4);
   pd.useStart = false;
   pd.useEnd = false;
-  pd.start = -1;
+  pd.start = -1; //Any value as useStart is false
   pd.end = -1;
   pd.uid = pid;
   theDB.writeProject(pd);
@@ -274,8 +274,35 @@ TEST_CASE("Writing Project", "[Database]"){
   REQUIRE(pd.name == pd_in.name);
   REQUIRE(pd.FTE == pd_in.FTE);
   REQUIRE(pd.uid == pd_in.uid);
-  REQUIRE(pd.start == pd_in.start);
-  REQUIRE(pd.end == pd_in.end);
+  REQUIRE(pd.useStart == pd_in.useStart);
+  REQUIRE( (!pd.useStart || pd.start == pd_in.start)); //If useStart, then must be equal
+  REQUIRE(pd.useEnd == pd_in.useEnd);
+  REQUIRE( (!pd.useEnd || pd.end == pd_in.end));
+}
+TEST_CASE("Writing project with dates", "[Database]"){
+  databaseStore theDB{getScratchFileName(), false};
+  uniqueIdGenerator theGen;
+  auto pid = theGen.getNextId();
+
+  fullProjectData pd;
+  pd.name = "Written Project";
+  pd.FTE.set(0.4);
+  pd.useStart = true;
+  pd.useEnd = true;
+  pd.start = 100;
+  pd.end = 200;
+  pd.uid = pid;
+  theDB.writeProject(pd);
+  auto pd_in = theDB.readProject(pid);
+
+  REQUIRE(pd.name == pd_in.name);
+  REQUIRE(pd.FTE == pd_in.FTE);
+  REQUIRE(pd.uid == pd_in.uid);
+  REQUIRE(pd.useStart == pd_in.useStart);
+  REQUIRE( (!pd.useStart || pd.start == pd_in.start)); //If useStart, then must be equal
+  REQUIRE(pd.useEnd == pd_in.useEnd);
+  REQUIRE( (!pd.useEnd || pd.end == pd_in.end));
+
 }
 
 TEST_CASE("Writing Sub Project", "[Database]"){

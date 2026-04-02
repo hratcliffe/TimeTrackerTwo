@@ -91,18 +91,26 @@ Also:
     refresh views of projects periodically against dates
 
 TASKS:
-when generate project lists for tracker, only include active-and-within date
-fix/test read/write of dates
-    true null
-    test read/write at DB store
+DONE when generate project lists for tracker, only include active-and-within date
+DONE fix/test read/write of dates
+DONE    true null
+DONE    test read/write at DB store
     test further up
     add read/write of plain 'active' status
+        use its own table for up-down-summ
 add a periodic (1 minute?) refresh of tracker display
 add date range selector to summary
     initially just "past week, past month, past year, all time"
     NOW FTE percents need to be calculated against the project duration
 hook up projects tab to same refresh as tracker
 add old-project-review to projects tab
+
+Do SOMETHING about overlapped FTE......
+    Split dates and FTE into separate table,
+    allow multiple time-FTE entries against a project
+    allow to set different amounts over time
+
+    Add report showing FTE rates over time, as e.g. stacked bars
 
 */
 

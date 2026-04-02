@@ -112,6 +112,24 @@ Q_OBJECT
     }
 
     void projectListUpdate(timecode now){
+      //Fresh fetch of only active projects
+      auto projectList = dataHandler->fetchProjectListActiveAt(now);
+      std::vector<proIds::Uuid> ids;
+      for(auto p : projectList){ids.push_back(p.uid);};
+      //Fetch only corresponding subs
+      auto subprojectList = dataHandler->fetchSubprojectListForParents(ids);
+
+      for(const auto & it : projectList){
+        thePM.restoreProject(it, now, true);
+      }
+      for(const auto & it : subprojectList){
+        thePM.restoreSubproject(it, true);
+      }
+      //Remove middleman here
+      emit projectListIsUpdatedEvent(thePM.getOrderedProjectList(now));
+      emit projectTotalUpdateEvent(thePM.allocatedFTE(), thePM.availableFTE());
+
+
       emit projectListIsUpdatedEvent(thePM.getOrderedProjectList(now));
     }
 

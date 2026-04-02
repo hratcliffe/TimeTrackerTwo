@@ -20,6 +20,7 @@ Q_OBJECT
   TW_duration digestCheckPeriod;
   TW_timePoint lastDigestCreationTime;
   TW_duration digestCreationDelay;
+  TW_timePoint lastRefresh = timeWrapper::fromSeconds(0); //Set on first refresh after creation
 
   public:
   Controller(appConfig config){
@@ -129,6 +130,8 @@ Q_OBJECT
     connect(currentData, &TrackerData::popAlert, themainWindow, &mainWindow::showSimpleAlert);
 
     // Update the view when the project list changes
+    // Checking on a schedule
+    connect(this, &Controller::refreshProjects, [this](){currentData->projectListUpdate(this->clock->now());});
     //List needs to be updated to now
     connect(currentData, &TrackerData::projectListNeedsUpdateEvent, [this](){currentData->projectListUpdate(this->clock->now());});
     //List has changed, refresh display
@@ -200,6 +203,8 @@ Q_OBJECT
     //Since clock is already updating every second we can use this to trigger timed events with sufficient fidelity
     //Connecting to 'midnight' rollovers
     connect(clockTicker, &QTimer::timeout, [this](){checkTimedEvents();});
+    // Other refresh events
+    connect(clockTicker, &QTimer::timeout, [this](){checkGenericRefreshEvents();});
 
     //Time traveling:
     //To show a dialog, view needs to know the time now:
@@ -210,9 +215,19 @@ Q_OBJECT
     connect(currentData, &TrackerData::popTT, themainWindow, &mainWindow::showTTOption);
   }
 
+  void checkGenericRefreshEvents(){
+    const auto now = timeWrapper::now();
+    //One minute
+    if(now > timeWrapper::addDuration(lastRefresh, 1, 0, 0)){
+      //Emit signals for any refresh events here
+      emit refreshProjects();
+      lastRefresh = now;
+    }
+  }
+
   void checkTimedEvents(){
     //This is REAL system time, not app time!
-    auto now = timeWrapper::now();
+    const auto now = timeWrapper::now();
 
     // Create Daily Digests for any data which is between lastDigestCreationTime
     // and now - digestCreationDelay.
@@ -257,5 +272,6 @@ Q_OBJECT
   signals:
 
   void clockUpdated(std::string newTime); // Signal from controller as appClock is not QT aware
+  void refreshProjects();
 
 };

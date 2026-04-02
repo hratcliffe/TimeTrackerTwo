@@ -201,18 +201,18 @@ class projectManager{
       return gen->getNextId(proIds::uidTag::oneoff);
     }
 
-    void restoreProject(const fullProjectData & dat, [[maybe_unused]] timecode now){
+    void restoreProject(const fullProjectData & dat, [[maybe_unused]] timecode now, bool ignorePresent=false){
       //Restore a project from e.g. file - i.e. one that already HAS a uid
       auto id = dat.uid;
       if(id == proIds::NullUid) throw std::runtime_error("Cannot restore project with Null Uid");
       if(!id.isTaggedAs(proIds::uidTag::none)) throw std::runtime_error("Id is not for a project");
-      if(projects.count(id) > 0) throw std::runtime_error("Project already exists, not restoring");
+      if(!ignorePresent && projects.count(id) > 0) throw std::runtime_error("Project already exists, not restoring");
       project tmp = project(dat);
       tmp.active = true;//Active is independent of dates
       projects[id] = tmp;
     }
 
-    void restoreSubproject(const fullSubProjectData & dat){
+    void restoreSubproject(const fullSubProjectData & dat, bool ignorePresent=false){
       // Restore a subproject. Parent MUST exist already
       auto id = dat.uid;
       auto parentUid = dat.parentUid;
@@ -220,7 +220,7 @@ class projectManager{
       if(parentUid.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Parent must not be a subproject");
       if(!id.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Id is not for a subproject");
       if(projects.count(parentUid) == 0 ) throw std::runtime_error("Parent project does not exist");
-      if(subprojects.count(id) > 0) throw std::runtime_error("Subproject already exists, not restoring");
+      if(!ignorePresent && subprojects.count(id) > 0) throw std::runtime_error("Subproject already exists, not restoring");
       subprojects[id] = subproject(dat);
       projects[parentUid].addSubproject(id);
     }

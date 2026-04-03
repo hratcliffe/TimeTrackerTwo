@@ -419,19 +419,21 @@ class databaseStore{
 
     void deleteProject(proIds::Uuid const & id){
         const std::string id_str = id.to_string();
-        std::string cmd;
+        std::string cmd1, cmd2;
         sqlite3_stmt * prep_cmd;
         int err = 0;
-        cmd = "DELETE FROM project_dates WHERE project_id =?; DELETE FROM projects WHERE id = ?; ";
-        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
-        sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
-        sqlite3_bind_text(prep_cmd, 2, id_str.c_str(), id_str.length(), SQLITE_STATIC);
-        err = sqlite3_step(prep_cmd);
-        if(err == SQLITE_DONE) err = SQLITE_OK;
-        if(err != SQLITE_OK){
-            throw std::runtime_error("Failed to delete project");
+        cmd1 = "DELETE FROM project_dates WHERE project_id =?;";
+        cmd2 = "DELETE FROM projects WHERE id = ?;";
+        for(auto cmd : {cmd1, cmd2}){
+            err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+            sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
+            err = sqlite3_step(prep_cmd);
+            if(err == SQLITE_DONE) err = SQLITE_OK;
+            if(err != SQLITE_OK){
+                throw std::runtime_error("Failed to delete project");
+            }
+            sqlite3_finalize(prep_cmd);
         }
-        sqlite3_finalize(prep_cmd);
     }
     void deleteSubproject(proIds::Uuid const & id){
         const std::string id_str = id.to_string();

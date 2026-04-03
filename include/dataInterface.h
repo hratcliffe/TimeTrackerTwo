@@ -27,7 +27,7 @@ class dataIO{
     virtual void writeProject(fullProjectData const& dat) = 0;
     virtual fullProjectData readProject(proIds::Uuid const & id) = 0;
     virtual projectSliceData readProjectTimes(proIds::Uuid const & id) = 0;
-    virtual std::vector<projectSliceData> readAllProjectTimesBetween(timecode start, timecode end) = 0;
+    virtual std::map<proIds::Uuid, projectSliceData> readAllProjectTimesBetween(timecode start, timecode end) = 0;
     virtual void deleteProject(proIds::Uuid const & id) = 0;
     // For update, take fullProjectData so can read, update and pass back
     virtual void updateProject(fullProjectData const & dat) = 0;
@@ -131,8 +131,8 @@ class databaseIO : public dataIO{
     projectSliceData readProjectTimes(proIds::Uuid const & id) override{
       return dbStore.readProjectTimes(id);
     }
-    std::vector<projectSliceData> readAllProjectTimesBetween(timecode start, timecode end) override{
-      throw std::runtime_error("Not implemented");
+    std::map<proIds::Uuid, projectSliceData> readAllProjectTimesBetween(timecode start, timecode end) override{
+      return dbStore.readAllProjectTimesBetween(start, end);
     }
 
     void deleteProject(proIds::Uuid const & id) override{

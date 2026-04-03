@@ -625,6 +625,41 @@ class databaseStore{
         sqlite3_finalize(prep_cmd);
         return ret;
     }
+    std::map<proIds::Uuid, projectSliceData> readAllProjectTimesBetween(timecode start, timecode end){
+        std::string cmd = "SELECT project_id, FTE, start_date, end_date FROM project_dates WHERE (start_date < ? OR start_date is NULL) AND (end_date>= ? OR end_date is NULL) ORDER BY project_id, start_date, end_date;";
+
+        sqlite3_stmt * prep_cmd;
+        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        //Reverse the order - start is before end of period, end is after start
+        sqlite3_bind_int64(prep_cmd, 2, start);
+        sqlite3_bind_int64(prep_cmd, 1, end);
+        std::map<proIds::Uuid, projectSliceData> ret;
+        while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            singleSlice slice;
+            slice.FTE.set(sqlite3_column_int(prep_cmd, 1));
+            //Checking for null on start_date (and end_date below)
+            if(sqlite3_column_type(prep_cmd, 2) != SQLITE_NULL){
+              slice.start = sqlite3_column_int64(prep_cmd, 2);
+            }else{
+              slice.start = timecodeNull;
+            }
+            if(sqlite3_column_type(prep_cmd, 3) != SQLITE_NULL){
+              slice.end = sqlite3_column_int64(prep_cmd, 3);
+            }else{
+              slice.end = timecodeNull;
+            }
+            auto id = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0)));
+            //Creates if does not exist
+            ret[id].slices.push_back(slice);
+        }
+        if(err != SQLITE_DONE){
+            sqlite3_finalize(prep_cmd);
+            std::cerr<<sqlite3_errmsg(DB)<<std::endl;
+            throw std::runtime_error("Failed to fetch project list for time");
+        }
+        sqlite3_finalize(prep_cmd);
+        return ret;
+    }
 
     fullSubProjectData readSubproject(proIds::Uuid const & id){
         const std::string id_str = id.to_string();

@@ -137,6 +137,34 @@ TEST_CASE("Int - Reading Known Data - Project Dates", "[Database]"){
     REQUIRE(data.slices[1] == slice1); }
   }
 }
+TEST_CASE("Int- Reading Known Data - All Project Dates", "[Database]"){
+  databaseIO theDB{"./InputData/KnownDatabaseSlices.db", true};
+  auto entries = theDB.readAllProjectTimesBetween(100, 200);
+  REQUIRE(entries.size() == 4);
+  //Checking first
+  { auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+    REQUIRE(entries[id].slices.size() == 2);
+    { auto slice1 = singleSlice{timecodeNull, timecodeNull, eb_float{5000}};
+    REQUIRE(entries[id].slices[0] == slice1); }
+    { auto slice1 = singleSlice{100, 200, eb_float{2500}};
+    REQUIRE(entries[id].slices[1] == slice1); }
+  }
+  { auto id = proIds::Uuid("{2c531a42-d999-4c0f-b6fd-f9417e69e715}");
+    REQUIRE(entries[id].slices.size() == 1);
+    { auto slice1 = singleSlice{125, 275, eb_float{1000}};
+    REQUIRE(entries[id].slices[0] == slice1); }
+  }
+  { auto id = proIds::Uuid("{7228d8fe-0782-4205-9ed3-dca2693c0d1f}");
+    REQUIRE(entries[id].slices.size() == 1);
+    { auto slice1 = singleSlice{timecodeNull, 2022, eb_float{100}};
+    REQUIRE(entries[id].slices[0] == slice1); }
+  }
+  {auto id = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+    REQUIRE(entries[id].slices.size() == 1);
+    { auto slice1 = singleSlice{50, timecodeNull, eb_float{2200}};
+    REQUIRE(entries[id].slices[0] == slice1); }
+  }
+}
 // Fetch lists
 //NOTE: projects list order is NOT guaranteed per contract
 

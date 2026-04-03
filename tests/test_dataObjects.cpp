@@ -511,6 +511,18 @@ TEST_CASE("SubProject Details", "[Stream]"){
   REQUIRE(ss.str().find("inactive") != std::string::npos);
 }
 
+TEST_CASE("Slices - single"){
+  auto ss = singleSlice{100, 200, eb_float{1710}};
+  auto ss2 = singleSlice{100, 200, eb_float{1710}};
+  REQUIRE(ss == ss2);
+
+  std::stringstream str;
+  str<<ss;
+  // Very cursory checks
+  REQUIRE(str.str().find("100 - 200") != std::string::npos);
+  REQUIRE(str.str().find("0.171 ") != std::string::npos);
+}
+
 TEST_CASE("Time Units", "[Stream]"){
   std::string unit = unitToString(timeSummaryUnit::hour);
   REQUIRE(unit == "hours");

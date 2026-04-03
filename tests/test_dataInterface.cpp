@@ -81,7 +81,62 @@ TEST_CASE("Int -Reading Known Data - Oneoff", "[Database]"){
   REQUIRE(oo.uid == id);
   REQUIRE(oo.description == "Special Coffee Meeting");
 }
+TEST_CASE("Int - Reading Known Data - Project Dates", "[Database]"){
+  databaseIO theDB{"./InputData/KnownDatabaseSlices.db", true};
 
+  SECTION("Project with ONLY full specified"){
+    auto id = proIds::Uuid("{2c531a42-d999-4c0f-b6fd-f9417e69e715}");
+    auto proj = theDB.readProject(id);
+    REQUIRE(proj.variableFTE);
+    // Expect 2 entries
+    auto data = theDB.readProjectTimes(id);
+    REQUIRE(data.slices.size() == 2);
+    { auto slice1 = singleSlice{125, 275, eb_float{1000}};
+    REQUIRE(data.slices[0] == slice1); }
+    { auto slice1 = singleSlice{275, 565, eb_float{1500}};
+    REQUIRE(data.slices[1] == slice1); }
+  }
+  SECTION("Project with unspecified envelope"){
+    auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+    //First check that project is marked as variable FTE
+    auto proj = theDB.readProject(id);
+    REQUIRE(proj.variableFTE);
+    // Expect 3 entries - the envelope first, then the others
+    auto data = theDB.readProjectTimes(id);
+    REQUIRE(data.slices.size() == 3);
+    { auto slice1 = singleSlice{timecodeNull, timecodeNull, eb_float{5000}};
+    REQUIRE(data.slices[0] == slice1); }
+    { auto slice1 = singleSlice{100, 200, eb_float{2500}};
+    REQUIRE(data.slices[1] == slice1); }
+    { auto slice1 = singleSlice{200, 500, eb_float{3000}};
+    REQUIRE(data.slices[2] == slice1); }
+  }
+  SECTION("Project with free start"){
+    auto id = proIds::Uuid("{7228d8fe-0782-4205-9ed3-dca2693c0d1f}");
+    auto proj = theDB.readProject(id);
+    REQUIRE(proj.variableFTE);
+    // Expect 2 entries - ordered by start so null first
+    auto data = theDB.readProjectTimes(id);
+    REQUIRE(data.slices.size() == 2);
+    { auto slice1 = singleSlice{timecodeNull, 2022, eb_float{100}};
+    REQUIRE(data.slices[0] == slice1); }
+    { auto slice1 = singleSlice{2022, 2025, eb_float{200}};
+    REQUIRE(data.slices[1] == slice1); }
+  }
+  SECTION("Project with free end"){
+    auto id = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+    //First check that project is marked as variable FTE
+    auto proj = theDB.readProject(id);
+    REQUIRE(proj.variableFTE);
+    // Expect 2 entries - ordered by start
+    auto data = theDB.readProjectTimes(id);
+    REQUIRE(data.slices.size() == 2);
+    { auto slice1 = singleSlice{20, 50, eb_float{2500}};
+    REQUIRE(data.slices[0] == slice1); }
+    { auto slice1 = singleSlice{50, timecodeNull, eb_float{2200}};
+    REQUIRE(data.slices[1] == slice1); }
+  }
+}
 // Fetch lists
 //NOTE: projects list order is NOT guaranteed per contract
 

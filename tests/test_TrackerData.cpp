@@ -439,8 +439,10 @@ TEST_CASE("Marking", "[QTAware, Slots]"){
     std::string str;
     str = sig.what(str);
     REQUIRE(str == name);
-
-  // TODO - Now check we wrote the mark...
+    auto data = td.trackerEntriesRequired(id);
+    REQUIRE(data.size() == 1);
+    REQUIRE(data[0].projectUid == id);
+    REQUIRE(data[0].time == 242);
   }
   SECTION("One Off"){
     std::string name = "One off project for mark dfh";
@@ -1172,7 +1174,7 @@ TEST_CASE("Merging project data - project to another project - move from has sub
   }
 }
 
-TEST_CASE("Merging project data - project to another project - move from has NO subs", "[Failing]"){
+TEST_CASE("Merging project data - project to another project - move from has NO subs", "[QTAware, Slots]"){
   auto app = dummyApp();
   TrackerData td{basicConfig("./Scratch/KnownDatabaseForMergeS.db")};
   td.loadProjects(1); // No start-end times so load for any time...
@@ -1572,7 +1574,7 @@ TEST_CASE("Deleting Stamps - no-op cases", "[QTAware]"){
   }
 }
 
-TEST_CASE("Deleting Stamps - by list", "[Failing]"){
+TEST_CASE("Deleting Stamps - by list", "[QTAware, Slots]"){
   auto app = dummyApp();
   TrackerData td{basicConfig("./Scratch/KnownDatabaseForDelete3.db")};
 

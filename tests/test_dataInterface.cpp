@@ -246,8 +246,8 @@ TEST_CASE("Int -Writing Project", "[Database]"){
   REQUIRE(pd.name == pd_in.name);
   REQUIRE(pd.FTE == pd_in.FTE);
   REQUIRE(pd.uid == pd_in.uid);
-  REQUIRE(pd.start == pd_in.start);
-  REQUIRE(pd.end == pd_in.end);
+  REQUIRE( (!pd.useStart || pd.start == pd_in.start) );
+  REQUIRE( (!pd.useEnd || pd.end == pd_in.end) );
 }
 
 TEST_CASE("Int -Writing Sub Project", "[Database]"){
@@ -360,8 +360,8 @@ TEST_CASE("Int -Edit project", "[Database]"){
   REQUIRE(pd.name == pd_in.name);
   REQUIRE(pd.FTE == pd_in.FTE);
   REQUIRE(pd.uid == pd_in.uid);
-  REQUIRE(pd.start == pd_in.start);
-  REQUIRE(pd.end == pd_in.end);
+  REQUIRE( (!pd.useStart ||  pd.start == pd_in.start) );
+  REQUIRE( (!pd.useEnd || pd.end == pd_in.end) );
 }
 
 TEST_CASE("Int -Edit subproject", "[Database]"){

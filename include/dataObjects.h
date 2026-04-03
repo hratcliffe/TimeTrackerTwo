@@ -26,7 +26,7 @@ struct projectData{
   std::string name;/**< \brief Name of project */
   eb_float FTE;/**< \brief Fraction of FTE this uses */
   timecode start=-1, end=-1;
-  bool useStart=false, useEnd=false;
+  bool useStart=false, useEnd=false, variableFTE=false;
 };
 
 inline std::ostream& operator<< (std::ostream& stream, const projectData& data){
@@ -90,15 +90,17 @@ class fullProjectData{
     eb_float FTE{0}; /**< \brief Fraction of Full-Time Equivalent this project uses */
     timecode start=-1, end=-1;
     bool useStart=false, useEnd=false;
+    bool variableFTE = false;
 
     fullProjectData() = default;
     fullProjectData(proIds::Uuid id, projectData const &data)
-        : uid(id), name(data.name), FTE(data.FTE), start(data.start), end(data.end), useStart(data.useStart), useEnd(data.useEnd) {};
+        : uid(id), name(data.name), FTE(data.FTE), start(data.start), end(data.end), useStart(data.useStart), useEnd(data.useEnd), variableFTE(data.variableFTE) {};
 };
 inline std::ostream& operator<< (std::ostream& stream, const fullProjectData& data){
 /** \brief Stream operator for fullProjectData
 */
   stream << data.name <<", "<<data.uid<<", "<<data.FTE;
+  if(data.variableFTE) stream<<" +";
   if(data.useStart) stream<<" "<<timeWrapper::formatTime(timeWrapper::fromSeconds(data.start));
   if(data.useStart or data.useEnd) stream<< " -";
   if(data.useEnd) stream<<" "<<timeWrapper::formatTime(timeWrapper::fromSeconds(data.end));

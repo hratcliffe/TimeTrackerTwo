@@ -414,8 +414,8 @@ TEST_CASE("Edit project", "[Database]"){
   REQUIRE(pd.name == pd_in.name);
   REQUIRE(pd.FTE == pd_in.FTE);
   REQUIRE(pd.uid == pd_in.uid);
-  REQUIRE(pd.start == pd_in.start);
-  REQUIRE(pd.end == pd_in.end);
+  REQUIRE( (!pd.useStart ||  pd.start == pd_in.start) );
+  REQUIRE( (!pd.useEnd || pd.end == pd_in.end) );
 }
 
 TEST_CASE("Edit subproject", "[Database]"){

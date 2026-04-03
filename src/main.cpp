@@ -98,22 +98,29 @@ DONE    test read/write at DB store
     test further up
     add read/write of plain 'active' status
         use its own table for up-down-summ
-add a periodic (1 minute?) refresh of tracker display
+DONE add a periodic (1 minute?) refresh of tracker display
 add date range selector to summary
     initially just "past week, past month, past year, all time"
     NOW FTE percents need to be calculated against the project duration
-hook up projects tab to same refresh as tracker
+DONE? hook up projects tab to same refresh as tracker
 add old-project-review to projects tab
 
 Do SOMETHING about overlapped FTE......
-    Split dates and FTE into separate table,
-    allow multiple time-FTE entries against a project
+  DONE  Split dates and FTE into separate table,
+  DONE allow multiple time-FTE entries against a project
     allow to set different amounts over time
-
+    when adding a new project, allow splitting into parts
+        Maybe 'advanced' dialog?
     Add report showing FTE rates over time, as e.g. stacked bars
+
+WHEN read project, start should be lowest start and end latest end, but FTE current FTE ?
+Add a flag for 'FTE varies'
+
+Add display of varying FTE to project description
 
 */
 
+//TODO - when selecting delete etc on Projects tab, pre-fill with selected
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);

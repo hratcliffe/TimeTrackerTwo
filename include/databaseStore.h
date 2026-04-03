@@ -466,35 +466,36 @@ class databaseStore{
         sqlite3_finalize(prep_cmd);
     }
 
+    /**
+     * @brief Reads the project.
+     *
+     * Returns the envelope start and end times, i.e. the earliest and latest respectively
+     * @param id Project id to find
+     * @return The data
+     */
     fullProjectData readProject(proIds::Uuid const & id){
         const std::string id_str = id.to_string();
-        std::string cmd = "SELECT name, FTE, start_date, end_date FROM projects INNER JOIN project_dates ON projects.id = project_dates.project_id WHERE projects.id = ?;";
+        std::string cmd = "SELECT name, min(FTE), max(FTE), min(coalesce(start_date, -1)), max(coalesce(end_date, 9223372036854775807)) FROM projects INNER JOIN project_dates ON projects.id = project_dates.project_id WHERE projects.id = ? EXCEPT SELECT null, null, null, null, null;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
-        
         fullProjectData ret;
         if((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
             ret.uid = id;
             ret.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0));
-            ret.FTE.set(sqlite3_column_int(prep_cmd, 1));
-            //Checking for null on start_date (and end_date below)
-            if(sqlite3_column_type(prep_cmd, 2) != SQLITE_NULL){
-              ret.start = sqlite3_column_int64(prep_cmd, 2);
-              ret.useStart = true;
-            }else{
-              ret.start = timecodeNull;
-              ret.useStart = false;
-            }
-            if(sqlite3_column_type(prep_cmd, 3) != SQLITE_NULL){
-              ret.end = sqlite3_column_int64(prep_cmd, 3);
-              ret.useEnd = true;
-            }else{
-              ret.end = timecodeNull;
-              ret.useEnd = false;
-            }
-
+            // Now we have possibly a min and max FTE so check if they are the same
+            int tmp1 = sqlite3_column_int(prep_cmd, 1);
+            int tmp2 = sqlite3_column_int(prep_cmd, 2);
+            ret.FTE.set(tmp1);
+            if(tmp1 != tmp2) ret.variableFTE = true;
+            // Fields 3 and 4 are either a real value, or the sentinel we chose so unpack:
+            ret.start = sqlite3_column_int64(prep_cmd, 3);
+            ret.useStart =  ret.start == -1 ? false : true;
+            ret.end = sqlite3_column_int64(prep_cmd, 4);
+            ret.useEnd =  ret.end == 9223372036854775807 ? false : true;
         }else{
+            std::cerr<<sqlite3_errmsg(DB)<<std::endl;
+            sqlite3_finalize(prep_cmd);
             throw std::runtime_error("Failed to read project");
         }
         sqlite3_finalize(prep_cmd);
@@ -536,6 +537,13 @@ class databaseStore{
         sqlite3_finalize(prep_cmd);
         return ret;
     }
+    /**
+     * @brief Read list of projects at date
+     *
+     * Produces list of all projects active at the given data. If project has variable FTE, the one at date is given
+     * @param date The date to check
+     * @return std::vector<fullProjectData> 
+     */
     std::vector<fullProjectData> fetchProjectListActiveAt(timecode date){
         // date should NOT be null- it will be used
 

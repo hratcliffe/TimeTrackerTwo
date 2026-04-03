@@ -586,6 +586,45 @@ class databaseStore{
         sqlite3_finalize(prep_cmd);
         return ret;
     }
+    /**
+     * @brief Read the time slicing data for project
+     *
+     * Returns object containing an ordered list of the slices (ordered by start_date, then end_date). If there are entries with null dates these are included
+     * @param id Project id to fetch
+     * @return projectSliceData
+     */
+    projectSliceData readProjectTimes(proIds::Uuid const & id){
+        const std::string id_str = id.to_string();
+        std::string cmd = "SELECT FTE, start_date, end_date FROM project_dates WHERE project_id = ? ORDER by start_date, end_date;";
+        sqlite3_stmt * prep_cmd;
+        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
+
+        projectSliceData ret;
+        while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            singleSlice slice;
+            slice.FTE.set(sqlite3_column_int(prep_cmd, 0));
+            //Checking for null on start_date (and end_date below)
+            if(sqlite3_column_type(prep_cmd, 1) != SQLITE_NULL){
+              slice.start = sqlite3_column_int64(prep_cmd, 1);
+            }else{
+              slice.start = timecodeNull;
+            }
+            if(sqlite3_column_type(prep_cmd, 2) != SQLITE_NULL){
+              slice.end = sqlite3_column_int64(prep_cmd, 2);
+            }else{
+              slice.end = timecodeNull;
+            }
+            ret.slices.push_back(slice);
+        }
+        if(err != SQLITE_DONE){
+            sqlite3_finalize(prep_cmd);
+            std::cerr<<sqlite3_errmsg(DB)<<std::endl;
+            throw std::runtime_error("Failed to fetch project list for time");
+        }
+        sqlite3_finalize(prep_cmd);
+        return ret;
+    }
 
     fullSubProjectData readSubproject(proIds::Uuid const & id){
         const std::string id_str = id.to_string();

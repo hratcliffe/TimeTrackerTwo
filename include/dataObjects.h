@@ -112,6 +112,29 @@ inline bool operator==(const fullProjectData &lhs, const fullProjectData &rhs){
 inline bool operator!=(const fullProjectData &lhs, const fullProjectData &rhs){
   return !(lhs == rhs);
 }
+struct singleSlice{
+  timecode start= timecodeNull, end=timecodeNull;
+  eb_float FTE{0};
+};
+inline bool operator==(const singleSlice &lhs, const singleSlice &rhs){
+  return lhs.start == rhs.start && lhs.end == rhs.end && lhs.FTE == rhs.FTE;
+}
+inline std::ostream& operator<< (std::ostream& stream, const singleSlice & slice){
+  stream<<slice.FTE<<" ";
+  if(slice.start != timecodeNull) stream<<slice.start;
+  stream<<" - ";
+  if(slice.end != timecodeNull) stream<<slice.end;
+  return stream;
+}
+/**
+ * @brief Project time slicing
+ * Ordered list of time-bins and corresponding FTEs. Missing time is assumed to mean 0 FTE. Bins are assumed to be non-overlapping and are thus [start_date, end_date)
+ */
+class projectSliceData{
+  public:
+  proIds::Uuid uid = proIds::NullUid;
+  std::vector<singleSlice> slices;
+};
 class fullSubProjectData{
     public:
     proIds::Uuid uid=proIds::NullUid; /**< \brief Unique identifier for the subproject */

@@ -626,7 +626,7 @@ class databaseStore{
         return ret;
     }
     std::map<proIds::Uuid, projectSliceData> readAllProjectTimesBetween(timecode start, timecode end){
-        std::string cmd = "SELECT project_id, FTE, start_date, end_date FROM project_dates WHERE (start_date < ? OR start_date is NULL) AND (end_date>= ? OR end_date is NULL) ORDER BY project_id, start_date, end_date;";
+        std::string cmd = "SELECT project_id, FTE, start_date, end_date FROM project_dates WHERE (start_date < ? OR start_date is NULL) AND (end_date > ? OR end_date is NULL) ORDER BY project_id, start_date, end_date;";
 
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);

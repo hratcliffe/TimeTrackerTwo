@@ -19,13 +19,14 @@ class ganttProcessor{
      * @param input Original list
      * @param start Desired start
      * @param end Desired end
-     * @return std::map<proIds::Uuid, projectSliceData> 
+     * @return std::map<proIds::Uuid, projectSliceData>
      */
     static std::map<proIds::Uuid, projectSliceData> envelope(std::map<proIds::Uuid, projectSliceData> & input, timecode start, timecode end){
         for(auto & entry: input){
             if(entry.second.slices.size() == 0) break;
+            auto e = entry.second.slices.size()-1;
             if(entry.second.slices[0].start == timecodeNull || entry.second.slices[0].start < start) entry.second.slices[0].start = start;
-            if(entry.second.slices[0].end == timecodeNull || entry.second.slices[0].end > end) entry.second.slices[0].end = end;
+            if(entry.second.slices[e].end == timecodeNull || entry.second.slices[e].end > end) entry.second.slices[e].end = end;
         }
         return input;
     }
@@ -35,7 +36,7 @@ class ganttProcessor{
      * Takes a map of ids onto time bins and remaps each entry onto the union set of bins (i.e the set of bins that accomodates all entries)
      * @pre All slices have specific (not null) start and end. No slices for a single project overlap.
      * @param input Set to process
-     * @return std::map<proIds::Uuid, projectSliceData> 
+     * @return std::map<proIds::Uuid, projectSliceData>
      */
     static std::map<proIds::Uuid, projectSliceData> reprocess(std::map<proIds::Uuid, projectSliceData> input){
         //Forming the list of all the edges (skipping null)

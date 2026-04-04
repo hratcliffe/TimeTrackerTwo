@@ -34,7 +34,8 @@ SOURCES += \
     test_projectManager.cpp \
     test_dataObjects.cpp \
     test_dataInterface.cpp \
-    test_TrackerData.cpp
+    test_TrackerData.cpp \
+    test_ganttProcessor.cpp
 
 HEADERS += ../include/dataObjects.h \
            ../include/idGenerators.h \
@@ -46,5 +47,6 @@ HEADERS += ../include/dataObjects.h \
            ../include/timeWrapper.h \
            ../include/timestampProcessor.h \
            ../include/appClock.h \
+           ../include/ganttProcessor.h \
            QTSignalHelper.h
 

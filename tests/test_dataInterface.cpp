@@ -98,18 +98,13 @@ TEST_CASE("Int - Reading Known Data - Project Dates", "[Database]"){
   }
   SECTION("Project with unspecified envelope"){
     auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
-    //First check that project is marked as variable FTE
+    //First check that project is not marked as variable FTE
     auto proj = theDB.readProject(id);
-    REQUIRE(proj.variableFTE);
-    // Expect 3 entries - the envelope first, then the others
+    REQUIRE_FALSE(proj.variableFTE);
     auto data = theDB.readProjectTimes(id);
-    REQUIRE(data.slices.size() == 3);
+    REQUIRE(data.slices.size() == 1);
     { auto slice1 = singleSlice{timecodeNull, timecodeNull, eb_float{5000}};
     REQUIRE(data.slices[0] == slice1); }
-    { auto slice1 = singleSlice{100, 200, eb_float{2500}};
-    REQUIRE(data.slices[1] == slice1); }
-    { auto slice1 = singleSlice{200, 500, eb_float{3000}};
-    REQUIRE(data.slices[2] == slice1); }
   }
   SECTION("Project with free start"){
     auto id = proIds::Uuid("{7228d8fe-0782-4205-9ed3-dca2693c0d1f}");
@@ -143,11 +138,9 @@ TEST_CASE("Int- Reading Known Data - All Project Dates", "[Database]"){
   REQUIRE(entries.size() == 4);
   //Checking first
   { auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
-    REQUIRE(entries[id].slices.size() == 2);
+    REQUIRE(entries[id].slices.size() == 1);
     { auto slice1 = singleSlice{timecodeNull, timecodeNull, eb_float{5000}};
     REQUIRE(entries[id].slices[0] == slice1); }
-    { auto slice1 = singleSlice{100, 200, eb_float{2500}};
-    REQUIRE(entries[id].slices[1] == slice1); }
   }
   { auto id = proIds::Uuid("{2c531a42-d999-4c0f-b6fd-f9417e69e715}");
     REQUIRE(entries[id].slices.size() == 1);

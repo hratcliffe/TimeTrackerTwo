@@ -59,10 +59,14 @@ class ganttProcessor{
             size_t i = 0, e = 0;
             //spin to first edge
             while(entry.second.slices[0].start > edges[e]) e++;
+            //NOTE: guaranteed that edges.size() >= slices.size()
             for(; e<edges.size()-1; e++){
+                //Adding the reduced slice
                 recut.slices.push_back({edges[e], edges[e+1], entry.second.slices[i].FTE});
-                if(entry.second.slices[i].start >= edges[e+1]) i++;
-                if(entry.second.slices[i].end != timecodeNull && entry.second.slices[i].end <= edges[e+1] ) break;
+                //Moving to the next original slice when the end of this one is the next edge
+                if(entry.second.slices[i].end == edges[e+1]) i++;
+                //Stopping when we run out of original slices
+                if(i > entry.second.slices.size()-1) break;
             }
             out[entry.first] = recut;
         }

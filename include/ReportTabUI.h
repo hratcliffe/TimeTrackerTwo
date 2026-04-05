@@ -12,7 +12,9 @@
 #include <QBarSet>
 #include <QBarCategoryAxis>
 #include <QValueAxis>
+#include <QScrollArea>
 #include "QLocalShortcuts.h"
+#include "ui_ReportTabContent.h"
 
 #include "support.h"
 #include "idGenerators.h"
@@ -25,13 +27,34 @@
 class ReportTabUI : public QWidget
 {
     Q_OBJECT
-
-    QGridLayout * target;
+  private:
+    void clearContent(){
+      if (auto vl = ui.v_items->layout()) {
+        QLayoutItem *item;
+        while ((item = vl->takeAt(0)) != nullptr) {
+          // If this item is a layout (e.g., our QHBoxLayout row),
+          // iterate through its children and delete widgets
+          if (auto layout = item->layout()) {
+            QLayoutItem *child;
+            while ((child = layout->takeAt(0)) != nullptr) {
+              if (child->widget()) delete child->widget();
+              delete child;
+            }
+            // Don't manually delete layout - let the item cleanup handle it
+          }
+          // Deleting the item cleans up the nested layout if it has one
+          delete item;
+        }
+      }
+  }
 public:
-    
-  explicit ReportTabUI(QWidget *parent, QGridLayout * target_in) : QWidget(parent){target=target_in;}
+  Ui::ReportTabContent ui;
 
-  void fillReports(std::map<proIds::Uuid, projectDetails> details){
+  explicit ReportTabUI(QWidget *parent=nullptr) : QWidget(parent){
+    ui.setupUi(this);
+  }
+
+ void fillReports(std::map<proIds::Uuid, projectDetails> details){
 
     QPieSeries *series = new QPieSeries();
     int i=0;
@@ -62,7 +85,7 @@ public:
     }
 
     QChartView *chartview = new QChartView(chart);
-    target->addWidget(chartview);
+    ui.v_items->addWidget(chartview);
 
   }
 
@@ -76,6 +99,9 @@ public:
    * @param info 
    */
   void fillReportsStackedBar(std::map<proIds::Uuid, projectSliceData> times, std::map<proIds::Uuid, projectDetails> info){
+ 
+    clearContent();
+
     if(times.empty()) return; // nothing to do
 
     // Determine the number of time bins (assuming all projects have the same slices - see preconditions)
@@ -139,7 +165,7 @@ public:
     // Create and add the chart view
     QChartView *chartView = new QChartView(chart);
     chartView->setRenderHint(QPainter::Antialiasing);
-    target->addWidget(chartView);
+    ui.v_items->addWidget(chartView);
   }
 
 };

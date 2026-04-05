@@ -106,7 +106,7 @@ Q_OBJECT
     ui->review_target_layout->addWidget(reviewTab);
 
     // TODO - does not clear when report is generated...
-    reportTab = new ReportTabUI(this, ui->report_target_layout);
+    reportTab = new ReportTabUI();
     ui->report_target_layout->addWidget(reportTab);
 
     //Connecting Tab bar to refresh actions

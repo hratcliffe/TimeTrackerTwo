@@ -21,6 +21,7 @@ FORMS += GUI/Main.ui \
          GUI/ProjectTabContent.ui \
          GUI/SummaryTabContent.ui \
          GUI/ReviewTabContent.ui \
+         GUI/ReportTabContent.ui \
          GUI/AddProjectDialog.ui \
          GUI/AddSubprojectDialog.ui \
          GUI/AddOneOffDialog.ui \

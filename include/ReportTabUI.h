@@ -8,6 +8,10 @@
 #include <QChartView>
 #include <QPieSeries>
 #include <QLegendMarker>
+#include <QStackedBarSeries>
+#include <QBarSet>
+#include <QBarCategoryAxis>
+#include <QValueAxis>
 #include "QLocalShortcuts.h"
 
 #include "support.h"
@@ -62,6 +66,82 @@ public:
 
   }
 
+  /**
+   * @brief Create a bar chart of FTE over time
+   *
+   * Plots the bar chart of FTE over time for the entries in the times map. All sets of slices in times are assumed to have the same set of bin edges. The info map should contain the same ids as the times map, and is used to map from ID to name.
+   *
+   * This function written by Claude Haiku since it started as little more than a standard QT example.
+   * @param times 
+   * @param info 
+   */
+  void fillReportsStackedBar(std::map<proIds::Uuid, projectSliceData> times, std::map<proIds::Uuid, projectDetails> info){
+    if(times.empty()) return;
+
+    // Determine the number of time bins (assuming all projects have the same slices)
+    int numSlices = 0;
+    if(!times.empty()){
+      numSlices = times.begin()->second.slices.size();
+    }
+    
+    if(numSlices == 0) return;
+
+    // Create category labels for the X-axis
+    QStringList categories;
+    for(int i = 0; i < numSlices; ++i){
+      categories << QString("Bin %1").arg(i);
+    }
+
+    // Create the stacked bar series
+    QStackedBarSeries *series = new QStackedBarSeries();
+
+    // Add a bar set for each project
+    for(auto & item : times){
+      proIds::Uuid projectId = item.first;
+      const projectSliceData &sliceData = item.second;
+
+      // Find the project name from info map
+      std::string projectName = "Unknown";
+      if(info.find(projectId) != info.end()){
+        projectName = info.at(projectId).name;
+      }
+
+      QBarSet *barSet = new QBarSet(projectName.c_str());
+      
+      // Add FTE values for each slice
+      for(const auto & slice : sliceData.slices){
+        barSet->append((float)slice.FTE);
+      }
+
+      series->append(barSet);
+    }
+
+    // Create the chart
+    QChart *chart = new QChart();
+    chart->addSeries(series);
+    chart->setTitle("Project FTE Over Time");
+
+    // Add X-axis (time bins)
+    QBarCategoryAxis *axisX = new QBarCategoryAxis();
+    axisX->append(categories);
+    chart->addAxis(axisX, Qt::AlignBottom);
+    series->attachAxis(axisX);
+
+    // Add Y-axis (FTE values)
+    QValueAxis *axisY = new QValueAxis();
+    axisY->setTitleText("FTE");
+    chart->addAxis(axisY, Qt::AlignLeft);
+    series->attachAxis(axisY);
+
+    // Add legend
+    chart->legend()->setVisible(true);
+    chart->legend()->setAlignment(Qt::AlignBottom);
+
+    // Create and add the chart view
+    QChartView *chartView = new QChartView(chart);
+    chartView->setRenderHint(QPainter::Antialiasing);
+    target->addWidget(chartView);
+  }
 
 };
 #endif

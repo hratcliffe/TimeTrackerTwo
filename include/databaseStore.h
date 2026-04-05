@@ -369,7 +369,7 @@ class databaseStore{
         std::string cmd;
         sqlite3_stmt * prep_cmd;
         int err = 0;
-        cmd = "insert into oneoffs values(?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, descr=excluded.descr;"; // TODO check the conflict clause
+        cmd = "insert into oneoffs values(?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, descr=excluded.descr;";
         err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_text(prep_cmd, 1, id.c_str(), id.length(), SQLITE_STATIC);
         sqlite3_bind_text(prep_cmd, 2, name.c_str(), name.length(), SQLITE_STATIC);
@@ -870,14 +870,12 @@ class databaseStore{
       return 0;
     }
 
-    std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1){
-        //TODO - should the Uid tags be handled down here?
-      //TODO - is there an elegant way to do this with prepared statements?
+    std::vector<timeStamp> fetchTrackerEntries(timecode start=timecodeNull, timecode end=timecodeNull){
       std::string where_clause ="";
-      if(start != -1){
+      if(start != timecodeNull){
         where_clause += "t.time >="+std::to_string(start);
       }
-      if(end != -1){
+      if(end != timecodeNull){
         if(where_clause != "") where_clause += " AND ";
         where_clause += "t.time <="+std::to_string(end);
       }

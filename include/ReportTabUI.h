@@ -76,20 +76,18 @@ public:
    * @param info 
    */
   void fillReportsStackedBar(std::map<proIds::Uuid, projectSliceData> times, std::map<proIds::Uuid, projectDetails> info){
-    if(times.empty()) return;
+    if(times.empty()) return; // nothing to do
 
-    // Determine the number of time bins (assuming all projects have the same slices)
-    int numSlices = 0;
-    if(!times.empty()){
-      numSlices = times.begin()->second.slices.size();
-    }
-    
+    // Determine the number of time bins (assuming all projects have the same slices - see preconditions)
+    int numSlices = times.begin()->second.slices.size();
     if(numSlices == 0) return;
 
     // Create category labels for the X-axis
     QStringList categories;
     for(int i = 0; i < numSlices; ++i){
-      categories << QString("Bin %1").arg(i);
+      auto tmp = times.begin()->second.slices[i].start;
+      auto str = timeWrapper::formatTime(timeWrapper::fromSeconds(tmp));
+      categories << QString("%1").arg(str);
     }
 
     // Create the stacked bar series
@@ -124,6 +122,7 @@ public:
     // Add X-axis (time bins)
     QBarCategoryAxis *axisX = new QBarCategoryAxis();
     axisX->append(categories);
+    axisX->setTitleText("Time Beginning");
     chart->addAxis(axisX, Qt::AlignBottom);
     series->attachAxis(axisX);
 

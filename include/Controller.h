@@ -153,6 +153,7 @@ Q_OBJECT
     connect(themainWindow, &mainWindow::projectDetailsRequiredAll, [this](auto functor){functor(themainWindow, currentData->projectDetailsRequired());});
     //To delete, we need to verify the marks
     connect(themainWindow, &mainWindow::projectDetailsRequiredSpecial, [this](auto functor, auto id){functor(themainWindow,  currentData->projectDetailsRequired(id), currentData->checkProjectRunning(id), currentData->checkTimeOnProjectOrSub(id));});
+    connect(themainWindow, &mainWindow::projectDetailsRequiredTimes, [this](auto functor){functor(themainWindow, currentData->projectTimesRequired(), currentData->projectDetailsRequired());});
 
     //Pausing a project:
     connect(themainWindow, &mainWindow::pauseRequested, [this](){currentData->pauseProject(this->clock->now());});

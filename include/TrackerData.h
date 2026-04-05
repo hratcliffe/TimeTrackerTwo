@@ -2,6 +2,7 @@
 #define ____trackerData__
 
 #include <QWidget>
+
 #include <vector>
 #include <sstream>
 
@@ -12,6 +13,7 @@
 #include "dataInterface.h"
 #include "timeWrapper.h"
 #include "timestampProcessor.h"
+#include "ganttProcessor.h"
 
 namespace trackerTypes{
 
@@ -150,6 +152,14 @@ Q_OBJECT
     }
     projectDetails projectDetailsRequired(proIds::Uuid id){
       return thePM.getDetails(id);
+    }
+
+    std::map<proIds::Uuid, projectSliceData> projectTimesRequired(){
+      auto entries = dataHandler->readAllProjectTimesBetween(1775001600, 1801440001);
+      // trims to exactly the interval
+      entries = ganttProcessor::envelope(entries, 1775001600, 1801440001);
+      entries = ganttProcessor::reprocess(entries);
+      return entries;
     }
 
     auto trackerEntriesRequired(proIds::Uuid id){

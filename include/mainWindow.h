@@ -113,7 +113,7 @@ Q_OBJECT
     auto tabRefresh =  [this](int index){
       if(index == 1) emit timeSummaryRequested(timeSummaryUnit::minute);
       else if(index == 3) emit reviewRequested();
-      else if(index == 4) this->reportSelected();
+      else if(index == 4) this->reportBarSelected();
     };
     connect(ui->tabWidget, &QTabWidget::currentChanged, tabRefresh);
     //TODO - minutes for dev, -> hours for real
@@ -313,6 +313,9 @@ Q_OBJECT
 
   void fillReportsImpl(std::map<proIds::Uuid, projectDetails> details){reportTab->fillReports(details);}
 
+  void fillReportsBarImpl(std::map<proIds::Uuid, projectSliceData> details, std::map<proIds::Uuid, projectDetails> info){reportTab->fillReportsStackedBar(details, info);}
+  using projectDetailsWTimingsCallbackType = decltype(makeCallback(&mainWindow::fillReportsBarImpl));
+
   void showDeleteDialogImpl(projectDetails details, bool running, bool marked){
     if(running){
       // TODO - could offer to stop it here
@@ -475,6 +478,10 @@ Q_OBJECT
       emit projectDetailsRequiredAll(makeCallback(&mainWindow::fillReportsImpl));
 
     }
+    void reportBarSelected(){
+      //Need details
+      emit projectDetailsRequiredTimes(makeCallback(&mainWindow::fillReportsBarImpl));
+    }
 
   signals:
     void projectSelectedTrack(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project button is clicked */
@@ -489,6 +496,7 @@ Q_OBJECT
     void mergeRequested(const proIds::Uuid & selection, const proIds::Uuid & sub_selection, const proIds::Uuid & target, const proIds::Uuid & sub_target);
     void projectDetailsRequiredAll(projectDetailsArgCallbackType);
     void projectDetailsRequiredSpecial(projectDetailsSpecialCallbackType, proIds::Uuid);
+    void projectDetailsRequiredTimes(projectDetailsWTimingsCallbackType);
     void projectDetailsRequired(const proIds::Uuid & proj);
 
     void fetchTimeTravelInfo();

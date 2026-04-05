@@ -99,6 +99,16 @@ class timeWrapper{
       timeInfo->tm_sec = 0;
       return clock::from_time_t(mktime(timeInfo));
     }
+    static timePoint startOfYear(timePoint tp){
+      std::time_t theTime = clock::to_time_t(tp);
+      auto timeInfo = localtime(&theTime);
+      timeInfo->tm_mon = 1;
+      timeInfo->tm_mday = 1;
+      timeInfo->tm_hour = 0;
+      timeInfo->tm_min = 0;
+      timeInfo->tm_sec = 0;
+      return clock::from_time_t(mktime(timeInfo));
+    }
 
     static duration makeDuration(long minutes, long hours, long days){
       duration offset{0};

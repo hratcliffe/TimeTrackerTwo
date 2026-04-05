@@ -111,6 +111,7 @@ Q_OBJECT
     connect(reportTab->ui.button1, &QPushButton::clicked, [this](){this->reportNeeded(30);});
     connect(reportTab->ui.button2, &QPushButton::clicked, [this](){this->reportNeeded(100);});
     connect(reportTab->ui.button3, &QPushButton::clicked, [this](){this->reportNeeded(365);});
+    connect(reportTab->ui.button0, &QPushButton::clicked, [this](){emit projectDetailsRequiredYearly(makeCallback(&mainWindow::fillReportsBarImpl));});
 
     //Connecting Tab bar to refresh actions
     auto tabRefresh =  [this](int index){
@@ -479,7 +480,6 @@ Q_OBJECT
     void reportSelected(){
       //Need project details
       emit projectDetailsRequiredAll(makeCallback(&mainWindow::fillReportsImpl));
-
     }
     void reportNeeded(int days = 100){
       //Need details
@@ -501,6 +501,7 @@ Q_OBJECT
     void projectDetailsRequiredAll(projectDetailsArgCallbackType);
     void projectDetailsRequiredSpecial(projectDetailsSpecialCallbackType, proIds::Uuid);
     void projectDetailsRequiredTimes(int days, projectDetailsWTimingsCallbackType);
+    void projectDetailsRequiredYearly(projectDetailsWTimingsCallbackType);
     void projectDetailsRequired(const proIds::Uuid & proj);
 
     void fetchTimeTravelInfo();

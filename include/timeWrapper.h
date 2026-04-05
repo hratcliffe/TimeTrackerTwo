@@ -53,6 +53,12 @@ class timeWrapper{
       std::strftime(buffer, sizeof(buffer), "%H:%M", std::localtime(&time)); /**< \brief Format time as a string */
       return std::string(buffer);
     }
+    static std::string formatTimeAsShortDate(timePoint tp){
+      std::time_t time = clock::to_time_t(tp);
+      char buffer[100];
+      std::strftime(buffer, sizeof(buffer), "%d-%m-%y", std::localtime(&time));
+      return std::string(buffer);
+    }
     static timePoint parseTime(const std::string &timeStr) {
       //Assumes string is GMT, does not attempt to parse any zoning
       std::tm tm = {};

@@ -86,7 +86,7 @@ public:
     QStringList categories;
     for(int i = 0; i < numSlices; ++i){
       auto tmp = times.begin()->second.slices[i].start;
-      auto str = timeWrapper::formatTime(timeWrapper::fromSeconds(tmp));
+      auto str = timeWrapper::formatTimeAsShortDate(timeWrapper::fromSeconds(tmp));
       categories << QString("%1").arg(str);
     }
 

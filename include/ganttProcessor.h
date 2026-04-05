@@ -72,6 +72,14 @@ class ganttProcessor{
             recut.name = entry.second.name;
             out[entry.first] = recut;
         }
+        //Adding a dummy entry with just the bin defs, all values 0
+        projectSliceData dummy;
+        for(size_t e = 0; e< edges.size()-1; e++){
+            dummy.slices.push_back({edges[e], edges[e+1], eb_float{}});
+        }
+        dummy.name = "Bin Definitions";
+        dummy.uid = proIds::NullUid;
+        out[dummy.uid] = dummy;
         return out;
     }
 };

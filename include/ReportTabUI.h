@@ -92,7 +92,7 @@ public:
   /**
    * @brief Create a bar chart of FTE over time
    *
-   * Plots the bar chart of FTE over time for the entries in the times map. All sets of slices in times are assumed to have the same set of bin edges. The info map should contain the same ids as the times map, and is used to map from ID to name.
+   * Plots the bar chart of FTE over time for the entries in the times map. All sets of slices in times are assumed to have the same set of bin edges, except that some can be missing at start and/or end. The info map should contain the same ids as the times map, and is used to map from ID to name.
    *
    * This function written by Claude Haiku since it started as little more than a standard QT example.
    * @param times 
@@ -105,17 +105,17 @@ public:
     if(times.empty()) return; // nothing to do
 
     // Determine the number of time bins (assuming all projects have the same slices - see preconditions)
-    int numSlices = times.begin()->second.slices.size();
+    int numSlices = times[proIds::NullUid].slices.size();
     if(numSlices == 0) return;
 
     // Create category labels for the X-axis
     QStringList categories;
     for(int i = 0; i < numSlices; ++i){
-      auto tmp = times.begin()->second.slices[i].start;
+      auto tmp = times[proIds::NullUid].slices[i].start;
       auto str = timeWrapper::formatTimeAsShortDate(timeWrapper::fromSeconds(tmp));
       categories << QString("%1").arg(str);
     }
-
+    const auto & refBins = times[proIds::NullUid].slices;
     // Create the stacked bar series
     QStackedBarSeries *series = new QStackedBarSeries();
 
@@ -123,11 +123,18 @@ public:
     for(auto & item : times){
       proIds::Uuid projectId = item.first;
       const projectSliceData &sliceData = item.second;
-      std::cout<<item.second.name<<std::endl;
+      if(sliceData.slices.size() == 0 || projectId == proIds::NullUid) continue; // Skip empties, should not really happen. Skip reference
       QBarSet *barSet = new QBarSet(item.second.name.c_str());
       
       // Add FTE values for each slice
-      for(const auto & slice : sliceData.slices){
+      //First find the first matching item, then append the rest
+      //Per pre-conditions, the edges must be compatible, but some may be missing at the start
+      auto thisStart = sliceData.slices[0].start;
+      size_t blanks = std::distance(refBins.begin(), std::find_if(refBins.begin(), refBins.end(), [thisStart](const singleSlice & sl){return sl.start == thisStart;}));
+      for(size_t i=0; i< blanks; i++){
+        barSet->append(0.0);
+      }
+      for(const auto & slice : item.second.slices){
         barSet->append((float)slice.FTE);
       }
 

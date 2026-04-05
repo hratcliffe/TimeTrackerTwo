@@ -659,6 +659,7 @@ class databaseStore{
             //Creates if does not exist
             ret[id].slices.push_back(slice);
             ret[id].name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 4));
+            ret[id].uid = id;
         }
         if(err != SQLITE_DONE){
             sqlite3_finalize(prep_cmd);

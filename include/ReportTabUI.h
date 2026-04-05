@@ -3,7 +3,9 @@
 
 #include <QWidget>
 #include <QLabel>
+#include <QMargins>
 #include <QLayout>
+#include <QGraphicsLayout>
 #include <QChart>
 #include <QChartView>
 #include <QPieSeries>
@@ -21,8 +23,6 @@
 #include "project.h"
 #include "projectbutton.h"
 #include "timeWrapper.h"
-
-//Currently does not have internal UI to setup, just plonks straight into the target layout
 
 class ReportTabUI : public QWidget
 {
@@ -162,6 +162,10 @@ public:
     chart->legend()->setVisible(true);
     chart->legend()->setAlignment(Qt::AlignBottom);
 
+    //Forcing a tight layout
+    chart->setMargins(QMargins());
+    chart->layout()->setContentsMargins(0, 0, 0, 0);
+    chart->setBackgroundRoundness(0);
     // Create and add the chart view
     QChartView *chartView = new QChartView(chart);
     chartView->setRenderHint(QPainter::Antialiasing);

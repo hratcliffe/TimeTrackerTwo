@@ -154,10 +154,10 @@ Q_OBJECT
       return thePM.getDetails(id);
     }
 
-    std::map<proIds::Uuid, projectSliceData> projectTimesRequired(){
-      auto entries = dataHandler->readAllProjectTimesBetween(1775001600, 1801440001);
+    std::map<proIds::Uuid, projectSliceData> projectTimesRequired(timecode start, timecode dur){
+      auto entries = dataHandler->readAllProjectTimesBetween(start, start+dur);
       // trims to exactly the interval
-      entries = ganttProcessor::envelope(entries, 1775001600, 1801440001);
+      entries = ganttProcessor::envelope(entries, start, start+dur);
       entries = ganttProcessor::reprocess(entries);
       return entries;
     }

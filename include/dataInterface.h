@@ -41,7 +41,6 @@ class dataIO{
 
     virtual void writeTrackerEntry(timeStamp const & stamp) = 0;
 
-    virtual std::vector<fullProjectData> fetchProjectList() = 0; /**< \brief Fetch list of projects from the data source */
     virtual std::vector<fullProjectData> fetchProjectListActiveAt(timecode date, timecode window=timecodeNull) = 0; /**< \brief Fetch list of projects from the data source which are active at given date */
     virtual std::vector<fullSubProjectData> fetchSubprojectList() = 0; /**< \brief Fetch list of subprojects from the data source */
     virtual std::vector<fullSubProjectData> fetchSubprojectListForParents(std::vector<proIds::Uuid> ids) = 0;/**< \brief Fetch subprojects for specified parent ids */
@@ -170,10 +169,6 @@ class databaseIO : public dataIO{
     void writeTrackerEntry(timeStamp const & stamp) override {
       // Implementation for writing tracker entry to database
         dbStore.writeTrackerEntry(stamp);
-    }
-    std::vector<fullProjectData> fetchProjectList() override {
-      // Implementation for fetching project list from database
-        return dbStore.fetchProjectList();
     }
     std::vector<fullProjectData> fetchProjectListActiveAt(timecode date, timecode window=timecodeNull) override {
       // Implementation for fetching project list from database

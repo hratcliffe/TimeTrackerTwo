@@ -501,42 +501,6 @@ class databaseStore{
         sqlite3_finalize(prep_cmd);
         return ret;
     }
-    std::vector<fullProjectData> fetchProjectList(){
-        std::string cmd = "SELECT projects.id, name, FTE, start_date, end_date FROM projects INNER JOIN project_dates ON projects.id = project_dates.project_id ORDER BY name;";
-        sqlite3_stmt * prep_cmd;
-        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
-        
-        std::vector<fullProjectData> ret;
-        while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
-            fullProjectData proj;
-            proj.uid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0)));
-            proj.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1));
-            proj.FTE.set(sqlite3_column_int(prep_cmd, 2));
-            timecode tmp = sqlite3_column_int64(prep_cmd, 3);
-            if(tmp != 0){ // TODO fix 0 to true null
-              proj.start = tmp;
-              proj.useStart = true;
-            }else{
-              proj.start = timecodeNull;
-              proj.useStart = false;
-            }
-            tmp = sqlite3_column_int64(prep_cmd, 4);
-            if(tmp != 0){ // TODO fix 0 to true null
-              proj.end = tmp;
-              proj.useEnd = true;
-            }else{
-              proj.end = timecodeNull;
-              proj.useEnd = false;
-            }
-            
-            ret.push_back(proj);
-        }
-        if(err != SQLITE_DONE){
-            throw std::runtime_error("Failed to fetch project list");
-        }
-        sqlite3_finalize(prep_cmd);
-        return ret;
-    }
     /**
      * @brief Read list of projects at date
      *

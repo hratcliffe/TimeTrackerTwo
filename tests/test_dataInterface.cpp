@@ -193,7 +193,7 @@ TEST_CASE("Int -List fetch - projects", "[Database]"){
   auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
   auto id2 = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
 
-  auto projList = theDB.fetchProjectList();
+  auto projList = theDB.fetchProjectListActiveAt(150);
 
   REQUIRE(projList.size() == 2);
   {

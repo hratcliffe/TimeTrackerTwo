@@ -1630,8 +1630,16 @@ TEST_CASE("Reprocessing to Gantt", "[QTAware]"){
   // This time it is DURATION for second arg
   auto entries = td.projectTimesRequired(50, 300-50);
 
-  REQUIRE(entries.size() == 4);
+  REQUIRE(entries.size() == 5);
   std::vector<timecode> s_edges{50, 125, 200, 275, 300}; // Expected common bin edges
+  SECTION("Combined bins"){
+    auto id = proIds::NullUid;
+    REQUIRE(entries[id].slices.size() == 4);
+    for(size_t i = 0; i< 3; i++){
+      auto slice1 = singleSlice{s_edges[i], s_edges[i+1], eb_float{0}};
+      REQUIRE(entries[id].slices[i] == slice1);
+    }
+  }
   SECTION("Unspecified ends"){
     auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
     REQUIRE(entries[id].slices.size() == 4);

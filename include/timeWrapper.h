@@ -102,7 +102,7 @@ class timeWrapper{
     static timePoint startOfYear(timePoint tp){
       std::time_t theTime = clock::to_time_t(tp);
       auto timeInfo = localtime(&theTime);
-      timeInfo->tm_mon = 1;
+      timeInfo->tm_mon = 0;
       timeInfo->tm_mday = 1;
       timeInfo->tm_hour = 0;
       timeInfo->tm_min = 0;

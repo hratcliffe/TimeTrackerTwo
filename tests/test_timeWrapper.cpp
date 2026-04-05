@@ -74,7 +74,13 @@ TEST_CASE("Start of Month", "[AdjustTime]"){
     auto day = tw::parseTimeZoned(str);
     REQUIRE(tw::formatTime(tw::startOfMonth(day)) == str2);
 }
-
+TEST_CASE("Start of Year", "[AdjustTime]"){
+    std::string str = "2023-03-07 13:00:00";
+    //TODO - do something better about DST since dates in April come out an hour too early...
+    std::string str2 = "2023-01-01 00:00:00";
+    auto day = tw::parseTimeZoned(str);
+    REQUIRE(tw::formatTime(tw::startOfYear(day)) == str2);
+}
 TEST_CASE("Duration Construction", "[AdjustTime]"){
     auto dur = tw::makeDuration(10, 0, 0);
     REQUIRE(tw::toSeconds(dur) == 600);

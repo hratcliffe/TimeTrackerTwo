@@ -100,11 +100,13 @@ TEST_CASE("Reading Known Data - Project Dates", "[Database]"){
     REQUIRE(proj.variableFTE);
     // Expect 2 entries
     auto data = theDB.readProjectTimes(id);
-    REQUIRE(data.slices.size() == 2);
-    { auto slice1 = singleSlice{125, 275, eb_float{1000}};
+    REQUIRE(data.slices.size() == 3);
+    { auto slice1 = singleSlice{125, 200, eb_float{1000}};
     REQUIRE(data.slices[0] == slice1); }
-    { auto slice1 = singleSlice{275, 565, eb_float{1500}};
+    { auto slice1 = singleSlice{200, 275, eb_float{1200}};
     REQUIRE(data.slices[1] == slice1); }
+    { auto slice1 = singleSlice{275, 565, eb_float{1500}};
+    REQUIRE(data.slices[2] == slice1); }
   }
   SECTION("Project with only unspecified envelope"){
     auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
@@ -155,7 +157,7 @@ TEST_CASE("Reading Known Data - All Project Dates", "[Database]"){
   }
   { auto id = proIds::Uuid("{2c531a42-d999-4c0f-b6fd-f9417e69e715}");
     REQUIRE(entries[id].slices.size() == 1);
-    { auto slice1 = singleSlice{125, 275, eb_float{1000}};
+    { auto slice1 = singleSlice{125, 200, eb_float{1000}};
     REQUIRE(entries[id].slices[0] == slice1); }
   }
   { auto id = proIds::Uuid("{7228d8fe-0782-4205-9ed3-dca2693c0d1f}");
@@ -201,7 +203,7 @@ TEST_CASE("List fetch - project active", "[Database]"){
   auto id2 = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
 
   //Base case - no dates set, both active
-  auto projList = theDB.fetchProjectListActiveAt(10);
+  auto projList = theDB.fetchProjectListActiveAt(10, timecodeNull);
 
   REQUIRE(projList.size() == 2);
   {

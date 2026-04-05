@@ -595,7 +595,7 @@ class databaseStore{
      */
     projectSliceData readProjectTimes(proIds::Uuid const & id){
         const std::string id_str = id.to_string();
-        std::string cmd = "SELECT FTE, start_date, end_date FROM project_dates WHERE project_id = ? ORDER by start_date, end_date;";
+        std::string cmd = "SELECT FTE, start_date, end_date, name FROM project_dates INNER JOIN projects on projects.id=project_dates.project_id WHERE project_id = ? ORDER by start_date, end_date;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
@@ -616,6 +616,7 @@ class databaseStore{
               slice.end = timecodeNull;
             }
             ret.slices.push_back(slice);
+            ret.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 3));
         }
         if(err != SQLITE_DONE){
             sqlite3_finalize(prep_cmd);
@@ -626,7 +627,7 @@ class databaseStore{
         return ret;
     }
     std::map<proIds::Uuid, projectSliceData> readAllProjectTimesBetween(timecode start, timecode end){
-        std::string cmd = "SELECT project_id, FTE, start_date, end_date FROM project_dates WHERE (start_date < ? OR start_date is NULL) AND (end_date > ? OR end_date is NULL) ORDER BY project_id, start_date, end_date;";
+        std::string cmd = "SELECT project_id, FTE, start_date, end_date, name FROM project_dates INNER JOIN projects ON projects.id = project_dates.project_id WHERE (start_date < ? OR start_date is NULL) AND (end_date > ? OR end_date is NULL) ORDER BY project_id, start_date, end_date;";
 
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
@@ -651,6 +652,7 @@ class databaseStore{
             auto id = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0)));
             //Creates if does not exist
             ret[id].slices.push_back(slice);
+            ret[id].name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 4));
         }
         if(err != SQLITE_DONE){
             sqlite3_finalize(prep_cmd);

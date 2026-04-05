@@ -68,6 +68,8 @@ class ganttProcessor{
                 //Stopping when we run out of original slices
                 if(i > entry.second.slices.size()-1) break;
             }
+            recut.uid = entry.second.uid;
+            recut.name = entry.second.name;
             out[entry.first] = recut;
         }
         return out;

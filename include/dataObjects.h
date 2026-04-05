@@ -133,6 +133,7 @@ inline std::ostream& operator<< (std::ostream& stream, const singleSlice & slice
 class projectSliceData{
   public:
   proIds::Uuid uid = proIds::NullUid;
+  std::string name;
   std::vector<singleSlice> slices;
 };
 class fullSubProjectData{

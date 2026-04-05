@@ -101,6 +101,7 @@ TEST_CASE("Reading Known Data - Project Dates", "[Database]"){
     // Expect 2 entries
     auto data = theDB.readProjectTimes(id);
     REQUIRE(data.slices.size() == 3);
+    REQUIRE(data.name == "Project Delta");
     { auto slice1 = singleSlice{125, 200, eb_float{1000}};
     REQUIRE(data.slices[0] == slice1); }
     { auto slice1 = singleSlice{200, 275, eb_float{1200}};
@@ -115,6 +116,7 @@ TEST_CASE("Reading Known Data - Project Dates", "[Database]"){
     REQUIRE_FALSE(proj.variableFTE);
     // Expect 3 entries - the envelope first, then the others
     auto data = theDB.readProjectTimes(id);
+    REQUIRE(data.name == "Project Alpha");
     REQUIRE(data.slices.size() == 1);
     { auto slice1 = singleSlice{timecodeNull, timecodeNull, eb_float{5000}};
     REQUIRE(data.slices[0] == slice1); }
@@ -125,6 +127,7 @@ TEST_CASE("Reading Known Data - Project Dates", "[Database]"){
     REQUIRE(proj.variableFTE);
     // Expect 2 entries - ordered by start so null first
     auto data = theDB.readProjectTimes(id);
+    REQUIRE(data.name == "Project Gamma");
     REQUIRE(data.slices.size() == 2);
     { auto slice1 = singleSlice{timecodeNull, 2022, eb_float{100}};
     REQUIRE(data.slices[0] == slice1); }
@@ -138,6 +141,7 @@ TEST_CASE("Reading Known Data - Project Dates", "[Database]"){
     REQUIRE(proj.variableFTE);
     // Expect 2 entries - ordered by start
     auto data = theDB.readProjectTimes(id);
+    REQUIRE(data.name == "Project Beta");
     REQUIRE(data.slices.size() == 2);
     { auto slice1 = singleSlice{20, 50, eb_float{2500}};
     REQUIRE(data.slices[0] == slice1); }
@@ -152,21 +156,25 @@ TEST_CASE("Reading Known Data - All Project Dates", "[Database]"){
   //Checking first
   { auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
     REQUIRE(entries[id].slices.size() == 1);
+    REQUIRE(entries[id].name == "Project Alpha");
     { auto slice1 = singleSlice{timecodeNull, timecodeNull, eb_float{5000}};
     REQUIRE(entries[id].slices[0] == slice1); }
   }
   { auto id = proIds::Uuid("{2c531a42-d999-4c0f-b6fd-f9417e69e715}");
     REQUIRE(entries[id].slices.size() == 1);
+    REQUIRE(entries[id].name == "Project Delta");
     { auto slice1 = singleSlice{125, 200, eb_float{1000}};
     REQUIRE(entries[id].slices[0] == slice1); }
   }
   { auto id = proIds::Uuid("{7228d8fe-0782-4205-9ed3-dca2693c0d1f}");
     REQUIRE(entries[id].slices.size() == 1);
+    REQUIRE(entries[id].name == "Project Gamma");
     { auto slice1 = singleSlice{timecodeNull, 2022, eb_float{100}};
     REQUIRE(entries[id].slices[0] == slice1); }
   }
   {auto id = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
     REQUIRE(entries[id].slices.size() == 1);
+    REQUIRE(entries[id].name == "Project Beta");
     { auto slice1 = singleSlice{50, timecodeNull, eb_float{2200}};
     REQUIRE(entries[id].slices[0] == slice1); }
   }

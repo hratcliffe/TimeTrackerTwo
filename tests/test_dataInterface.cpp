@@ -60,7 +60,32 @@ TEST_CASE("Int -Reading Known Data - Project", "[Database]"){
   REQUIRE(pd.name == "Project Alpha");
   REQUIRE(pd.FTE == 0.5);
   REQUIRE(pd.uid == id);
-  //TODO - start and end
+}
+TEST_CASE("Int-Reading Known Data - Project with dates", "[Database]"){
+  databaseIO theDB{"./InputData/KnownDatabaseDates.db", true};
+
+  SECTION("Start"){
+    auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+    auto pd = theDB.readProject(id);
+
+    REQUIRE(pd.name == "Project Alpha");
+    REQUIRE(pd.FTE == 0.5);
+    REQUIRE(pd.uid == id);
+    REQUIRE(pd.useStart);
+    REQUIRE(pd.start == 100);
+    REQUIRE_FALSE(pd.useEnd);
+  }
+  SECTION("End"){
+    auto id = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+    auto pd = theDB.readProject(id);
+
+    REQUIRE(pd.name == "Project Beta");
+    REQUIRE(pd.FTE == 0.25);
+    REQUIRE(pd.uid == id);
+    REQUIRE(pd.useEnd);
+    REQUIRE(pd.end == 200);
+    REQUIRE_FALSE(pd.useStart);
+  }
 }
 TEST_CASE("Int -Reading Known Data - Sub", "[Database]"){
   databaseIO theDB{"./InputData/KnownDatabase.db", true};
@@ -164,7 +189,7 @@ TEST_CASE("Int- Reading Known Data - All Project Dates", "[Database]"){
 //NOTE: projects list order is NOT guaranteed per contract
 
 TEST_CASE("Int -List fetch - projects", "[Database]"){
-  databaseIO theDB{"./InputData/KnownDatabase.db", true};
+  databaseIO theDB{"./InputData/KnownDatabaseDates.db", true};
   auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
   auto id2 = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
 
@@ -176,14 +201,18 @@ TEST_CASE("Int -List fetch - projects", "[Database]"){
   REQUIRE(pd.name == "Project Alpha");
   REQUIRE(pd.FTE == 0.5);
   REQUIRE(pd.uid == id);
-  //TODO - start and end
+  REQUIRE(pd.useStart);
+  REQUIRE(pd.start == 100);
+  REQUIRE_FALSE(pd.useEnd);
   }
   {
   auto pd = projList[1];
   REQUIRE(pd.name == "Project Beta");
   REQUIRE(pd.FTE == 0.25);
   REQUIRE(pd.uid == id2);
-  //TODO - start and end
+  REQUIRE(pd.useEnd);
+  REQUIRE(pd.end == 200);
+  REQUIRE_FALSE(pd.useStart);
   }
 }
 
@@ -665,8 +694,6 @@ TEST_CASE("Int -Reading Known Data - Digest Periods", "[Database]"){
   REQUIRE(dp[1].duration == 100);
   REQUIRE(dp[0].start == 100);
   REQUIRE(dp[1].start == 200);
-
-  //TODO start and end
 }
 TEST_CASE("Int -Reading Known Data - Digest By Period", "[Database]"){
   databaseIO theDB{"./InputData/KnownDatabase.db", true};

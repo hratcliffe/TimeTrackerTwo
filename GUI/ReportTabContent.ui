@@ -15,7 +15,7 @@
     <rect>
      <x>9</x>
      <y>9</y>
-     <width>421</width>
+     <width>427</width>
      <height>462</height>
     </rect>
    </property>
@@ -42,7 +42,7 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>417</width>
+         <width>423</width>
          <height>398</height>
         </rect>
        </property>
@@ -67,12 +67,36 @@
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout_3">
        <item>
-        <widget class="QPushButton" name="v_button">
+        <widget class="QPushButton" name="button0">
          <property name="enabled">
           <bool>false</bool>
          </property>
          <property name="text">
-          <string>Button</string>
+          <string>This Year</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="button1">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="text">
+          <string>30 Days</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="button2">
+         <property name="text">
+          <string>100 Days</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="button3">
+         <property name="text">
+          <string>365 days</string>
          </property>
         </widget>
        </item>

@@ -108,12 +108,15 @@ Q_OBJECT
     // TODO - does not clear when report is generated...
     reportTab = new ReportTabUI();
     ui->report_target_layout->addWidget(reportTab);
+    connect(reportTab->ui.button1, &QPushButton::clicked, [this](){this->reportNeeded(30);});
+    connect(reportTab->ui.button2, &QPushButton::clicked, [this](){this->reportNeeded(100);});
+    connect(reportTab->ui.button3, &QPushButton::clicked, [this](){this->reportNeeded(365);});
 
     //Connecting Tab bar to refresh actions
     auto tabRefresh =  [this](int index){
       if(index == 1) emit timeSummaryRequested(timeSummaryUnit::minute);
       else if(index == 3) emit reviewRequested();
-      else if(index == 4) this->reportBarSelected();
+      else if(index == 4) this->reportNeeded();
     };
     connect(ui->tabWidget, &QTabWidget::currentChanged, tabRefresh);
     //TODO - minutes for dev, -> hours for real
@@ -478,9 +481,10 @@ Q_OBJECT
       emit projectDetailsRequiredAll(makeCallback(&mainWindow::fillReportsImpl));
 
     }
-    void reportBarSelected(){
+    void reportNeeded(int days = 100){
       //Need details
-      emit projectDetailsRequiredTimes(makeCallback(&mainWindow::fillReportsBarImpl));
+      //Default to 100 days here
+      emit projectDetailsRequiredTimes(days, makeCallback(&mainWindow::fillReportsBarImpl));
     }
 
   signals:
@@ -496,7 +500,7 @@ Q_OBJECT
     void mergeRequested(const proIds::Uuid & selection, const proIds::Uuid & sub_selection, const proIds::Uuid & target, const proIds::Uuid & sub_target);
     void projectDetailsRequiredAll(projectDetailsArgCallbackType);
     void projectDetailsRequiredSpecial(projectDetailsSpecialCallbackType, proIds::Uuid);
-    void projectDetailsRequiredTimes(projectDetailsWTimingsCallbackType);
+    void projectDetailsRequiredTimes(int days, projectDetailsWTimingsCallbackType);
     void projectDetailsRequired(const proIds::Uuid & proj);
 
     void fetchTimeTravelInfo();

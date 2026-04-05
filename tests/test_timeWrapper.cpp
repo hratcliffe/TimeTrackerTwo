@@ -54,7 +54,10 @@ TEST_CASE( "Clock format round trip", "[BasicTime]" ) {
     std::string str = "2020-05-03 11:45:13";
     REQUIRE(tw::formatTimeAsClock(tw::parseTimeZoned(str)) == "11:45");
 }
-
+TEST_CASE( "String format short date", "[BasicTime]" ) {
+    std::string str = "2020-05-03 11:45:13";
+    REQUIRE(tw::formatTimeAsShortDate(tw::parseTimeZoned(str)) == "03-05-20");
+}
 
 // Time adjustments
 

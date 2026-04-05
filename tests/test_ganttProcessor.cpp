@@ -89,6 +89,3 @@ TEST_CASE("Reprocessing case", "[Only]"){
   }
 
 }
-TEST_CASE("No-op case", "[DataProcessing]"){
-
-}

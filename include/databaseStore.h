@@ -544,13 +544,19 @@ class databaseStore{
      * @param date The date to check
      * @return std::vector<fullProjectData> 
      */
-    std::vector<fullProjectData> fetchProjectListActiveAt(timecode date){
+    std::vector<fullProjectData> fetchProjectListActiveAt(timecode date, timecode window){
         // date should NOT be null- it will be used
 
         std::string cmd = "SELECT projects.id, name, FTE, start_date, end_date FROM projects INNER JOIN project_dates ON projects.id = project_dates.project_id WHERE (start_date <= ? OR start_date IS NULL) AND (end_date >= ? OR end_date IS NULL) ORDER by name;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
-        sqlite3_bind_int64(prep_cmd, 1, date);
+        //Start is either before given date or before end of the window
+        if(window != timecodeNull){
+          sqlite3_bind_int64(prep_cmd, 1, date+window);
+        }else{
+           sqlite3_bind_int64(prep_cmd, 1, date);
+        }
+        //End is after given date
         sqlite3_bind_int64(prep_cmd, 2, date);
         
         std::vector<fullProjectData> ret;

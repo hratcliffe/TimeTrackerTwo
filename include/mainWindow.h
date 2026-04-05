@@ -313,7 +313,7 @@ Q_OBJECT
 
   void fillReportsImpl(std::map<proIds::Uuid, projectDetails> details){reportTab->fillReports(details);}
 
-  void fillReportsBarImpl(std::map<proIds::Uuid, projectSliceData> details, std::map<proIds::Uuid, projectDetails> info){reportTab->fillReportsStackedBar(details, info);}
+  void fillReportsBarImpl(std::map<proIds::Uuid, projectSliceData> details){reportTab->fillReportsStackedBar(details);}
   using projectDetailsWTimingsCallbackType = decltype(makeCallback(&mainWindow::fillReportsBarImpl));
 
   void showDeleteDialogImpl(projectDetails details, bool running, bool marked){

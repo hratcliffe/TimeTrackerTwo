@@ -98,7 +98,7 @@ public:
    * @param times 
    * @param info 
    */
-  void fillReportsStackedBar(std::map<proIds::Uuid, projectSliceData> times, std::map<proIds::Uuid, projectDetails> info){
+  void fillReportsStackedBar(std::map<proIds::Uuid, projectSliceData> times){
  
     clearContent();
 
@@ -123,14 +123,8 @@ public:
     for(auto & item : times){
       proIds::Uuid projectId = item.first;
       const projectSliceData &sliceData = item.second;
-
-      // Find the project name from info map
-      std::string projectName = "Unknown";
-      if(info.find(projectId) != info.end()){
-        projectName = info.at(projectId).name;
-      }
-
-      QBarSet *barSet = new QBarSet(projectName.c_str());
+      std::cout<<item.second.name<<std::endl;
+      QBarSet *barSet = new QBarSet(item.second.name.c_str());
       
       // Add FTE values for each slice
       for(const auto & slice : sliceData.slices){

@@ -529,17 +529,15 @@ class databaseStore{
             proj.uid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0)));
             proj.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1));
             proj.FTE.set(sqlite3_column_int(prep_cmd, 2));
-            timecode tmp = sqlite3_column_int64(prep_cmd, 3);
-            if(tmp != 0){ // TODO fix 0 to true null
-              proj.start = tmp;
+            if(sqlite3_column_type(prep_cmd, 3) != SQLITE_NULL){
+              proj.start = sqlite3_column_int64(prep_cmd, 3);
               proj.useStart = true;
             }else{
               proj.start = timecodeNull;
               proj.useStart = false;
             }
-            tmp = sqlite3_column_int64(prep_cmd, 4);
-            if(tmp != 0){ // TODO fix 0 to true null
-              proj.end = tmp;
+            if(sqlite3_column_type(prep_cmd, 4) != SQLITE_NULL){
+              proj.end = sqlite3_column_int64(prep_cmd, 4);
               proj.useEnd = true;
             }else{
               proj.end = timecodeNull;

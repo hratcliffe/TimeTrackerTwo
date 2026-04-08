@@ -28,10 +28,13 @@ Q_OBJECT
     bool exitState = false;
 
 
-    void connectBaseRow(){
+    void connectBaseRow(QDate date){
         auto & startDate = addUi.baseStartSelect;
+        startDate->setDate(date);
         auto & endDate = addUi.baseEndSelect;
+        endDate->setDate(date.addMonths(1));
         auto & label = addUi.baseRowHint;
+        updateLabel(label, startDate, endDate);
         //Connect changes to start and end to update label
         connect(startDate, &QDateTimeEdit::dateTimeChanged, [this, label, startDate, endDate](){updateLabel(label, startDate, endDate);});
         connect(endDate, &QDateTimeEdit::dateTimeChanged, [this, label, startDate, endDate](){updateLabel(label, startDate, endDate);});
@@ -184,14 +187,14 @@ Q_OBJECT
     }
 
     public:
-    advancedAddDialog(QString name, QWidget * parent){
+    advancedAddDialog(QString name, QWidget * parent, QDate base){
         //TODO - start with start-of-month for current
       advDialog = new QDialog(parent);
       addUi.setupUi(advDialog);
       advDialog->setWindowTitle(name);
 
       //Connect up the existing row
-      connectBaseRow();
+      connectBaseRow(base);
       //Connecting:
       //Cancel button to exit
       connect(this->addUi.cancelButton, &QPushButton::clicked, [this](){exitState = false; advDialog->close();});

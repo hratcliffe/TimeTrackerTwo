@@ -422,7 +422,7 @@ Q_OBJECT
     }
     void showAdvancedAddDialog(QString name){
       //This is a complex dialog so done as a separate class
-      auto dialog = advancedAddDialog(name, this);
+      auto dialog = advancedAddDialog(name, this, toQDateTime(timeWrapper::startOfMonth(timeWrapper::now())).date());
       bool result = dialog.exec();
       if(result){
         

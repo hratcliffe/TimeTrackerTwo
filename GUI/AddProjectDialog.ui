@@ -151,6 +151,22 @@
     </layout>
    </widget>
   </widget>
+  <widget class="QPushButton" name="advancedButton">
+   <property name="geometry">
+    <rect>
+     <x>100</x>
+     <y>240</y>
+     <width>100</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="toolTip">
+    <string>Configure variable FTE etc</string>
+   </property>
+   <property name="text">
+    <string>Advanced</string>
+   </property>
+  </widget>
  </widget>
  <resources/>
  <connections>

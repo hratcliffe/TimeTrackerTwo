@@ -24,6 +24,9 @@
 #include "ReviewTabUI.h"
 #include "ReportTabUI.h"
 
+//Other dialogs
+#include "advancedAddDialog.h"
+
 // ----- Other headers
 #include "support.h"
 #include "idGenerators.h"
@@ -378,7 +381,7 @@ Q_OBJECT
 
     void showAddDialog(){
 
-      if(freeFTE == 0.0){ //TODO - this should be the minimum FTE increment from app settings
+      if(freeFTE == 0.0){
         QMessageBox box;
         box.setText("Maximum FTE already reached. Deactivate some projects or increase maximum");
         box.exec();
@@ -398,8 +401,13 @@ Q_OBJECT
 
       //Disable OK button and require NameField to be not blank for it to enable
       addUi.buttonBox->button(QDialogButtonBox::Ok)->setDisabled(true);
+      addUi.advancedButton->setDisabled(true);
       connect(addUi.nameField, &QLineEdit::textChanged, [this, &addUi](QString txt){this->enableOnRequiredFields(addUi.buttonBox->button(QDialogButtonBox::Ok), &addUi);});
+      //NOTE: currently OK and Advanced have the same requirement - change next line if they diverge
+      connect(addUi.nameField, &QLineEdit::textChanged, [this, &addUi](QString txt){this->enableOnRequiredFields(addUi.advancedButton, &addUi);});
+      connect(addUi.advancedButton, &QPushButton::clicked, [this, &addUi](){showAdvancedAddDialog(addUi.nameField->text());});
       
+      addDialog->setWindowTitle("Adding Project");
       bool result = addDialog->exec();
 
       //If OK was clicked, signal to add a project
@@ -411,6 +419,14 @@ Q_OBJECT
         emit projectAddRequested(projectData{addUi.nameField->text().toStdString(), FTE, start, end, addUi.startEnabled->isChecked(), addUi.endEnabled->isChecked()});
       }
 
+    }
+    void showAdvancedAddDialog(QString name){
+      //This is a complex dialog so done as a separate class
+      auto dialog = advancedAddDialog(name, this);
+      bool result = dialog.exec();
+      if(result){
+        
+      }
     }
 
     void showAddSubDialog(){

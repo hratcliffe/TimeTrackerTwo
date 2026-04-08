@@ -35,27 +35,41 @@ Q_OBJECT
         //Connect changes to start and end to update label
         connect(startDate, &QDateTimeEdit::dateTimeChanged, [this, label, startDate, endDate](){updateLabel(label, startDate, endDate);});
         connect(endDate, &QDateTimeEdit::dateTimeChanged, [this, label, startDate, endDate](){updateLabel(label, startDate, endDate);});
+
+        //Connect freeStart to disable input into first edit
+        connect(addUi.startCheckBox, &QCheckBox::checkStateChanged, [this](Qt::CheckState st){updateStartCheck();});
+        connect(addUi.endCheckBox, &QCheckBox::checkStateChanged, [this](Qt::CheckState st){updateEndCheck();});
     }
 
     void addBlock(bool enable=true){
         //Add a row to the dialog
         //startTarget
-        auto startDate= new QDateTimeEdit();
+        auto startDate = new QDateTimeEdit();
         startDate->setDisplayFormat("dd/MM/yy");
+        // Set start of this row to match prev plus 1 day
+        if(addUi.endTarget->count() > 0){
+          auto prevEnd = dynamic_cast<QDateTimeEdit *>(addUi.endTarget->itemAt(addUi.endTarget->count()-1)->widget());
+          startDate->setDate(prevEnd->date().addDays(1));
+        }else{
+          startDate->setDate(addUi.baseEndSelect->date().addDays(1));
+        }
         addUi.startTarget->addWidget(startDate);
 
         //endTarget
         auto endDate= new QDateTimeEdit();
         endDate->setDisplayFormat("dd/MM/yy");
+        //Set value to start plus 1 month
+        endDate->setDate(startDate->date().addMonths(1));
         addUi.endTarget->addWidget(endDate);
 
         //FTETarget
         auto FTEbox = new QSpinBox();
         addUi.FTETarget->addWidget(FTEbox);
-        //TODO - set maximum??
+        //TODO - set maximum using passed available info
 
         //Label Target
         auto label = new QLabel();
+        updateLabel(label, startDate, endDate);
         addUi.labelTarget->addWidget(label);
 
         //Button Target
@@ -69,7 +83,21 @@ Q_OBJECT
         //Connect changes to start and end to update label
         connect(startDate, &QDateTimeEdit::dateTimeChanged, [this, label, startDate, endDate](){updateLabel(label, startDate, endDate);});
         connect(endDate, &QDateTimeEdit::dateTimeChanged, [this, label, startDate, endDate](){updateLabel(label, startDate, endDate);});
+        // We _could_ make changes to start push the end around, but it's not clear what is desired, so leave for now
 
+        //IF endCheck is set, need to enable the last box and disable this one
+        if(addUi.endCheckBox->isChecked()){
+            //Re-enable the previous
+            //Just added this, so count is >0
+            if(addUi.endTarget->count() == 1){
+                addUi.baseEndSelect->setEnabled(true);
+            }else{
+            //Pick the penult
+                addUi.endTarget->itemAt(addUi.endTarget->count()-2)->widget()->setEnabled(true);
+            }
+            //Disable this
+            endDate->setDisabled(true);
+        }
     }
     void updateLabel(QLabel * label, QDateTimeEdit * start, QDateTimeEdit * end){
         auto days = timeWrapper::getDays(fromQDateTime(start->dateTime()), fromQDateTime(end->dateTime()));
@@ -78,6 +106,14 @@ Q_OBJECT
         label->setText(ss.str().c_str());
     }
     void deleteRow(QDateTimeEdit * start, QDateTimeEdit * end, QSpinBox * fte, QLabel * label, QPushButton* button){
+        //If endCheck is set, and this was the last box, need to disable the new last before removing
+        if(addUi.endCheckBox->isChecked()){
+            auto ct = addUi.endTarget->count();
+            if(addUi.endTarget->itemAt(ct-1)->widget() == end){
+                addUi.endTarget->itemAt(ct-2)->widget()->setDisabled(true);
+            }
+        }
+
         addUi.startTarget->removeWidget(start);
         delete start;
         addUi.endTarget->removeWidget(end);
@@ -88,8 +124,31 @@ Q_OBJECT
         delete label;
         addUi.buttonTarget->removeWidget(button);
         delete button;
+   }
+    void updateStartCheck(){
+        if(addUi.startCheckBox->isChecked()){
+            addUi.baseStartSelect->setDisabled(true);
+        }else{
+            addUi.baseStartSelect->setDisabled(false);
+        }
     }
-
+    void updateEndCheck(){
+        //Need to decide WHICH box to associate
+        if(addUi.endTarget->count() == 0){
+            updateEndCheck(addUi.baseEndSelect);
+        }else{
+            //Pick the last one...
+            updateEndCheck((addUi.endTarget->itemAt(addUi.endTarget->count()-1)->widget()));
+        }
+    }
+    void updateEndCheck(QWidget * tg){
+        //Asssume it is the right sort of widget
+        if(addUi.endCheckBox->isChecked()){
+            tg->setDisabled(true);
+        }else{
+            tg->setDisabled(false);
+        }
+    }
     void fetchInfo(){
         //Populate result with each row of start, end, fte
 
@@ -101,6 +160,24 @@ Q_OBJECT
             std::cout<<"Got open enc condition"<<std::endl;
         }
         //Fetch all the rows start, end and FTE into slices
+        result.slices.clear(); // Should not happen...
+        //First, the base row
+        singleSlice tmp;
+        tmp.start = timeWrapper::toSeconds(fromQDateTime(addUi.baseStartSelect->dateTime()));
+        tmp.end = timeWrapper::toSeconds(fromQDateTime(addUi.baseEndSelect->dateTime()));
+        tmp.FTE.set(addUi.baseFTEField->value() * eb_float::fromPercent);
+        result.slices.push_back(tmp);
+        //Now the rest
+        auto ct = addUi.endTarget->count();
+        for(size_t i = 0; i < ct ; i++){
+            auto st = dynamic_cast<QDateTimeEdit *>(addUi.startTarget->itemAt(i)->widget());
+            tmp.start = timeWrapper::toSeconds(fromQDate(st->date()));
+            auto end = dynamic_cast<QDateTimeEdit *>(addUi.endTarget->itemAt(i)->widget());
+            tmp.end = timeWrapper::toSeconds(fromQDate(end->date()));
+            auto fte = dynamic_cast<QSpinBox *>(addUi.FTETarget->itemAt(i)->widget());
+            tmp.FTE.set(fte->value() * eb_float::fromPercent);
+            result.slices.push_back(tmp);
+        }
     }
     void validateBasic(){
         //Check that e.g. end is after start, and each row follows the previous?
@@ -108,6 +185,7 @@ Q_OBJECT
 
     public:
     advancedAddDialog(QString name, QWidget * parent){
+        //TODO - start with start-of-month for current
       advDialog = new QDialog(parent);
       addUi.setupUi(advDialog);
       advDialog->setWindowTitle(name);
@@ -129,7 +207,7 @@ Q_OBJECT
 
     }
     ~advancedAddDialog(){delete advDialog;}
-    bool exec(){return advDialog->exec();}
+    bool exec(){advDialog->exec(); return exitState;}
     //Result is guaranteed populated only if exec returned true, in which case fetchInfo has already been called
     auto data(){
         return result;

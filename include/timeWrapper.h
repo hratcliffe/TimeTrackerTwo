@@ -131,6 +131,12 @@ class timeWrapper{
       return total;
     }
 
+    static long getDays(timePoint tp1, timePoint tp2){
+      //APPROX days - this will give the floored number of 24 hour periods
+      auto diff = tp2 - tp1;
+      long days = std::chrono::duration_cast<std::chrono::hours>(diff).count() / 24;
+      return days;
+    }
   };
 
 

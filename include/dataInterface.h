@@ -25,6 +25,7 @@ class dataIO{
     virtual std::string readAppConfig(std::string key) = 0;/**< \brief Read a config value */
 
     virtual void writeProject(fullProjectData const& dat) = 0;
+    virtual void writeVariableFTEProject(fullProjectData const & dat, projectSliceData const & slices) = 0;
     virtual fullProjectData readProject(proIds::Uuid const & id) = 0;
     virtual projectSliceData readProjectTimes(proIds::Uuid const & id) = 0;
     virtual std::map<proIds::Uuid, projectSliceData> readAllProjectTimesBetween(timecode start, timecode end) = 0;
@@ -123,6 +124,15 @@ class databaseIO : public dataIO{
       // Implementation for writing project data to database
         dbStore.writeProject(dat);
     }
+    void writeVariableFTEProject(fullProjectData const & dat, projectSliceData const & slices) override{
+      dbStore.writeProject(dat);
+      auto first = true;
+      for(auto & slice: slices.slices){
+        dbStore.writeProjectSlice(dat.uid, slice, first);
+        first = false;
+      }
+    }
+
     fullProjectData readProject(proIds::Uuid const & id ) override {
       // Implementation for reading project data from database
       return dbStore.readProject(id);

@@ -38,6 +38,7 @@ HEADERS += include/Controller.h \
            include/SummaryTabUI.h \
            include/ReportTabUI.h \
            include/ReviewTabUI.h \
+           include/ChartHelpers.h \
            include/advancedAddDialog.h \
            include/dataObjects.h \
            include/idGenerators.h \

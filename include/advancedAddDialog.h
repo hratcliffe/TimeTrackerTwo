@@ -191,7 +191,7 @@ Q_OBJECT
         //TODO - start with start-of-month for current
       advDialog = new QDialog(parent);
       addUi.setupUi(advDialog);
-      advDialog->setWindowTitle(name);
+      advDialog->setWindowTitle("Configuring "+name);
 
       //Connect up the existing row
       connectBaseRow(base);

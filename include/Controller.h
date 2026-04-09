@@ -156,7 +156,8 @@ Q_OBJECT
     connect(themainWindow, &mainWindow::projectDetailsRequiredTimes, [this](int days, auto functor){functor(themainWindow, currentData->projectTimesRequired(timeWrapper::toSeconds(timeWrapper::startOfMonth(timeWrapper::fromSeconds(this->clock->now()))), timeWrapper::toSeconds(timeWrapper::makeDuration(0,0,days))));});
     //365 days is not a year, but it is good enough for now
     connect(themainWindow, &mainWindow::projectDetailsRequiredYearly, [this](auto functor){functor(themainWindow, currentData->projectTimesRequired(timeWrapper::toSeconds(timeWrapper::startOfYear(timeWrapper::fromSeconds(this->clock->now()))), timeWrapper::toSeconds(timeWrapper::makeDuration(0,0,365))));});
-
+    //Background display of details
+    connect(themainWindow, &mainWindow::projectDetailsRequiredYearlyForBackground, [this](){auto details = currentData->projectTimesRequired(timeWrapper::toSeconds(timeWrapper::startOfMonth(timeWrapper::fromSeconds(this->clock->now()))), timeWrapper::toSeconds(timeWrapper::makeDuration(0,0,365))); themainWindow->showBarChartBackground(details);});
 
     //Pausing a project:
     connect(themainWindow, &mainWindow::pauseRequested, [this](){currentData->pauseProject(this->clock->now());});

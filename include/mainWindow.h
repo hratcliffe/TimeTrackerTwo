@@ -17,6 +17,7 @@
 #include "ui_TimeTravelDialog.h"
 // ---- Helper functions
 #include "QLocalShortcuts.h"
+#include "ChartHelpers.h"
 // ---- Tab contents classes
 #include "TrackerTabUI.h"
 #include "ProjectTabUI.h"
@@ -421,12 +422,24 @@ Q_OBJECT
 
     }
     void showAdvancedAddDialog(QString name){
+
+      emit projectDetailsRequiredYearlyForBackground();
       //This is a complex dialog so done as a separate class
       auto dialog = advancedAddDialog(name, this, toQDateTime(timeWrapper::startOfMonth(timeWrapper::now())).date());
       bool result = dialog.exec();
       if(result){
         
       }
+    }
+    void showBarChartBackground(std::map<proIds::Uuid, projectSliceData> details){
+      auto dialog = new QDialog();
+      auto chart = BarChartHelper::generate(details);
+      QVBoxLayout *layout = new QVBoxLayout;
+      layout->addWidget(chart);
+      dialog->setLayout(layout);
+      auto wid = std::max((int)details.size()*100, 600);
+      dialog->setMinimumSize(wid, 400);
+      dialog->show();
     }
 
     void showAddSubDialog(){
@@ -518,6 +531,7 @@ Q_OBJECT
     void projectDetailsRequiredSpecial(projectDetailsSpecialCallbackType, proIds::Uuid);
     void projectDetailsRequiredTimes(int days, projectDetailsWTimingsCallbackType);
     void projectDetailsRequiredYearly(projectDetailsWTimingsCallbackType);
+    void projectDetailsRequiredYearlyForBackground();
     void projectDetailsRequired(const proIds::Uuid & proj);
 
     void fetchTimeTravelInfo();

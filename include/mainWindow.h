@@ -433,7 +433,7 @@ Q_OBJECT
     }
     void showBarChartBackground(std::map<proIds::Uuid, projectSliceData> details){
       auto dialog = new QDialog();
-      auto chart = BarChartHelper::generate(details);
+      auto chart = BarChartHelper::generate(details, true);
       QVBoxLayout *layout = new QVBoxLayout;
       layout->addWidget(chart);
       dialog->setLayout(layout);

@@ -335,6 +335,58 @@ class databaseStore{
         }
         sqlite3_finalize(prep_cmd);
     }
+    /**
+     * @brief Write a time slice
+     *
+     * Writes information on FTE and start/emd dates for this value
+     * @pre The project must exist in the DB. If start and end are set, start must precede end
+     * @post The entry is written. If start and end are both absent OR clobber is true, this will be the sole entry for the project. Otherwise no consistency checks are done
+     * @param dat The slice data
+     * @param clobber Whether to force-delete any existing slices
+     */
+    void writeProjectSlice(const proIds::Uuid & uid, const singleSlice & slice, bool clobber=false){
+        //Writes date information only - project must exist
+        const std::string & id = uid.to_string();
+        const int FTE = slice.FTE.value;
+        std::string cmd;
+        sqlite3_stmt * prep_cmd;
+        int err = 0;
+        if(clobber){
+            //Overwrite any/all slices with this data
+            cmd = "DELETE from project_dates WHERE project_id = ?;";
+            err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+            sqlite3_bind_text(prep_cmd, 1, id.c_str(), id.length(), SQLITE_STATIC);
+
+            err = sqlite3_step(prep_cmd);
+            if(err == SQLITE_DONE) err = SQLITE_OK;
+            if(err != SQLITE_OK){
+                std::cerr<< sqlite3_errmsg(DB) << std::endl;
+                sqlite3_finalize(prep_cmd);
+                throw std::runtime_error("Failed to write project");
+            }
+            sqlite3_finalize(prep_cmd);
+        }
+        cmd = "insert into project_dates(project_id, FTE, start_date, end_date) values(?, ?, ?, ?);";
+        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, id.c_str(), id.length(), SQLITE_STATIC);
+
+        sqlite3_bind_int(prep_cmd, 2, FTE);
+        //Unbound parameters are NULL which is what we want here
+        if(slice.start != timecodeNull){
+            sqlite3_bind_int64(prep_cmd, 3, slice.start);
+        }
+        if(slice.end != timecodeNull){
+            sqlite3_bind_int64(prep_cmd, 4, slice.end);
+        }
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            std::cerr<< sqlite3_errmsg(DB) << std::endl;
+            sqlite3_finalize(prep_cmd);
+            throw std::runtime_error("Failed to write slice");
+        }
+        sqlite3_finalize(prep_cmd);
+    }
     void writeSubproject(const fullSubProjectData & dat){
 
         //Unpacking

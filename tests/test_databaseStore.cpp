@@ -420,7 +420,85 @@ TEST_CASE("Writing project with dates", "[Database]"){
   REQUIRE( (!pd.useEnd || pd.end == pd_in.end));
 
 }
+TEST_CASE("Writing project slice", "[Database]"){
+  databaseStore theDB{getScratchFileName(), false};
+  uniqueIdGenerator theGen;
+  auto pid = theGen.getNextId();
 
+  fullProjectData pd;
+  pd.name = "Written Project";
+  pd.uid = pid;
+  theDB.writeProject(pd);
+
+  SECTION("Slice, fully qualified"){
+    singleSlice slice;
+    slice.start = 300;
+    slice.end = 400;
+    slice.FTE.set(0.2);
+    theDB.writeProjectSlice(pid, slice, true);
+    auto pd_in = theDB.readProject(pid);
+
+    REQUIRE(pd.name == pd_in.name);
+    REQUIRE(pd_in.FTE == slice.FTE);
+    REQUIRE(pd.uid == pd_in.uid);
+    REQUIRE_FALSE(pd.variableFTE);
+    REQUIRE(pd_in.useStart);
+    REQUIRE(pd_in.start == slice.start);
+    REQUIRE(pd_in.useEnd);
+    REQUIRE(pd_in.end == slice.end);
+  }
+  SECTION("Slice, free start"){
+    singleSlice slice;
+    slice.start = timecodeNull;
+    slice.end = 400;
+    slice.FTE.set(0.2);
+    theDB.writeProjectSlice(pid, slice, true);
+    auto pd_in = theDB.readProject(pid);
+
+    REQUIRE(pd.name == pd_in.name);
+    REQUIRE(pd_in.FTE == slice.FTE);
+    REQUIRE(pd.uid == pd_in.uid);
+    REQUIRE_FALSE(pd.variableFTE);
+    REQUIRE_FALSE(pd_in.useStart);
+    REQUIRE(pd_in.useEnd);
+    REQUIRE(pd_in.end == 400);
+  }
+  SECTION("Slice, free end"){
+    singleSlice slice;
+    slice.start = 300;
+    slice.end = timecodeNull;
+    slice.FTE.set(0.4);
+    theDB.writeProjectSlice(pid, slice, true);
+    auto pd_in = theDB.readProject(pid);
+
+    REQUIRE(pd.name == pd_in.name);
+    REQUIRE(pd_in.FTE == slice.FTE);
+    REQUIRE(pd.uid == pd_in.uid);
+    REQUIRE_FALSE(pd.variableFTE);
+    REQUIRE(pd_in.useStart);
+    REQUIRE(pd_in.start == slice.start);
+    REQUIRE_FALSE(pd_in.useEnd);
+  }
+  SECTION("Multiple slices"){
+    //Write one with clobber, then a second
+    singleSlice slice1, slice2;
+    slice1.start = 300;
+    slice1.end = 400;
+    slice1.FTE.set(0.2);
+    slice2.start = 400;
+    slice2.end = 800;
+    slice2.FTE.set(0.27);
+    theDB.writeProjectSlice(pid, slice1, true);
+    theDB.writeProjectSlice(pid, slice2, false);
+    auto pd_in = theDB.readProject(pid);
+    auto slices_in = theDB.readProjectTimes(pid);
+    REQUIRE(slices_in.slices.size() == 2);
+    REQUIRE(pd_in.variableFTE);
+    REQUIRE(std::find_if(slices_in.slices.begin(), slices_in.slices.end(), [slice1](const singleSlice & sl){return sl == slice1;}) != slices_in.slices.end());
+    REQUIRE(std::find_if(slices_in.slices.begin(), slices_in.slices.end(), [slice2](const singleSlice & sl){return sl == slice2;}) != slices_in.slices.end());
+
+  }
+}
 TEST_CASE("Writing Sub Project", "[Database]"){
   databaseStore theDB{getScratchFileName(), false};
 

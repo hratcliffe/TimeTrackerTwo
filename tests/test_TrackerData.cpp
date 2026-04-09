@@ -184,6 +184,61 @@ TEST_CASE("Create and read - subproj", "[QTAware, Slots]"){
 
 }
 
+TEST_CASE("Create and read - variable FTE", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  auto config = basicConfig();
+  TrackerData td{config};
+
+  projectData pd;
+  pd.name = "XYZ Created by Tracker Mk3";
+  pd.FTE.set(0.54);
+  pd.useStart = false;
+  pd.useEnd = false;
+
+  singleSlice slice1, slice2;
+  slice1.start = 300;
+  slice1.end = 400;
+  slice1.FTE.set(0.2);
+  slice2.start = 400;
+  slice2.end = 800;
+  slice2.FTE.set(0.27);
+  projectSliceData slices;
+  slices.slices.push_back(slice1);
+  slices.slices.push_back(slice2);
+
+  SECTION("Currently active"){
+    td.createProjectAdvanced(pd, slices, 500); //Slice2 should be current
+    auto descr = td.projectDetailsRequired();
+    auto pid = InferIDFromName(descr, pd.name);
+    auto pd_in = descr[pid];
+
+    auto slices_in = td.projectTimesRequired(0, 900)[pid];
+    REQUIRE(slices_in.slices.size() == 2);
+    REQUIRE(pd_in.FTE == slice2.FTE);
+    auto f1 = [slice1](const singleSlice & sl){return sl == slice1;};
+    REQUIRE(std::find_if(slices_in.slices.begin(), slices_in.slices.end(), f1) != slices_in.slices.end());
+    auto f2 = [slice2](const singleSlice & sl){return sl == slice2;};
+    REQUIRE(std::find_if(slices_in.slices.begin(), slices_in.slices.end(), f2) != slices_in.slices.end());
+  }
+  SECTION("Project in future"){
+    td.createProjectAdvanced(pd, slices, 100);//Before any slice
+     auto descr = td.projectDetailsRequired();
+    auto pid = InferIDFromName(descr, pd.name);
+    auto slices_in = td.projectTimesRequired(0, 900)[pid];
+    REQUIRE(slices_in.slices.size() == 2);
+    auto f1 = [slice1](const singleSlice & sl){return sl == slice1;};
+    REQUIRE(std::find_if(slices_in.slices.begin(), slices_in.slices.end(), f1) != slices_in.slices.end());
+    auto f2 = [slice2](const singleSlice & sl){return sl == slice2;};
+    REQUIRE(std::find_if(slices_in.slices.begin(), slices_in.slices.end(), f2) != slices_in.slices.end());
+
+    //New Tracker - loads projects fresh from backend
+    TrackerData td2{config};
+    td2.loadProjects(100);
+    descr = td2.projectDetailsRequired();
+    REQUIRE(descr.count(pid) == 0);
+    //TODO - what is expected in the original PM?
+  }
+}
 TEST_CASE("Updating One-Off Id", "[QTAware, Slots]"){
   auto app = dummyApp();
   TrackerData td{basicConfig()};

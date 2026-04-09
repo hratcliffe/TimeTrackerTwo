@@ -106,6 +106,32 @@ Q_OBJECT
       emit projectListNeedsUpdateEvent();
       emit projectTotalUpdateEvent(thePM.allocatedFTE(), thePM.availableFTE());
     }
+    /**
+     * @brief Create a Project using advanced input
+     *
+     * This configures a variable FTE project
+     * @param dat Basic project data. Must contain name, other fields will be ignored
+     * @param slices Time slice data, must contain at least one slice and must be IN ORDER
+     */
+    void createProjectAdvanced(projectData dat, const projectSliceData & slices, timecode now){
+      //Set dat to match the start and end from slices, and to have the current FTE value
+      dat.start = slices.slices[0].start;
+      if(dat.start != timecodeNull) dat.useStart = true;
+      dat.end = slices.slices[slices.slices.size()-1].end;
+      if(dat.end != timecodeNull) dat.useEnd = true;
+      if(slices.slices.size() > 1) dat.variableFTE = true;
+      for(auto &slice : slices.slices){
+        if(slice.end >= now && slice.start <= now){
+            dat.FTE = slice.FTE;
+            break;
+        }
+      }
+      //Write to PM to get id
+      auto id = thePM.addProject(dat);
+      dataHandler->writeVariableFTEProject(fullProjectData(id, dat), slices); // Write to data handler
+      emit projectListNeedsUpdateEvent();
+      emit projectTotalUpdateEvent(thePM.allocatedFTE(), thePM.availableFTE());
+    }
     void createSubproject(const subprojectData & dat, const proIds::Uuid & parentId){
       //Create a new sub under and existing project
       auto idS = thePM.addSubproject(dat, parentId);

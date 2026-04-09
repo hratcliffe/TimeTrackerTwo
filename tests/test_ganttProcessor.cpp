@@ -53,8 +53,9 @@ TEST_CASE("Reprocessing case", "[Only]"){
   SECTION("Combined bins"){
     auto id = proIds::NullUid;
     REQUIRE(entries[id].slices.size() == 4);
+    std::vector<eb_float> cumulates{eb_float{5000+2200+100}, eb_float{5000+1000+2200+100}, eb_float{5000+1200+2200+100}, eb_float{5000+1500+2200+100} };
     for(size_t i = 0; i< 3; i++){
-      auto slice1 = singleSlice{s_edges[i], s_edges[i+1], eb_float{0}};
+      auto slice1 = singleSlice{s_edges[i], s_edges[i+1], cumulates[i]};
       REQUIRE(entries[id].slices[i] == slice1);
     }
   }

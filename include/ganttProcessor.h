@@ -54,6 +54,14 @@ class ganttProcessor{
         // Re-cut each project onto the new edges
         // Assume we have succeeded, and can thus rely on all previous edges appearing
         std::map<proIds::Uuid, projectSliceData> out;
+        //Adding a dummy entry with just the bin defs, all values start at 0.0
+        // Then we cumulate the total into these
+        projectSliceData dummy;
+        for(size_t e = 0; e< edges.size()-1; e++){
+            dummy.slices.push_back({edges[e], edges[e+1], eb_float{}});
+        }
+        dummy.name = "Bin Definitions";
+        dummy.uid = proIds::NullUid;
         for(auto & entry: input){
             projectSliceData recut;
             size_t i = 0, e = 0;
@@ -63,6 +71,8 @@ class ganttProcessor{
             for(; e<edges.size()-1; e++){
                 //Adding the reduced slice
                 recut.slices.push_back({edges[e], edges[e+1], entry.second.slices[i].FTE});
+                //Adding to the cumulate
+                dummy.slices[e].FTE += entry.second.slices[i].FTE;
                 //Moving to the next original slice when the end of this one is the next edge
                 if(entry.second.slices[i].end == edges[e+1]) i++;
                 //Stopping when we run out of original slices
@@ -72,13 +82,6 @@ class ganttProcessor{
             recut.name = entry.second.name;
             out[entry.first] = recut;
         }
-        //Adding a dummy entry with just the bin defs, all values 0
-        projectSliceData dummy;
-        for(size_t e = 0; e< edges.size()-1; e++){
-            dummy.slices.push_back({edges[e], edges[e+1], eb_float{}});
-        }
-        dummy.name = "Bin Definitions";
-        dummy.uid = proIds::NullUid;
         out[dummy.uid] = dummy;
         return out;
     }

@@ -382,8 +382,10 @@ TEST_CASE("Int - Writing variable FTE project", "[Database]"){
   auto slices_in = theDB.readProjectTimes(pid);
   REQUIRE(slices_in.slices.size() == 2);
   REQUIRE(pd_in.variableFTE);
-  REQUIRE(std::find_if(slices_in.slices.begin(), slices_in.slices.end(), [slice1](const singleSlice & sl){return sl == slice1;}) != slices_in.slices.end());
-  REQUIRE(std::find_if(slices_in.slices.begin(), slices_in.slices.end(), [slice2](const singleSlice & sl){return sl == slice2;}) != slices_in.slices.end());
+  auto f1 = [slice1](const singleSlice & sl){return sl == slice1;};
+  REQUIRE(std::find_if(slices_in.slices.begin(), slices_in.slices.end(), f1) != slices_in.slices.end());
+  auto f2 = [slice2](const singleSlice & sl){return sl == slice2;};
+  REQUIRE(std::find_if(slices_in.slices.begin(), slices_in.slices.end(), f2) != slices_in.slices.end());
 
 }
 

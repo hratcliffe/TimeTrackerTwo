@@ -155,14 +155,7 @@ Q_OBJECT
     void fetchInfo(){
         //Populate result with each row of start, end, fte
 
-        // Based on checked state of free start and free end, set start and end to open
-        if(addUi.startCheckBox->isChecked()){
-            std::cout<<"Got open start condition"<<std::endl;
-        }
-        if(addUi.endCheckBox->isChecked()){
-            std::cout<<"Got open enc condition"<<std::endl;
-        }
-        //Fetch all the rows start, end and FTE into slices
+       //Fetch all the rows start, end and FTE into slices
         result.slices.clear(); // Should not happen...
         //First, the base row
         singleSlice tmp;
@@ -181,6 +174,13 @@ Q_OBJECT
             tmp.FTE.set(fte->value() * eb_float::fromPercent);
             result.slices.push_back(tmp);
         }
+        // Based on checked state of free start and free end, set start and end to open
+        if(addUi.startCheckBox->isChecked() && result.slices.size() > 0){
+            result.slices[0].start = timecodeNull;
+        }
+        if(addUi.endCheckBox->isChecked() && result.slices.size() > 0){
+            result.slices[result.slices.size()-1].end = timecodeNull;
+        }
     }
     void validateBasic(){
         //Check that e.g. end is after start, and each row follows the previous?
@@ -192,6 +192,7 @@ Q_OBJECT
       advDialog = new QDialog(parent);
       addUi.setupUi(advDialog);
       advDialog->setWindowTitle("Configuring "+name);
+      addUi.validateButton->setDisabled(true); //Disable until we have check data
 
       //Connect up the existing row
       connectBaseRow(base);

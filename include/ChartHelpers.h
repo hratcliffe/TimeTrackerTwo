@@ -12,6 +12,7 @@
 #include <QLegendMarker>
 #include <QStackedBarSeries>
 #include <QBarSet>
+#include <QBarSeries>
 #include <QBarCategoryAxis>
 #include <QValueAxis>
 #include <QScrollArea>
@@ -40,7 +41,7 @@ public:
    * @param times 
    * @param info 
    */
-  static QChartView * generate(std::map<proIds::Uuid, projectSliceData> times){
+  static QChartView * generate(std::map<proIds::Uuid, projectSliceData> times, bool with_remainder=false){
  
 
     if(times.empty()) return nullptr; // nothing to do
@@ -64,9 +65,10 @@ public:
     for(auto & item : times){
       proIds::Uuid projectId = item.first;
       const projectSliceData &sliceData = item.second;
-      if(sliceData.slices.size() == 0 || projectId == proIds::NullUid) continue; // Skip empties, should not really happen. Skip reference
+      if(sliceData.slices.size() == 0 || projectId == proIds::NullUid) continue; // Skip empties, should not really happen. Skip reference - use this below
+
       QBarSet *barSet = new QBarSet(item.second.name.c_str());
-      
+
       // Add FTE values for each slice
       //First find the first matching item, then append the rest
       //Per pre-conditions, the edges must be compatible, but some may be missing at the start
@@ -78,9 +80,22 @@ public:
       for(const auto & slice : item.second.slices){
         barSet->append((float)slice.FTE);
       }
-
+      series->setLabelsVisible(true);
       series->append(barSet);
     }
+    // Add a bar set for the remainder only
+    if(with_remainder){
+      const projectSliceData &sliceData = times[proIds::NullUid];
+      QBarSet *barSet = new QBarSet("Remaining");
+      //In this case we know the slices contain every time, even if the value might be 0
+      for(const auto & slice : sliceData.slices){
+        //Invert used to get free
+        barSet->append((float)oneMinus(slice.FTE));
+      }
+      series->setLabelsVisible(true);
+      series->append(barSet);
+    }
+
 
     // Create the chart
     QChart *chart = new QChart();

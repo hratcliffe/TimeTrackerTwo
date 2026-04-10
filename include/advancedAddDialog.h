@@ -197,16 +197,110 @@ Q_OBJECT
             result.slices[result.slices.size()-1].end = timecodeNull;
         }
     }
-    void validateBasic(){
-        //Check that e.g. end is after start, and each row follows the previous?
+    void alertDates(int i){
+        //-1 for base row, index for others
+        if(i == -1){
+            auto label = addUi.baseRowHint;
+            label->setStyleSheet("QLabel { background-color : darkRed; color : white;}");
+            label->setToolTip("Make sure start is before end!");
+        }else if(addUi.labelTarget->count() > i){
+            auto label = dynamic_cast<QLabel *>(addUi.labelTarget->itemAt(i)->widget());
+            label->setStyleSheet("QLabel { background-color : darkRed; color : white;}");
+            label->setToolTip("Make sure start is before end, and each row follows the next");
+        }
+    }
+    void alertFTE(int i){
+        //-1 for base row, index for others
+        if(i == -1){
+            auto fld = addUi.baseFTEField;
+            fld->setStyleSheet("QSpinBox { background-color : darkRed; color : white;}");
+            fld->setToolTip("Insufficient FTE for this window");
+        }else if(addUi.FTETarget->count() > i){
+            auto fld = dynamic_cast<QSpinBox *>(addUi.FTETarget->itemAt(i)->widget());
+            fld->setStyleSheet("QSpinBox { background-color : darkRed; color : white;}");
+            fld->setToolTip("Insufficient FTE for this window");
+        }
+    }
+    void clearAlerts(){
+        auto tmp = addUi.baseRowHint;
+        tmp->setStyleSheet("QLabel {}");
+        tmp->setToolTip("");
+        auto fld = addUi.baseFTEField;
+        fld->setStyleSheet("QSpinBox {}");
+        fld->setToolTip("");
+
+        for(int i = 0; i< addUi.labelTarget->count(); i++){
+          auto label = dynamic_cast<QLabel *>(addUi.labelTarget->itemAt(i)->widget());
+          label->setStyleSheet("QLabel {}");
+          label->setToolTip("");
+        }
+        for(int i = 0; i< addUi.FTETarget->count(); i++){
+          auto label = dynamic_cast<QSpinBox *>(addUi.FTETarget->itemAt(i)->widget());
+          label->setStyleSheet("QSpinBox {}");
+          label->setToolTip("");
+        }
+    }
+    bool validateBasic(){
+        bool pass = true;
+        //Check that each row has an end after its start
+        for(size_t i = 0; i<result.slices.size(); i++){
+          auto diff = result.slices[i].end - result.slices[i].start;
+          if(diff < 1){
+            alertDates(i-1);
+            pass = false;
+          }
+        }
+        for(size_t i = 1; i<result.slices.size(); i++){
+          // Start of this row should be after end of the previous
+          auto diff = result.slices[i].start - result.slices[i-1].end;
+          // Just in case previous is malformed, also check its after start
+          auto diff2 = result.slices[i].start - result.slices[i-1].start;
+          if(diff < 1 || diff2 < 1){
+            alertDates(i-1);
+            pass = false;
+          }
+        }
+        return pass;
     }
 
-    void validateAvails(){
-        // Need to co-bin avails and inputs onto the same edges. Use the Gantt. This also forms the cumulate!
-        std::map<proIds::Uuid, projectSliceData> codata;
-        //codata[proIds::U]
-        //Then check that each bin is satisfyable
+    bool validateAvails(){
+        //ASSUMES basic validation has passed - if it hasn't then some of the date ranges make no sense, so
+        // can't really validate
+        bool pass = true;
 
+        std::map<proIds::Uuid, projectSliceData> codata;
+        codata[proIds::NullUid] = avails;
+        codata[proIds::NullUid].uid = proIds::NullUid;
+        codata[tmpId] = result;
+        codata[tmpId].uid = tmpId;
+        ganttProcessor::mapType remapping;
+        //Reprocess, and get the map so we can identify the rows later
+        codata = ganttProcessor::reprocessWithMap(codata, remapping);
+
+        //Then check that each bin is satisfyable
+        std::vector<size_t> badTimes;
+        //Remember that one of the lists may not start at bin 0
+        if(result.slices[0].start >= avails.slices[0].start){
+          size_t avail_offset = (remapping[proIds::NullUid][0].first - remapping[tmpId][0].first);
+          for(size_t i = 0; i < codata[tmpId].slices.size(); i++){
+            //Check that available + requested is within range
+            auto sum = codata[proIds::NullUid].slices[avail_offset+i].FTE.value + codata[tmpId].slices[i].FTE.value;
+            if(sum > eb_float::permyriad) badTimes.push_back(i);
+          }
+        }else{
+            //Bad - we don't have the availability, and this must be back in time...
+            throw std::runtime_error("Trying to validate a project in the past");
+        }
+        if(badTimes.size() > 0) pass = false;
+
+        for(auto i : badTimes){
+           auto loc = std::find_if(remapping[tmpId].begin(), remapping[tmpId].end(), [i](const std::pair<size_t, size_t> p){return p.first == i;});
+           if(loc != remapping[tmpId].end()){
+            auto j = loc->second;
+            alertFTE(j-1);
+           }
+        }
+        return pass;
     }
 
     public:
@@ -230,7 +324,7 @@ Q_OBJECT
       //Add block button to addBlock function
       connect(this->addUi.addButton, &QPushButton::clicked, this, &advancedAddDialog::addBlock);
       //Validate button to running validation
-      connect(this->addUi.validateButton, &QPushButton::clicked, [this](){validateBasic(); validateAvails();});
+      connect(this->addUi.validateButton, &QPushButton::clicked, [this](){clearAlerts(); fetchInfo(); validateBasic() && validateAvails();});
 
     }
     ~advancedAddDialog(){delete advDialog;}

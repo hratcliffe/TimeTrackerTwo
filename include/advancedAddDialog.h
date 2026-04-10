@@ -320,7 +320,7 @@ Q_OBJECT
       //Cancel button to exit
       connect(this->addUi.cancelButton, &QPushButton::clicked, [this](){exitState = false; advDialog->close();});
       //Done button to OK
-      connect(this->addUi.doneButton, &QPushButton::clicked, [this](){fetchInfo(); exitState = true; advDialog->close();});
+      connect(this->addUi.doneButton, &QPushButton::clicked, [this](){fetchInfo(); if(validateBasic() && validateAvails()){exitState = true; advDialog->close();}});
       //Add block button to addBlock function
       connect(this->addUi.addButton, &QPushButton::clicked, this, &advancedAddDialog::addBlock);
       //Validate button to running validation

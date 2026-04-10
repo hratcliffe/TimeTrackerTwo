@@ -3,7 +3,7 @@
 #include "databaseStore.h"
 #include "ganttProcessor.h"
 
-TEST_CASE("Forming Envelope", "[Only]"){
+TEST_CASE("Forming Envelope", "[FTEProcessing]"){
   databaseStore theDB{"./InputData/KnownDatabaseSlices.db", true};
   timecode e_st=50, e_end=300;
   //gets all entries which apply to the given interval
@@ -40,7 +40,7 @@ TEST_CASE("Forming Envelope", "[Only]"){
     REQUIRE(entries[id].slices[0] == slice1);
   }
 }
-TEST_CASE("Reprocessing case", "[Only]"){
+TEST_CASE("Reprocessing case", "[FTEProcessing]"){
   databaseStore theDB{"./InputData/KnownDatabaseSlices.db", true};
   //gets all entries which apply to the given interval
   auto entries = theDB.readAllProjectTimesBetween(50, 300);
@@ -94,6 +94,54 @@ TEST_CASE("Reprocessing case", "[Only]"){
     for(size_t i = 0; i< 3; i++){
       auto slice1 = singleSlice{s_edges[i], s_edges[i+1], eb_float{100}};
       REQUIRE(entries[id].slices[i] == slice1);
+    }
+  }
+}
+TEST_CASE("Reprocessing with map", "[FTEProcessing]"){
+  databaseStore theDB{"./InputData/KnownDatabaseSlices.db", true};
+  //gets all entries which apply to the given interval
+  auto entries = theDB.readAllProjectTimesBetween(50, 300);
+  // trims to exactly the interval
+  entries = ganttProcessor::envelope(entries, 50, 300);
+  ganttProcessor::mapType remapping;
+  entries = ganttProcessor::reprocessWithMap(entries, remapping);
+
+  REQUIRE(entries.size() == 4);
+  std::vector<timecode> s_edges{50, 125, 200, 275, 300}; // Expected common bin edges
+  SECTION("Unspecified ends"){
+    auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+    REQUIRE(entries[id].slices.size() == 4);
+    //Same FTE, but now 3 bins
+    //All bins come from index 0
+    for(size_t i = 0; i< 3; i++){
+      REQUIRE(remapping[id][i].second == 0);
+    }
+  }
+  SECTION("Fully specified"){
+    auto id = proIds::Uuid("{2c531a42-d999-4c0f-b6fd-f9417e69e715}");
+    REQUIRE(entries[id].slices.size() == 3);
+    // Map should be 0 missing, 1 filled from 0, 2 from 1 and 3 from 2
+    for(size_t i = 0; i< 3; i++){
+      REQUIRE(remapping[id][i].first == i+1);
+      REQUIRE(remapping[id][i].second == i);
+    }
+  }
+  SECTION("No end specified"){
+    auto id = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+    REQUIRE(entries[id].slices.size() == 4);
+    //Same FTE, but now 3 bins
+    //In this case all bins come from 0 selection
+    for(size_t i = 0; i< 3; i++){
+      REQUIRE(remapping[id][i].second == 0);
+    }
+  }
+  SECTION("No start specifed"){
+    auto id = proIds::Uuid("{7228d8fe-0782-4205-9ed3-dca2693c0d1f}");
+    REQUIRE(entries[id].slices.size() == 4);
+    //Same FTE, but now 3 bins
+    //In this case all bins come from 0 selection
+    for(size_t i = 0; i< 3; i++){
+      REQUIRE(remapping[id][i].second == 0);
     }
   }
 

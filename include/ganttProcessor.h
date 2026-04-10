@@ -35,6 +35,7 @@ class ganttProcessor{
      *
      * Takes a map of ids onto time bins and remaps each entry onto the union set of bins (i.e the set of bins that accomodates all entries)
      * @pre All slices have specific (not null) start and end. No slices for a single project overlap.
+     * @post The slices all have shared time-bin edges. Entries may be missing slices at the start and/or end, but will contain entries consecutively (i.e. contain 0's for missing data within their envelope)
      * @param input Set to process. 
      * @param fillCumulates Whether to produce the null-uid entry containing totals - requires all totals to not exceed 1. If input contains a NullUid entry and fillCumulates is true, this entry will be clobberred
      * @return std::map<proIds::Uuid, projectSliceData>
@@ -73,7 +74,12 @@ class ganttProcessor{
             //NOTE: guaranteed that edges.size() >= slices.size()
             for(; e<edges.size()-1; e++){
                 //Adding the reduced slice
-                recut.slices.push_back({edges[e], edges[e+1], entry.second.slices[i].FTE});
+                if(entry.second.slices[i].start <= edges[e]){
+                    recut.slices.push_back({edges[e], edges[e+1], entry.second.slices[i].FTE});
+                }else{
+                    //Accounting for gaps: this bin did not contain a slice in the original
+                    recut.slices.push_back({edges[e], edges[e+1], eb_float{0}});
+                }
                 //Adding to the cumulate
                 if(fillCumulates) dummy.slices[e].FTE += entry.second.slices[i].FTE;
                 //Moving to the next original slice when the end of this one is the next edge
@@ -88,11 +94,11 @@ class ganttProcessor{
         if(fillCumulates) out[dummy.uid] = dummy;
         return out;
     }
-    using mapType = std::map<proIds::Uuid, std::vector<std::pair<size_t, size_t> > >;
+    using mapType = std::map<proIds::Uuid, std::vector<std::pair<size_t, int> > >;
     /**
      * @brief Reprocess onto shared times
      *
-     * Takes a map of ids onto time bins and remaps each entry onto the union set of bins (i.e the set of bins that accomodates all entries). Populates a map from input slice index to output slice index for each id
+     * Takes a map of ids onto time bins and remaps each entry onto the union set of bins (i.e the set of bins that accomodates all entries). Populates a map from input slice index to output slice index for each id. Entries may be missing slices at the start and/or end, but will contain entries consecutively (i.e. contain 0's for missing data within their envelope) and the mapping will contain '-1' for the original bin in this case
      * @pre All slices have specific (not null) start and end. No slices for a single project overlap.
      * @param input Set to process.
      * @param remapping Variable to fill with the remapping, final slice id and the slice it is populated from
@@ -122,9 +128,14 @@ class ganttProcessor{
             while(entry.second.slices[0].start > edges[e]) e++;
             //NOTE: guaranteed that edges.size() >= slices.size()
             for(; e<edges.size()-1; e++){
-                //Adding the reduced slice
-                recut.slices.push_back({edges[e], edges[e+1], entry.second.slices[i].FTE});
-                remapping[entry.second.uid].push_back(std::make_pair(e, i));
+                if(entry.second.slices[i].start <= edges[e]){
+                    recut.slices.push_back({edges[e], edges[e+1], entry.second.slices[i].FTE});
+                    remapping[entry.second.uid].push_back(std::make_pair(e, i));
+                }else{
+                    //Accounting for gaps: this bin did not contain a slice in the original
+                    recut.slices.push_back({edges[e], edges[e+1], eb_float{0}});
+                    remapping[entry.second.uid].push_back(std::make_pair(e, -1));
+                }
                 //Moving to the next original slice when the end of this one is the next edge
                 if(entry.second.slices[i].end == edges[e+1]) i++;
                 //Stopping when we run out of original slices

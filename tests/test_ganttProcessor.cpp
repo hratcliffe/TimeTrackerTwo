@@ -1,6 +1,7 @@
 #include "catch2/catch_all.hpp"
 
 #include "databaseStore.h"
+#include "idGenerators.h"
 #include "ganttProcessor.h"
 
 TEST_CASE("Forming Envelope", "[FTEProcessing]"){
@@ -97,6 +98,52 @@ TEST_CASE("Reprocessing case", "[FTEProcessing]"){
     }
   }
 }
+TEST_CASE("Reprocessing with gaps", "[FTEProcessing]"){
+  std::map<proIds::Uuid, projectSliceData> entries;
+  std::vector<timecode> s_edges{50, 125, 200, 275, 300, 380, 495}; // Expected common bin edges
+ 
+  std::vector<int> edges_1{0, 2, 3, 5};
+  auto id = uniqueIdGenerator().getNextId();
+  for(auto i : edges_1){
+    singleSlice slice1 = singleSlice{s_edges[i], s_edges[i+1], eb_float{200}};
+    entries[id].slices.push_back(slice1);
+  }
+  entries[id].uid = id;
+  std::vector<int> edges_2{1, 3, 4};
+  auto id2 = uniqueIdGenerator().getNextId();
+  for(auto i : edges_2){
+    singleSlice slice1 = singleSlice{s_edges[i], s_edges[i+1], eb_float{300}};
+    entries[id2].slices.push_back(slice1);
+  }
+  entries[id2].uid = id2;
+ 
+  entries = ganttProcessor::envelope(entries, 50, 495);
+  entries = ganttProcessor::reprocess(entries);
+
+  //Contains the first and last, so 6 bins
+  REQUIRE(entries[id].slices.size() == 6);
+  for(size_t i = 0; i< 6; i++){
+    if(std::find(edges_1.begin(), edges_1.end(), i) != edges_1.end()){
+      auto slice1 = singleSlice{s_edges[i], s_edges[i+1], eb_float{200}};
+      REQUIRE(entries[id].slices[i] == slice1);
+    }else{
+      auto slice1 = singleSlice{s_edges[i], s_edges[i+1], eb_float{0}};
+      REQUIRE(entries[id].slices[i] == slice1);
+    }
+  }
+
+  //Only has data between 1 and 4, so 4 bins
+  REQUIRE(entries[id2].slices.size() == 4);
+  for(size_t i = 0; i< 4; i++){
+    if(std::find(edges_2.begin(), edges_2.end(), i+1) != edges_2.end()){
+      auto slice1 = singleSlice{s_edges[i+1], s_edges[i+1+1], eb_float{300}};
+      REQUIRE(entries[id2].slices[i] == slice1);
+    }else{
+      auto slice1 = singleSlice{s_edges[i+1], s_edges[i+1+1], eb_float{0}};
+      REQUIRE(entries[id2].slices[i] == slice1);
+    }
+  }
+}
 TEST_CASE("Reprocessing with map", "[FTEProcessing]"){
   databaseStore theDB{"./InputData/KnownDatabaseSlices.db", true};
   //gets all entries which apply to the given interval
@@ -144,5 +191,58 @@ TEST_CASE("Reprocessing with map", "[FTEProcessing]"){
       REQUIRE(remapping[id][i].second == 0);
     }
   }
+}
+TEST_CASE("Reprocessing with gaps AND map", "[FTEProcessing]"){
+  std::map<proIds::Uuid, projectSliceData> entries;
+  std::vector<timecode> s_edges{50, 125, 200, 275, 300, 380, 495}; // Expected common bin edges
+ 
+  std::vector<int> edges_1{0, 1, 3, 5};
+  auto id = uniqueIdGenerator().getNextId();
+  for(auto i : edges_1){
+    singleSlice slice1 = singleSlice{s_edges[i], s_edges[i+1], eb_float{200}};
+    entries[id].slices.push_back(slice1);
+  }
+  entries[id].uid = id;
+  std::vector<int> edges_2{1, 2, 4};
+  auto id2 = uniqueIdGenerator().getNextId();
+  for(auto i : edges_2){
+    singleSlice slice1 = singleSlice{s_edges[i], s_edges[i+1], eb_float{300}};
+    entries[id2].slices.push_back(slice1);
+  }
+  entries[id2].uid = id2;
+ 
+  entries = ganttProcessor::envelope(entries, 50, 495);
+  ganttProcessor::mapType remapping;
+  entries = ganttProcessor::reprocessWithMap(entries, remapping);
 
+  //Contains the first and last, so 6 bins
+  REQUIRE(entries[id].slices.size() == 6);
+  for(size_t i = 0; i< 6; i++){
+    if(std::find(edges_1.begin(), edges_1.end(), i) != edges_1.end()){
+      auto slice1 = singleSlice{s_edges[i], s_edges[i+1], eb_float{200}};
+      REQUIRE(entries[id].slices[i] == slice1);
+    }else{
+      auto slice1 = singleSlice{s_edges[i], s_edges[i+1], eb_float{0}};
+      REQUIRE(entries[id].slices[i] == slice1);
+    }
+  }
+  //Check the map
+  REQUIRE(remapping[id][0].second  == 0);
+  REQUIRE(remapping[id][1].second  == 1);
+  REQUIRE(remapping[id][2].second  == -1);//Missing original
+  REQUIRE(remapping[id][3].second  == 2);
+  REQUIRE(remapping[id][4].second  == -1);
+  REQUIRE(remapping[id][5].second  == 3);
+
+  //Only has data between 1 and 4, so 4 bins
+  REQUIRE(entries[id2].slices.size() == 4);
+  for(size_t i = 0; i< 4; i++){
+    if(std::find(edges_2.begin(), edges_2.end(), i+1) != edges_2.end()){
+      auto slice1 = singleSlice{s_edges[i+1], s_edges[i+1+1], eb_float{300}};
+      REQUIRE(entries[id2].slices[i] == slice1);
+    }else{
+      auto slice1 = singleSlice{s_edges[i+1], s_edges[i+1+1], eb_float{0}};
+      REQUIRE(entries[id2].slices[i] == slice1);
+    }
+  }
 }

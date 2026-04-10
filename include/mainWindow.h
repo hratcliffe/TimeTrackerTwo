@@ -348,6 +348,40 @@ Q_OBJECT
   }
   using projectDetailsSpecialCallbackType = decltype(makeCallback(&mainWindow::showDeleteDialogImpl));
 
+  /**
+     * @brief Show the advanced project add dialog
+     *
+     * This allows configuring a Variable FTE project, and validating against FTE over time
+     * @param name Name of project
+     * @param parent Dialog this was opened by
+     */
+    void showAdvancedAddDialogImpl(std::map<proIds::Uuid, projectSliceData> details, proIds::Uuid tmp){
+
+      showBarChartBackground(details);
+      //This is a complex dialog so done as a separate class
+      auto dialog = advancedAddDialog(this, toQDateTime(timeWrapper::startOfMonth(timeWrapper::now())).date());
+      dialog.enableValidation(details, tmp);
+      bool result = dialog.exec();
+      if(result){
+        auto newData = dialog.data();
+        projectData dat;
+        dat.name = dialog.name();
+        dat.variableFTE = (newData.slices.size() > 1);
+        emit advancedProjectAddRequested(dat, dialog.data());
+      }
+    }
+    void showBarChartBackground(std::map<proIds::Uuid, projectSliceData> details){
+      auto dialog = new QDialog();
+      auto chart = BarChartHelper::generate(details, true);
+      QVBoxLayout *layout = new QVBoxLayout;
+      layout->addWidget(chart);
+      dialog->setLayout(layout);
+      auto wid = std::max((int)details.size()*100, 600);
+      dialog->setMinimumSize(wid, 400);
+      dialog->show();
+    }
+    using showAdvancedCallbackType = decltype(makeCallback(&mainWindow::showAdvancedAddDialogImpl));
+
   public slots:
     void exitApp(){
       std::cout << "Exiting UI" << std::endl;
@@ -381,65 +415,8 @@ Q_OBJECT
     }
 
     void showAddDialog(){
-
-      if(freeFTE == 0.0){
-        QMessageBox box;
-        box.setText("Maximum FTE already reached. Deactivate some projects or increase maximum");
-        box.exec();
-        return;
-      }
-
-      auto addDialog = new QDialog(this);
-      Ui::addProjectDialog addUi;
-      addUi.setupUi(addDialog);
-      addUi.FTEField->setMaximum((float)(freeFTE.value/100));
-      addUi.FTEField->setValue(addUi.FTEField->maximum()/2.0);
-      addUi.FTEField->setSingleStep(1);
-      addUi.startSelect->setDate(toQDateTime(timeWrapper::startOfMonth(timeWrapper::now())).date());
-      addUi.endSelect->setDate(toQDateTime(timeWrapper::startOfMonth(timeWrapper::now())).date());
-
-      //TODO make it so that end cannot be before start if both are enabled
-
-      //Disable OK button and require NameField to be not blank for it to enable
-      addUi.buttonBox->button(QDialogButtonBox::Ok)->setDisabled(true);
-      addUi.advancedButton->setDisabled(true);
-      connect(addUi.nameField, &QLineEdit::textChanged, [this, &addUi](QString txt){this->enableOnRequiredFields(addUi.buttonBox->button(QDialogButtonBox::Ok), &addUi);});
-      //NOTE: currently OK and Advanced have the same requirement - change next line if they diverge
-      connect(addUi.nameField, &QLineEdit::textChanged, [this, &addUi](QString txt){this->enableOnRequiredFields(addUi.advancedButton, &addUi);});
-      connect(addUi.advancedButton, &QPushButton::clicked, [this, &addUi](){showAdvancedAddDialog(addUi.nameField->text());});
-      
-      addDialog->setWindowTitle("Adding Project");
-      bool result = addDialog->exec();
-
-      //If OK was clicked, signal to add a project
-      if(result){
-        eb_float FTE;
-        FTE.set(addUi.FTEField->value() * eb_float::fromPercent);
-        timecode start = timeWrapper::toSeconds(fromQDateTime(addUi.startSelect->dateTime()));
-        timecode end = timeWrapper::toSeconds(fromQDateTime(addUi.endSelect->dateTime()));
-        emit projectAddRequested(projectData{addUi.nameField->text().toStdString(), FTE, start, end, addUi.startEnabled->isChecked(), addUi.endEnabled->isChecked()});
-      }
-
-    }
-    void showAdvancedAddDialog(QString name){
-
-      emit projectDetailsRequiredYearlyForBackground();
-      //This is a complex dialog so done as a separate class
-      auto dialog = advancedAddDialog(name, this, toQDateTime(timeWrapper::startOfMonth(timeWrapper::now())).date());
-      bool result = dialog.exec();
-      if(result){
-        
-      }
-    }
-    void showBarChartBackground(std::map<proIds::Uuid, projectSliceData> details){
-      auto dialog = new QDialog();
-      auto chart = BarChartHelper::generate(details, true);
-      QVBoxLayout *layout = new QVBoxLayout;
-      layout->addWidget(chart);
-      dialog->setLayout(layout);
-      auto wid = std::max((int)details.size()*100, 600);
-      dialog->setMinimumSize(wid, 400);
-      dialog->show();
+      //Need details
+      emit projectConfigDataRequested(makeCallback(&mainWindow::showAdvancedAddDialogImpl));
     }
 
     void showAddSubDialog(){
@@ -524,14 +501,15 @@ Q_OBJECT
     void resumeRequested(); /**< \brief Signal emitted when the resume button is clicked */
     void stopRequested(); /**< \brief Signal emitted when the stop button is clicked */
 
+    void projectConfigDataRequested(showAdvancedCallbackType);
     void projectAddRequested(const projectData & data);
+    void advancedProjectAddRequested(const projectData & data, const projectSliceData & slices);
     void subprojectAddRequested(const subprojectData & data, const proIds::Uuid & parent);
     void mergeRequested(const proIds::Uuid & selection, const proIds::Uuid & sub_selection, const proIds::Uuid & target, const proIds::Uuid & sub_target);
     void projectDetailsRequiredAll(projectDetailsArgCallbackType);
     void projectDetailsRequiredSpecial(projectDetailsSpecialCallbackType, proIds::Uuid);
     void projectDetailsRequiredTimes(int days, projectDetailsWTimingsCallbackType);
     void projectDetailsRequiredYearly(projectDetailsWTimingsCallbackType);
-    void projectDetailsRequiredYearlyForBackground();
     void projectDetailsRequired(const proIds::Uuid & proj);
 
     void fetchTimeTravelInfo();
@@ -542,37 +520,6 @@ Q_OBJECT
     void deleteConfirmed(const proIds::Uuid & proj, bool);
   private:
 
-
-
-    // Check given string is valid as a name - currently not blank nor all whitespace
-    bool isValidNameString(std::string name)const{
-      return name.find_first_not_of("\t ") != std::string::npos;
-    }
-
-    /**
-     * @brief Enforce non-blankness of a SINGLE field
-     *
-     *  Can be hooked onto a QTextEdit to enforce that if the field contains only
-     * whitespace OR nothing, the given button is disabled, else it is enabled. NOTE: can handle one-and-only-one
-     * determining field!
-     * Use like: connect(addUi.NameField, &QLineEdit::textChanged, [this, addUi](QString txt){this->disableButtonIfFieldIsBlankElseEnable(addUi.buttonBox->button(QDialogButtonBox::Ok), addUi.NameField);});
-     */
-    void disableButtonIfFieldIsBlankElseEnable(QPushButton * theButton, QLineEdit * fld){
-      auto txt = fld->text().toStdString();
-      if(txt.find_first_not_of("\t ") == std::string::npos){
-        theButton->setDisabled(true);
-      }else{
-        theButton->setDisabled(false);
-      }
-    }
-
-    void enableOnRequiredFields(QPushButton * theButton, Ui::addProjectDialog * dialog){
-      //Enforce the required fields for an addProjectDialog - theButton is disabled unless the following are met
-      // NameField is not blank or whitespace
-      auto txt = dialog->nameField->text().toStdString();
-      bool state_bad = !isValidNameString(txt);
-      theButton->setDisabled(state_bad);
-    }
     void enableOnRequiredFields(QPushButton * theButton, Ui::addSubprojectDialog * dialog){
       //Enforce the required fields for an addSubprojectDialog - theButton is disabled unless the following are met
       // NameField is not blank or whitespace

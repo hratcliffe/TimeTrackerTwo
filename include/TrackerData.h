@@ -171,6 +171,15 @@ Q_OBJECT
       proIds::Uuid id = thePM.getNextOneOffId();
       emit oneOffIdUpdate(id);
     }
+    /**
+     * @brief Get a temporary Uuid
+     *
+     * I.e. get a new id. But this is not intended for labelling a project, it's for using as an ID for special purposes.
+     * @return auto 
+     */
+    auto getTemporaryId(){
+      return thePM.getNextOneOffId();
+    }
 
     std::map<proIds::Uuid, projectDetails> projectDetailsRequired(){
       //Get for all Ids

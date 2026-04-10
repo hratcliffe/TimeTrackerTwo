@@ -18,6 +18,11 @@
 #include <sstream>
 #include <iomanip>
 
+// Check given string is valid as a name - currently not blank nor all whitespace
+inline bool isValidNameString(std::string name){
+  return name.find_first_not_of("\t ") != std::string::npos;
+};
+
 using timecode = long long; /**< \brief Type for timecodes, representing seconds since epoch. SIGNED to allow -1 for sentinel below*/
 
 inline const timecode timecodeNull = -1; /**< \brief Sentinel for null time * * Need a sentinel - do not rely on this value, use the named constant */

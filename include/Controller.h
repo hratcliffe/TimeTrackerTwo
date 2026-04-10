@@ -149,6 +149,10 @@ Q_OBJECT
     connect(themainWindow->trackerTab, &TrackerTabContent::oneOffIdRequired, currentData, &TrackerData::oneOffIdRequired);
     connect(currentData, &TrackerData::oneOffIdUpdate, themainWindow->trackerTab, &TrackerTabContent::updateOneOffId);
 
+    //To add a project, need the data on existing ones. Default to 2 years
+    connect(themainWindow, &mainWindow::projectConfigDataRequested, [this](auto functor){
+      auto details = currentData->projectTimesRequired(timeWrapper::toSeconds(timeWrapper::startOfMonth(timeWrapper::fromSeconds(this->clock->now()))), timeWrapper::toSeconds(timeWrapper::makeDuration(0,0,365*2)));
+      functor(themainWindow, details, currentData->getTemporaryId());});
     //To add a subproject, view needs an up-to-date list of projects - gather this and then call the provided callback
     connect(themainWindow, &mainWindow::projectDetailsRequiredAll, [this](auto functor){functor(themainWindow, currentData->projectDetailsRequired());});
     //To delete, we need to verify the marks
@@ -156,8 +160,6 @@ Q_OBJECT
     connect(themainWindow, &mainWindow::projectDetailsRequiredTimes, [this](int days, auto functor){functor(themainWindow, currentData->projectTimesRequired(timeWrapper::toSeconds(timeWrapper::startOfMonth(timeWrapper::fromSeconds(this->clock->now()))), timeWrapper::toSeconds(timeWrapper::makeDuration(0,0,days))));});
     //365 days is not a year, but it is good enough for now
     connect(themainWindow, &mainWindow::projectDetailsRequiredYearly, [this](auto functor){functor(themainWindow, currentData->projectTimesRequired(timeWrapper::toSeconds(timeWrapper::startOfYear(timeWrapper::fromSeconds(this->clock->now()))), timeWrapper::toSeconds(timeWrapper::makeDuration(0,0,365))));});
-    //Background display of details
-    connect(themainWindow, &mainWindow::projectDetailsRequiredYearlyForBackground, [this](){auto details = currentData->projectTimesRequired(timeWrapper::toSeconds(timeWrapper::startOfMonth(timeWrapper::fromSeconds(this->clock->now()))), timeWrapper::toSeconds(timeWrapper::makeDuration(0,0,365))); themainWindow->showBarChartBackground(details);});
 
     //Pausing a project:
     connect(themainWindow, &mainWindow::pauseRequested, [this](){currentData->pauseProject(this->clock->now());});
@@ -177,7 +179,7 @@ Q_OBJECT
     connect(currentData, &TrackerData::projectSummaryReady, themainWindow->projectTab, &ProjectTabUI::summaryDisplayUpdated);
 
     //Adding project and sub
-    connect(themainWindow, &mainWindow::projectAddRequested, currentData, &TrackerData::createProject);
+    connect(themainWindow, &mainWindow::advancedProjectAddRequested, [this](projectData data, const projectSliceData & slices){currentData->createProjectAdvanced(data, slices, clock->now());});
     connect(themainWindow, &mainWindow::subprojectAddRequested, currentData, &TrackerData::createSubproject);
     connect(themainWindow, &mainWindow::projectOneOffAdd, currentData, &TrackerData::createOneOff);
 

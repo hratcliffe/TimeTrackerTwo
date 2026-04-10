@@ -13,6 +13,7 @@
 #include "dataObjects.h"
 #include "timeWrapper.h"
 #include "QLocalShortcuts.h"
+#include "ganttProcessor.h"
 
 /**
  * @brief Shows a dialog to configure multiple FTE blocks
@@ -25,8 +26,20 @@ Q_OBJECT
     Ui::addProjectAdvanced addUi;
     QDialog * advDialog;
     projectSliceData result;
+    bool haveValidation = false;
+    projectSliceData avails;
+    proIds::Uuid tmpId;
     bool exitState = false;
 
+    void enableDoneOnRequiredFields(){
+      //Enforce the required fields etc - doneButton is disabled unless the following are met
+      // NameField is not blank or whitespace
+      // Validation data is ready
+      auto txt = addUi.nameEdit->text().toStdString();
+      bool state_ok = isValidNameString(txt);
+      state_ok &= haveValidation;
+      addUi.doneButton->setEnabled(state_ok);
+    }
 
     void connectBaseRow(QDate date){
         auto & startDate = addUi.baseStartSelect;
@@ -155,6 +168,8 @@ Q_OBJECT
     void fetchInfo(){
         //Populate result with each row of start, end, fte
 
+        //TODO - this should either sort inputs, or demand ordered inputs
+        //TODO - should this de-duplicate consecutive slices at same FTE?
        //Fetch all the rows start, end and FTE into slices
         result.slices.clear(); // Should not happen...
         //First, the base row
@@ -186,13 +201,24 @@ Q_OBJECT
         //Check that e.g. end is after start, and each row follows the previous?
     }
 
+    void validateAvails(){
+        // Need to co-bin avails and inputs onto the same edges. Use the Gantt. This also forms the cumulate!
+        std::map<proIds::Uuid, projectSliceData> codata;
+        //codata[proIds::U]
+        //Then check that each bin is satisfyable
+
+    }
+
     public:
-    advancedAddDialog(QString name, QWidget * parent, QDate base){
-        //TODO - start with start-of-month for current
+    advancedAddDialog(QWidget * parent, QDate base){
       advDialog = new QDialog(parent);
       addUi.setupUi(advDialog);
-      advDialog->setWindowTitle("Configuring "+name);
+      advDialog->setWindowTitle("Adding New Project");
+      addUi.doneButton->setDisabled(true); //Disable until we have check data
       addUi.validateButton->setDisabled(true); //Disable until we have check data
+
+      //Once name is valid and validate data is ready, can enable button
+      connect(addUi.nameEdit, &QLineEdit::textChanged, [this](QString txt){enableDoneOnRequiredFields();});
 
       //Connect up the existing row
       connectBaseRow(base);
@@ -201,21 +227,24 @@ Q_OBJECT
       connect(this->addUi.cancelButton, &QPushButton::clicked, [this](){exitState = false; advDialog->close();});
       //Done button to OK
       connect(this->addUi.doneButton, &QPushButton::clicked, [this](){fetchInfo(); exitState = true; advDialog->close();});
- 
       //Add block button to addBlock function
       connect(this->addUi.addButton, &QPushButton::clicked, this, &advancedAddDialog::addBlock);
-
-
-      //Validate button to .... ??
-
+      //Validate button to running validation
+      connect(this->addUi.validateButton, &QPushButton::clicked, [this](){validateBasic(); validateAvails();});
 
     }
     ~advancedAddDialog(){delete advDialog;}
+    void enableValidation(const std::map<proIds::Uuid, projectSliceData> & avail_in, const proIds::Uuid & tmp){
+        avails = avail_in.at(proIds::NullUid);
+        tmpId = tmp;
+        this->addUi.validateButton->setEnabled(true);
+        haveValidation = true;
+        enableDoneOnRequiredFields();//Runs the check
+    }
     bool exec(){advDialog->exec(); return exitState;}
     //Result is guaranteed populated only if exec returned true, in which case fetchInfo has already been called
-    auto data(){
-        return result;
-    }
+    auto name(){return addUi.nameEdit->text().toStdString();}
+    auto data(){return result;}
 
 };
 

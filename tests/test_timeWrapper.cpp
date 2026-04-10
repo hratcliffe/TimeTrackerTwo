@@ -107,4 +107,34 @@ TEST_CASE("Duration Difference", "[AdjustTime]"){
     tw::timePoint day2 = tw::parseTimeZoned(str2);
     REQUIRE(tw::toSeconds(tw::getDifference(day2, day)) == 71);
 }
+TEST_CASE("Days between", "[BasicTime]"){
 
+    SECTION("Same Month"){
+        std::string str = "2023-03-23 00:00:00";
+        std::string str2 = "2023-03-26 00:00:00";
+        tw::timePoint day = tw::parseTimeZoned(str);
+        tw::timePoint day2 = tw::parseTimeZoned(str2);
+        REQUIRE(timeWrapper::getDays(day, day2) == 3);
+    }
+    SECTION("Same Month"){
+        std::string str = "2023-03-23 00:00:00";
+        std::string str2 = "2023-03-26 23:59:59";
+        tw::timePoint day = tw::parseTimeZoned(str);
+        tw::timePoint day2 = tw::parseTimeZoned(str2);
+        REQUIRE(timeWrapper::getDays(day, day2) == 3); //Duration is _floor_ of 24 hours
+    }
+    SECTION("Approx month"){
+        std::string str = "2023-03-23 00:00:00";
+        std::string str2 = "2023-04-23 00:00:00";
+        tw::timePoint day = tw::parseTimeZoned(str);
+        tw::timePoint day2 = tw::parseTimeZoned(str2);
+        REQUIRE(timeWrapper::getDays(day, day2) == 30); // Midnight at _start_ of day2
+    }
+    SECTION("February"){
+        std::string str = "2023-02-01 00:00:00";
+        std::string str2 = "2023-03-01 00:00:00";
+        tw::timePoint day = tw::parseTimeZoned(str);
+        tw::timePoint day2 = tw::parseTimeZoned(str2);
+        REQUIRE(timeWrapper::getDays(day, day2) == 28);
+    }
+}

@@ -192,8 +192,17 @@ Q_OBJECT
     std::map<proIds::Uuid, projectSliceData> projectTimesRequired(timecode start, timecode dur){
       auto entries = dataHandler->readAllProjectTimesBetween(start, start+dur);
       // trims to exactly the interval
-      entries = ganttProcessor::envelope(entries, start, start+dur);
-      entries = ganttProcessor::reprocess(entries);
+      if(entries.size()>0){
+        entries = ganttProcessor::envelope(entries, start, start+dur);
+        entries = ganttProcessor::reprocess(entries);
+      }else{
+        singleSlice s{start, start+dur, eb_float{0.0}};
+        projectSliceData pd;
+        pd.slices.push_back(s);
+        pd.name="";
+        pd.uid = proIds::NullUid;
+        entries[proIds::NullUid] = pd;
+      }
       return entries;
     }
 

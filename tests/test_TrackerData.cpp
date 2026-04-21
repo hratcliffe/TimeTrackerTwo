@@ -63,6 +63,14 @@ TEST_CASE("Config round trip", "[QTAware]"){
   REQUIRE(c == "Version c6qe");
 }
 
+TEST_CASE("Temporary Ids", "[QTAware]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+  auto id = td.getTemporaryId();
+  auto id2 = td.getTemporaryId();
+  REQUIRE( id != proIds::NullUid);
+  REQUIRE(id != id2);
+}
 //--- Adding/creating ----------------------------------------------------------------------------
 
 proIds::Uuid InferIDFromName(const std::map<proIds::Uuid, projectDetails> & map, std::string name){

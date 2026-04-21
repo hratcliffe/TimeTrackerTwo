@@ -196,7 +196,9 @@ class projectManager{
         throw std::runtime_error("Cannot check active state - not a valid project");
       }
     }
-
+    bool isVariableFTE(proIds::Uuid id){
+      return isProject(id) && projects[id].variableFTE();
+    }
     proIds::Uuid getNextOneOffId(){
       return gen->getNextId(proIds::uidTag::oneoff);
     }

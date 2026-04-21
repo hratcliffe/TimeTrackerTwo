@@ -13,6 +13,7 @@ cp ./InputData/KnownDatabaseForDigests.db ./Scratch
 cp ./InputData/KnownDatabaseForMerge.db ./Scratch
 cp ./InputData/KnownDatabaseForMerge.db ./Scratch/KnownDatabaseForMerge2.db
 cp ./InputData/KnownDatabaseForMergeS.db ./Scratch/KnownDatabaseForMergeS.db
+cp ./InputData/KnownDatabaseSlices.db ./Scratch/KnownDatabaseMergeDates.db
 ./ttt_tests.app/Contents/MacOS/ttt_tests --order rand --warn NoAssertions
 #./ttt_tests.app/Contents/MacOS/ttt_tests [Failing]
 chmod u+r ./InputData/UnreadableFile.db

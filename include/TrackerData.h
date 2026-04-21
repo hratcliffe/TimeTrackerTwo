@@ -771,7 +771,9 @@ Q_OBJECT
         throw trackerMergeError("Null uids are not valid", trackerTypes::mergeErrorKind::invalid);
       }else if(current == target && sub == sub_target){
         throw trackerMergeError("Cannot merge with itself", trackerTypes::mergeErrorKind::invalid);
-      };
+      }else if(thePM.isVariableFTE(current) || thePM.isVariableFTE(target)){
+         throw trackerMergeError("Not implemented merge for variable FTE case", trackerTypes::mergeErrorKind::not_implemented);
+      }
 
       bool current_has_subs = false;
       if(current.isProj()){

@@ -1333,6 +1333,22 @@ TEST_CASE("Merging project data - sub to another sub of same parent"){
   }
 }
 
+TEST_CASE("Merging project unimplemented cases", "[QTAware]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./Scratch/KnownDatabaseMergeDates.db")};
+
+  td.loadProjects(150);
+
+  proIds::Uuid id1{"{cc467402-acd5-494f-9c58-466f3aa6f117}"};
+  proIds::Uuid id2{"{8af5d44a-2921-4666-b33b-053459e2ced6}"};
+  REQUIRE_THROWS_AS(td.mergeProject(id1, proIds::NullUid, id2, proIds::NullUid), trackerMergeError);
+  try{
+    td.mergeProject(id1, proIds::NullUid, id2, proIds::NullUid);
+  }catch(const trackerMergeError & e){
+    REQUIRE(e.kind == trackerTypes::mergeErrorKind::not_implemented);
+  }
+}
+
 TEST_CASE("Deleting project fails" "[QTAware]"){
   auto app = dummyApp();
   TrackerData td{basicConfig()};

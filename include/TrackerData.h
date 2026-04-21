@@ -148,7 +148,9 @@ Q_OBJECT
       auto subprojectList = dataHandler->fetchSubprojectListForParents(ids);
 
       for(const auto & it : projectList){
-        thePM.restoreProject(it, now, true);
+        // TODO - use the read into a map instead of one per project?
+        projectSliceData slices = dataHandler->readProjectTimes(it.uid);
+        thePM.restoreProject(it, slices, now, true);
       }
       for(const auto & it : subprojectList){
         thePM.restoreSubproject(it, true);
@@ -222,7 +224,9 @@ Q_OBJECT
       auto subprojectList = dataHandler->fetchSubprojectListForParents(ids);
 
       for(const auto & it : projectList){
-        thePM.restoreProject(it, now);
+        // TODO - use map read
+        projectSliceData slices = dataHandler->readProjectTimes(it.uid);
+        thePM.restoreProject(it, slices, now);
       }
       for(const auto & it : subprojectList){
         thePM.restoreSubproject(it);

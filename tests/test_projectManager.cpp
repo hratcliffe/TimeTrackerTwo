@@ -269,12 +269,11 @@ TEST_CASE("Restoring Project", "[Basic]"){
   projectManager pm;
   fullProjectData pd;
   pd.name = "Project from file";
-  pd.FTE.set(0.7);
-  pd.useEnd = false;
-  pd.useStart = false;
+  projectSliceData slices;
+  slices.slices.push_back({timecodeNull, timecodeNull, eb_float{0.7}});
   pd.uid = uniqueIdGenerator().getNextId();
 
-  pm.restoreProject(pd, 10);
+  pm.restoreProject(pd, slices, 10);
   REQUIRE(pm.projectCount() == 1);
   REQUIRE(pm.getName(pd.uid) == pd.name);
 }
@@ -284,12 +283,11 @@ TEST_CASE("Restoring Subproject", "[Basic]"){
   //Parent:
   fullProjectData pd;
   pd.name = "Project from file";
-  pd.FTE.set(0.7);;
-  pd.useEnd = false;
-  pd.useStart = false;
+  projectSliceData slices;
+  slices.slices.push_back({timecodeNull, timecodeNull, eb_float{0.7}});
   pd.uid = theGen.getNextId();
 
-  pm.restoreProject(pd, 10);
+  pm.restoreProject(pd, slices, 10);
 
   fullSubProjectData sd;
   sd.name = "Subproject from file";
@@ -310,60 +308,40 @@ TEST_CASE("Restoring Time-specified Project", "[Basic]"){
   projectManager pm;
   fullProjectData pd;
   pd.name = "Project from file with time";
-  pd.FTE.set(0.7);;
   pd.uid = uniqueIdGenerator().getNextId();
 
   SECTION("Start time - active"){
-    pd.useEnd = false;
-    pd.useStart = true;
-    pd.start = 5;
-    pm.restoreProject(pd, 10);
+    projectSliceData slices;
+    slices.slices.push_back({5, timecodeNull, eb_float{0.7}});
+    pm.restoreProject(pd, slices, 10);
     REQUIRE(pm.projectCount() == 1);
     REQUIRE(pm.getName(pd.uid) == pd.name);
     REQUIRE(pm.isActiveProject(pd.uid, 10));
   }
   SECTION("End time - active"){
-    pd.useEnd = true;
-    pd.useStart = false;
-    pd.end = 15;
-    pm.restoreProject(pd, 10);
+    projectSliceData slices;
+    slices.slices.push_back({timecodeNull, 15, eb_float{0.7}});
+    pm.restoreProject(pd, slices, 10);
     REQUIRE(pm.projectCount() == 1);
     REQUIRE(pm.getName(pd.uid) == pd.name);
     REQUIRE(pm.isActiveProject(pd.uid, 10));
   }
   SECTION("Start time - in-active"){
-    pd.useEnd = false;
-    pd.useStart = true;
-    pd.start = 5;
-    pm.restoreProject(pd, 3);
+    projectSliceData slices;
+    slices.slices.push_back({5, timecodeNull, eb_float{0.7}});
+    pm.restoreProject(pd, slices, 3);
     REQUIRE(pm.projectCount() == 1);
     REQUIRE(pm.getName(pd.uid) == pd.name);
     REQUIRE_FALSE(pm.isActiveProject(pd.uid, 3));
   }
-  SECTION("End time - active"){
-    pd.useEnd = true;
-    pd.useStart = false;
-    pd.end = 15;
-    pm.restoreProject(pd, 20);
+  SECTION("End time - in-active"){
+    projectSliceData slices;
+    slices.slices.push_back({timecodeNull, 15, eb_float{0.7}});
+    pm.restoreProject(pd, slices, 20);
     REQUIRE(pm.projectCount() == 1);
     REQUIRE(pm.getName(pd.uid) == pd.name);
     REQUIRE_FALSE(pm.isActiveProject(pd.uid, 20));
   }
-}
-TEST_CASE("Restoring Time-specified Project - inactive", "[Basic]"){
-  projectManager pm;
-  fullProjectData pd;
-  pd.name = "Project from file with time";
-  pd.FTE.set(0.7);;
-  pd.useEnd = false;
-  pd.useStart = true;
-  pd.start = 15;
-  pd.uid = uniqueIdGenerator().getNextId();
-
-  pm.restoreProject(pd, 10);
-  REQUIRE(pm.projectCount() == 1);
-  REQUIRE(pm.getName(pd.uid) == pd.name);
-  REQUIRE_FALSE(pm.isActiveProject(pd.uid, 10));
 }
 //Now describe, to check the active flag works
 
@@ -817,26 +795,24 @@ TEST_CASE("Restoring a project using invalid id"){
   projectManager pm;
   fullProjectData pd;
   pd.name = "Project from file";
-  pd.FTE.set(0.7);
-  pd.useEnd = false;
-  pd.useStart = false;
   pd.uid = uniqueIdGenerator().getNextId();
+  projectSliceData slices;
 
   SECTION("Subproject tag"){
     pd.uid.tag(proIds::uidTag::sub);
-    REQUIRE_THROWS(pm.restoreProject(pd, 10));
+    REQUIRE_THROWS(pm.restoreProject(pd, slices, 10));
   }
   SECTION("One off tag"){
     pd.uid.tag(proIds::uidTag::oneoff);
-    REQUIRE_THROWS(pm.restoreProject(pd, 10));
+    REQUIRE_THROWS(pm.restoreProject(pd, slices, 10));
   }
   SECTION("Null uid"){
     pd.uid = proIds::NullUid;
-    REQUIRE_THROWS(pm.restoreProject(pd, 10));
+    REQUIRE_THROWS(pm.restoreProject(pd, slices, 10));
   }
   SECTION("Restoring twice (id taken)"){
-    pm.restoreProject(pd, 10);
-    REQUIRE_THROWS(pm.restoreProject(pd, 10));
+    pm.restoreProject(pd, slices, 10);
+    REQUIRE_THROWS(pm.restoreProject(pd, slices, 10));
   }
 }
 TEST_CASE("Restoring a subproject using invalid id"){

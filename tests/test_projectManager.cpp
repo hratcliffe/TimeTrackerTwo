@@ -343,6 +343,91 @@ TEST_CASE("Restoring Time-specified Project", "[Basic]"){
     REQUIRE_FALSE(pm.isActiveProject(pd.uid, 20));
   }
 }
+TEST_CASE("Restoring with multiple time slices", "[Basic]"){
+  projectManager pm;
+  fullProjectData pd;
+  pd.name = "Project from file with time";
+  pd.uid = uniqueIdGenerator().getNextId();
+
+  SECTION("Start time - active"){
+    projectSliceData slices;
+    slices.slices.push_back({5, 20, eb_float{0.7}});
+    slices.slices.push_back({20, timecodeNull, eb_float{0.5}});
+    pm.restoreProject(pd, slices, 10);
+    REQUIRE(pm.projectCount() == 1);
+    REQUIRE(pm.getName(pd.uid) == pd.name);
+    REQUIRE(pm.isActiveProject(pd.uid, 10));
+    REQUIRE(pm.isVariableFTE(pd.uid));
+  }
+  SECTION("End time - active"){
+    projectSliceData slices;
+    slices.slices.push_back({timecodeNull, 15, eb_float{0.7}});
+    slices.slices.push_back({15, 20, eb_float{0.5}});
+    pm.restoreProject(pd, slices, 10);
+    REQUIRE(pm.projectCount() == 1);
+    REQUIRE(pm.getName(pd.uid) == pd.name);
+    REQUIRE(pm.isActiveProject(pd.uid, 10));
+    REQUIRE(pm.isVariableFTE(pd.uid));
+  }
+  SECTION("Start time - in-active"){
+    projectSliceData slices;
+    slices.slices.push_back({5, 20, eb_float{0.7}});
+    slices.slices.push_back({20, timecodeNull, eb_float{0.5}});
+    pm.restoreProject(pd, slices, 3);
+    REQUIRE(pm.projectCount() == 1);
+    REQUIRE(pm.getName(pd.uid) == pd.name);
+    REQUIRE_FALSE(pm.isActiveProject(pd.uid, 3));
+    REQUIRE(pm.isVariableFTE(pd.uid));
+  }
+  SECTION("End time - in-active"){
+    projectSliceData slices;
+    slices.slices.push_back({timecodeNull, 10, eb_float{0.7}});
+    slices.slices.push_back({10, 15, eb_float{0.5}});
+    pm.restoreProject(pd, slices, 20);
+    REQUIRE(pm.projectCount() == 1);
+    REQUIRE(pm.getName(pd.uid) == pd.name);
+    REQUIRE_FALSE(pm.isActiveProject(pd.uid, 20));
+    REQUIRE(pm.isVariableFTE(pd.uid));
+  }
+  SECTION("Both times, FTE at"){
+    projectSliceData slices;
+    slices.slices.push_back({3, 10, eb_float{0.7}});
+    slices.slices.push_back({10, 25, eb_float{0.5}});
+    pm.restoreProject(pd, slices, 20);
+    REQUIRE(pm.getFTEAt(pd.uid, 4) == eb_float{0.7});
+    REQUIRE(pm.getFTEAt(pd.uid, 12) == eb_float{0.5});
+    REQUIRE(pm.getFTEAt(pd.uid, 2) == eb_float{0.0});
+    REQUIRE(pm.getFTEAt(pd.uid, 30) == eb_float{0.0});
+  }
+  SECTION("Open start, FTE at"){
+    projectSliceData slices;
+    slices.slices.push_back({timecodeNull, 10, eb_float{0.7}});
+    slices.slices.push_back({10, 25, eb_float{0.5}});
+    pm.restoreProject(pd, slices, 20);
+    REQUIRE(pm.getFTEAt(pd.uid, 2) == eb_float{0.7});
+    REQUIRE(pm.getFTEAt(pd.uid, 12) == eb_float{0.5});
+    REQUIRE(pm.getFTEAt(pd.uid, 30) == eb_float{0.0});
+  }
+  SECTION("Open end, FTE at"){
+    projectSliceData slices;
+    slices.slices.push_back({1, 10, eb_float{0.7}});
+    slices.slices.push_back({10, timecodeNull, eb_float{0.5}});
+    pm.restoreProject(pd, slices, 20);
+    REQUIRE(pm.getFTEAt(pd.uid, 2) == eb_float{0.7});
+    REQUIRE(pm.getFTEAt(pd.uid, 12) == eb_float{0.5});
+    REQUIRE(pm.getFTEAt(pd.uid, 30) == eb_float{0.5});
+  }
+  SECTION("Both Open, FTE at"){
+    projectSliceData slices;
+    slices.slices.push_back({timecodeNull, 10, eb_float{0.7}});
+    slices.slices.push_back({10, timecodeNull, eb_float{0.5}});
+    pm.restoreProject(pd, slices, 20);
+    REQUIRE(pm.getFTEAt(pd.uid, 2) == eb_float{0.7});
+    REQUIRE(pm.getFTEAt(pd.uid, 12) == eb_float{0.5});
+    REQUIRE(pm.getFTEAt(pd.uid, 30) == eb_float{0.5});
+  }
+}
+
 //Now describe, to check the active flag works
 
 //--------- Modifying --------------------------------------------------------------

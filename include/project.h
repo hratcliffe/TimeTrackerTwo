@@ -32,8 +32,6 @@ class projectLike{
   protected:
     std::string name; /**< \brief Name for entity */
     proIds::Uuid uid; /**< \brief Unique identifier for entity */
-    bool hasStart=false, hasEnd=false; /**< Whether or not there is a start or end */
-    timecode start=timecodeNull, end=timecodeNull; /**< Time for the start and end */
 
   public:
     virtual std::string describe()=0; /**< \brief Describe the project */
@@ -41,28 +39,6 @@ class projectLike{
     virtual std::string getName() const{return name;}; /**< \brief Get the name of the project */
     virtual ~projectLike(){;}; /**< \brief Destructor */
     virtual operator selectableEntity(){return selectableEntity{name, uid};} /**< \brief Convert to selectable entity */
-    virtual std::pair<timecode, timecode> getDateRange() const{
-      timecode start_t = hasStart ? start : timecodeNull;
-      timecode end_t = hasEnd ? end : timecodeNull;
-      return std::make_pair(start_t, end_t);
-    }
-    virtual void setDateRange(timecode start_in, timecode end_in){
-      //Pass null for 'no end specified' - this will override any existing value
-      // IF there emerges a reason to set only one or other, consider allowing this
-      if(start_in != timecodeNull){
-        start = start_in; 
-        hasStart = true;
-      }else{
-        hasStart = false;
-      }
-      if(end_in != timecodeNull){ 
-        end=end_in; 
-        hasEnd = true;
-      }else{
-        hasEnd = false;
-      }
-    }
-
   };
 
 
@@ -114,38 +90,93 @@ class project : public projectLike{
   private:
 
     bool active; /**< \brief Flag to allow project to be deactivated for any reason*/
-    eb_float FTE;/**< \brief Fraction of FTE for this project */
     std::vector<proIds::Uuid> subprojects;/**< \brief Subprojects belonging to this project */
+    std::vector<singleSlice> FTE_profile;/**< \brief Time profile of FTE for this project */
   public:
     project() = default;
-    project(const fullProjectData &data){
+    /**
+     * @brief Construct a new project object with variable FTE
+     *
+     * Project has a sing
+     * @param data Data on the project. Any start, end or FTE data in this object is ignored. If slices is empty, project effectively has 0 FTE
+     * @param slices Project FTE slices
+     */
+    project(const fullProjectData &data, const projectSliceData & slices){
       name = data.name;
       uid = data.uid;
-      FTE = data.FTE;
-      hasStart = data.useStart;
-      hasEnd = data.useEnd;
-      start = data.start;
-      end = data.end;
+      FTE_profile = slices.slices;
       active = true;
     }
+    /**
+     * @brief Construct a new project object
+     *
+     * Project has a single fixed FTE although it can have start and end dates. This data is populated from the data parameter
+     * @param data Data on the project
+     * @param uid_in Uid for project
+     */
     project(projectData data, proIds::Uuid uid_in){
-        name = data.name;
-        uid =  uid_in;
-        FTE = data.FTE;
-        hasStart = data.useStart;
-        hasEnd = data.useEnd;
-        start = data.start;
-        end = data.end;
-        active = true;
+      new_init(data, uid_in);
+    }
+    /**
+     * @brief Construct a new project object with variable FTE
+     *
+     * Project FTE is determined by the slices parameter - any start, end or FTE in the data parameter is ignored
+     * @param data The data such as name
+     * @param uid_in Uid for project
+     * @param slices The FTE slice data
+     */
+    project(projectData data, proIds::Uuid uid_in, const projectSliceData & slices){
+      new_init(data, uid_in);
+      FTE_profile = slices.slices;
+    };
+    void new_init(projectData data, proIds::Uuid uid_in){
+      name = data.name;
+      uid =  uid_in;
+      // Make sure
+      if( !data.useStart) data.start = timecodeNull;
+      if( !data.useEnd) data.end = timecodeNull;
+      FTE_profile.push_back(singleSlice{data.start, data.end, data.FTE});
+      active = true;
     };
     void addSubproject(proIds::Uuid sub_id){subprojects.push_back(sub_id);}
     ~project()=default;
 
-    eb_float getFTE(){return FTE;}
+    eb_float getFTE(){
+      if(FTE_profile.size()>0){
+        return FTE_profile[0].FTE;
+      }else{
+        return eb_float{0.0};
+      }
+    }
+    eb_float getFTEAt(timecode time){
+      auto it = std::find_if(FTE_profile.begin(), FTE_profile.end(), [time](const singleSlice & sl){return (sl.start == timecodeNull || sl.start <= time) && (sl.end == timecodeNull || sl.end >= time);});
+      if(it != FTE_profile.end()){
+        return it->FTE;
+      }else{
+        return eb_float{0.0};
+      }
+    }
+    void setFTE(eb_float FTE_in){
+      if(!variableFTE()){
+        FTE_profile[0].FTE = FTE_in;
+      }else{
+        throw std::runtime_error("Cannot set FTE without time window on variable FTE project");
+      }
+    }
+    bool variableFTE(){return FTE_profile.size()>1;}
     void activate(){active = true;}
     void deactivate(){active = false;}
+    std::pair<timecode, timecode> getDateRange() const{
+      if(FTE_profile.size() > 0){
+        timecode start_t = FTE_profile[0].start;
+        timecode end_t = FTE_profile[FTE_profile.size()-1].end;
+        return std::make_pair(start_t, end_t);
+      }else{
+        return std::make_pair(timecodeNull, timecodeNull);
+      }
+    }
     std::string describe()override{
-      return !active ? "\nProject is inactive\n" : name+" "+ integerPercent(FTE)+" % FTE\n "+ std::to_string(subprojects.size()) + " subprojects";
+      return !active ? "\nProject is inactive\n" : name+" "+ integerPercent(getFTE())+" % FTE\n "+ std::to_string(subprojects.size()) + " subprojects";
     }
 };
 

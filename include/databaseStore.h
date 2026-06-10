@@ -40,7 +40,7 @@ class databaseStore{
     void enable_foreign_keys(){sqlite3_exec(DB, "PRAGMA foreign_keys = ON", nullptr, nullptr, nullptr);}
     bool check_tables(bool verbose){
 
-        auto expected_tables = std::vector<std::string>{"projects", "subprojects", "timestamps", "app_data", "app_state", "oneoffs", "digest_periods", "time_digests"};
+        auto expected_tables = std::vector<std::string>{"projects", "subprojects", "timestamps", "app_data", "app_state", "oneoffs", "digest_periods", "time_digests", "project_dates", "project_status"};
         // Get list of tables in the database
         std::string cmd = "SELECT name FROM sqlite_master WHERE type='table';";
         sqlite3_stmt *stmt;
@@ -73,7 +73,12 @@ class databaseStore{
 
         std::map<std::string, std::string> cmds;
 
-        cmds["projects"] = "CREATE TABLE IF NOT EXISTS projects(id CHAR(36) PRIMARY KEY, name TEXT, FTE INTEGER, start_date INTEGER, end_date INTEGER);";
+        cmds["projects"] = "CREATE TABLE IF NOT EXISTS projects(id CHAR(36) PRIMARY KEY, name TEXT);";
+        // Will have to rely on insertion to prevent overlaps
+        // Start, end and FTE
+        cmds["project_dates"] = "CREATE TABLE IF NOT EXISTS project_dates(id INTEGER PRIMARY KEY, project_id CHAR(36), FTE INTEGER, start_date INTEGER, end_date INTEGER, FOREIGN KEY(project_id) REFERENCES projects(id));";
+        // Incidental deactivation - keep a log of the time 'down'
+        cmds["project_status"] = "CREATE TABLE IF NOT EXISTS project_status(id INTEGER PRIMARY KEY, project_id CHAR(36), last_up INTEGER, last_down INTEGER, total_down INTEGER, FOREIGN KEY(project_id) REFERENCES projects(id));";
         cmds["subprojects"] = "CREATE TABLE IF NOT EXISTS subprojects(id CHAR(36) PRIMARY KEY, name TEXT, frac INTEGER, parent_id CHAR(36), FOREIGN KEY(parent_id) REFERENCES projects(id));";
 
         // NOTE: ideally would have a foreign key here BUT since it can be either a project OR a sub OR a one-off
@@ -102,7 +107,7 @@ class databaseStore{
     }
 
     void delete_all_tables(){
-        std::string cmd = "DROP TABLE IF EXISTS subprojects; DROP TABLE IF EXISTS projects; DROP TABLE IF EXISTS oneoffs; DROP TABLE IF EXISTS timestamps; DROP TABLE IF EXISTS digest_periods; DROP TABLE IF EXISTS time_digests; DROP TABLE IF EXISTS app_data; DROP TABLE IF EXISTS app_state;";
+        std::string cmd = "DROP TABLE IF EXISTS subprojects; DROP TABLE IF EXISTS projects; DROP TABLE IF EXISTS oneoffs; DROP TABLE IF EXISTS timestamps; DROP TABLE IF EXISTS digest_periods; DROP TABLE IF EXISTS time_digests; DROP TABLE IF EXISTS app_data; DROP TABLE IF EXISTS app_state; DROP TABLE IF EXISTS project_dates; DROP TABLE IF EXISTS project_status;";
         int err = sqlite3_exec(DB, cmd.c_str(), NULL, NULL, &errMsg);
         if(err != SQLITE_OK){
             std::cerr << "Error deleting tables: " << errMsg << std::endl;
@@ -256,38 +261,131 @@ class databaseStore{
     }
 
     void writeProject(const fullProjectData & dat){
-
         //Unpacking
         const std::string & id = dat.uid.to_string();
         const std::string & name = dat.name;
-        const int FTE = dat.FTE.value;
-
         std::string cmd;
         sqlite3_stmt * prep_cmd;
         int err = 0;
-        cmd = "insert into projects(id, name, FTE, start_date, end_date) values(?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, FTE=excluded.FTE, start_date=excluded.start_date, end_date=excluded.end_date;";
+        cmd = "insert into projects(id, name) values(?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name;";
         err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_text(prep_cmd, 1, id.c_str(), id.length(), SQLITE_STATIC);
         sqlite3_bind_text(prep_cmd, 2, name.c_str(), name.length(), SQLITE_STATIC);
-        sqlite3_bind_int(prep_cmd, 3, FTE);
-        if(dat.useStart){
-            sqlite3_bind_int64(prep_cmd, 4, dat.start);
-        }else{
-            sqlite3_bind_int64(prep_cmd, 4, 0); // TODO fix null date
-        }
-        if(dat.useEnd){
-            sqlite3_bind_int64(prep_cmd, 5, dat.end);
-        }else{
-            sqlite3_bind_int64(prep_cmd, 5, 0); // TODO fix null date
-        }
 
         err = sqlite3_step(prep_cmd);
         if(err == SQLITE_DONE) err = SQLITE_OK;
         if(err != SQLITE_OK){
             std::cerr<< sqlite3_errmsg(DB) << std::endl;
+            sqlite3_finalize(prep_cmd);
             throw std::runtime_error("Failed to write project");
         }
-        sqlite3_finalize(prep_cmd); //tODO finalize inside error case also
+        sqlite3_finalize(prep_cmd);
+
+        writeProjectSlice(dat);
+    }
+    /**
+     * @brief Write a time slice
+     *
+     * Writes information on FTE and start/emd dates for this value.
+     * @pre The project must exist in the DB. If start and end are set, start must precede end
+     * @post The entry is written. If start and end are both absent OR clobber is true, this will be the sole entry for the project. Otherwise no consistency checks are done
+     * @param dat The project data
+     * @param clobber Whether to force-delete any existing slices
+     */
+    void writeProjectSlice(const fullProjectData & dat, bool clobber=false){
+        //Writes date information only - project must exist
+        const std::string & id = dat.uid.to_string();
+        const int FTE = dat.FTE.value;
+        std::string cmd;
+        sqlite3_stmt * prep_cmd;
+        int err = 0;
+        if(clobber || (!dat.useStart && !dat.useEnd)){
+            //Overwrite any/all slices with this data
+            cmd = "DELETE from project_dates WHERE project_id = ?;";
+            err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+            sqlite3_bind_text(prep_cmd, 1, id.c_str(), id.length(), SQLITE_STATIC);
+
+            err = sqlite3_step(prep_cmd);
+            if(err == SQLITE_DONE) err = SQLITE_OK;
+            if(err != SQLITE_OK){
+                std::cerr<< sqlite3_errmsg(DB) << std::endl;
+                sqlite3_finalize(prep_cmd);
+                throw std::runtime_error("Failed to write project");
+            }
+            sqlite3_finalize(prep_cmd);
+        }
+        cmd = "insert into project_dates(project_id, FTE, start_date, end_date) values(?, ?, ?, ?);";
+        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, id.c_str(), id.length(), SQLITE_STATIC);
+
+        sqlite3_bind_int(prep_cmd, 2, FTE);
+        //Unbound parameters are NULL which is what we want here
+        if(dat.useStart){
+            sqlite3_bind_int64(prep_cmd, 3, dat.start);
+        }
+        if(dat.useEnd){
+            sqlite3_bind_int64(prep_cmd, 4, dat.end);
+        }
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            std::cerr<< sqlite3_errmsg(DB) << std::endl;
+            sqlite3_finalize(prep_cmd);
+            throw std::runtime_error("Failed to write project");
+        }
+        sqlite3_finalize(prep_cmd);
+    }
+    /**
+     * @brief Write a time slice
+     *
+     * Writes information on FTE and start/emd dates for this value
+     * @pre The project must exist in the DB. If start and end are set, start must precede end
+     * @post The entry is written. If start and end are both absent OR clobber is true, this will be the sole entry for the project. Otherwise no consistency checks are done
+     * @param dat The slice data
+     * @param clobber Whether to force-delete any existing slices
+     */
+    void writeProjectSlice(const proIds::Uuid & uid, const singleSlice & slice, bool clobber=false){
+        //Writes date information only - project must exist
+        const std::string & id = uid.to_string();
+        const int FTE = slice.FTE.value;
+        std::string cmd;
+        sqlite3_stmt * prep_cmd;
+        int err = 0;
+        if(clobber){
+            //Overwrite any/all slices with this data
+            cmd = "DELETE from project_dates WHERE project_id = ?;";
+            err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+            sqlite3_bind_text(prep_cmd, 1, id.c_str(), id.length(), SQLITE_STATIC);
+
+            err = sqlite3_step(prep_cmd);
+            if(err == SQLITE_DONE) err = SQLITE_OK;
+            if(err != SQLITE_OK){
+                std::cerr<< sqlite3_errmsg(DB) << std::endl;
+                sqlite3_finalize(prep_cmd);
+                throw std::runtime_error("Failed to write project");
+            }
+            sqlite3_finalize(prep_cmd);
+        }
+        cmd = "insert into project_dates(project_id, FTE, start_date, end_date) values(?, ?, ?, ?);";
+        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        sqlite3_bind_text(prep_cmd, 1, id.c_str(), id.length(), SQLITE_STATIC);
+
+        sqlite3_bind_int(prep_cmd, 2, FTE);
+        //Unbound parameters are NULL which is what we want here
+        if(slice.start != timecodeNull){
+            sqlite3_bind_int64(prep_cmd, 3, slice.start);
+        }
+        if(slice.end != timecodeNull){
+            sqlite3_bind_int64(prep_cmd, 4, slice.end);
+        }
+        err = sqlite3_step(prep_cmd);
+        if(err == SQLITE_DONE) err = SQLITE_OK;
+        if(err != SQLITE_OK){
+            std::cerr<< sqlite3_errmsg(DB) << std::endl;
+            sqlite3_finalize(prep_cmd);
+            throw std::runtime_error("Failed to write slice");
+        }
+        sqlite3_finalize(prep_cmd);
     }
     void writeSubproject(const fullSubProjectData & dat){
 
@@ -323,7 +421,7 @@ class databaseStore{
         std::string cmd;
         sqlite3_stmt * prep_cmd;
         int err = 0;
-        cmd = "insert into oneoffs values(?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, descr=excluded.descr;"; // TODO check the conflict clause
+        cmd = "insert into oneoffs values(?, ?, ?) ON CONFLICT(id) DO UPDATE SET name=excluded.name, descr=excluded.descr;";
         err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_text(prep_cmd, 1, id.c_str(), id.length(), SQLITE_STATIC);
         sqlite3_bind_text(prep_cmd, 2, name.c_str(), name.length(), SQLITE_STATIC);
@@ -373,18 +471,21 @@ class databaseStore{
 
     void deleteProject(proIds::Uuid const & id){
         const std::string id_str = id.to_string();
-        std::string cmd;
+        std::string cmd1, cmd2;
         sqlite3_stmt * prep_cmd;
         int err = 0;
-        cmd = "DELETE FROM projects WHERE id = ?;";
-        err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
-        sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
-        err = sqlite3_step(prep_cmd);
-        if(err == SQLITE_DONE) err = SQLITE_OK;
-        if(err != SQLITE_OK){
-            throw std::runtime_error("Failed to delete project");
+        cmd1 = "DELETE FROM project_dates WHERE project_id =?;";
+        cmd2 = "DELETE FROM projects WHERE id = ?;";
+        for(auto cmd : {cmd1, cmd2}){
+            err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+            sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
+            err = sqlite3_step(prep_cmd);
+            if(err == SQLITE_DONE) err = SQLITE_OK;
+            if(err != SQLITE_OK){
+                throw std::runtime_error("Failed to delete project");
+            }
+            sqlite3_finalize(prep_cmd);
         }
-        sqlite3_finalize(prep_cmd);
     }
     void deleteSubproject(proIds::Uuid const & id){
         const std::string id_str = id.to_string();
@@ -417,46 +518,62 @@ class databaseStore{
         sqlite3_finalize(prep_cmd);
     }
 
+    /**
+     * @brief Reads the project.
+     *
+     * Returns the envelope start and end times, i.e. the earliest and latest respectively
+     * @param id Project id to find
+     * @return The data
+     */
     fullProjectData readProject(proIds::Uuid const & id){
         const std::string id_str = id.to_string();
-        std::string cmd = "SELECT name, FTE, start_date, end_date FROM projects WHERE id = ?;";
+        std::string cmd = "SELECT name, min(FTE), max(FTE), min(coalesce(start_date, -1)), max(coalesce(end_date, 9223372036854775807)) FROM projects INNER JOIN project_dates ON projects.id = project_dates.project_id WHERE projects.id = ? EXCEPT SELECT null, null, null, null, null;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
         sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
-        
         fullProjectData ret;
-        timecode tmp;
         if((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
             ret.uid = id;
             ret.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0));
-            ret.FTE.set(sqlite3_column_int(prep_cmd, 1));
-            tmp = sqlite3_column_int64(prep_cmd, 2);
-            if(tmp != 0){ // TODO fix 0 to true null
-              ret.start = tmp;
-              ret.useStart = true;
-            }else{
-              ret.start = timecodeNull;
-              ret.useStart = false;
-            }
-            tmp = sqlite3_column_int64(prep_cmd, 3);
-            if(tmp != 0){ // TODO fix 0 to true null
-              ret.end = tmp;
-              ret.useEnd = true;
-            }else{
-              ret.end = timecodeNull;
-              ret.useEnd = false;
-            }
-
+            // Now we have possibly a min and max FTE so check if they are the same
+            int tmp1 = sqlite3_column_int(prep_cmd, 1);
+            int tmp2 = sqlite3_column_int(prep_cmd, 2);
+            ret.FTE.set(tmp1);
+            if(tmp1 != tmp2) ret.variableFTE = true;
+            // Fields 3 and 4 are either a real value, or the sentinel we chose so unpack:
+            ret.start = sqlite3_column_int64(prep_cmd, 3);
+            ret.useStart =  ret.start == -1 ? false : true;
+            ret.end = sqlite3_column_int64(prep_cmd, 4);
+            ret.useEnd =  ret.end == 9223372036854775807 ? false : true;
         }else{
+            std::cerr<<sqlite3_errmsg(DB)<<std::endl;
+            sqlite3_finalize(prep_cmd);
             throw std::runtime_error("Failed to read project");
         }
         sqlite3_finalize(prep_cmd);
         return ret;
     }
-    std::vector<fullProjectData> fetchProjectList(){
-        std::string cmd = "SELECT id, name, FTE, start_date, end_date FROM projects ORDER by name;";
+    /**
+     * @brief Read list of projects at date
+     *
+     * Produces list of all projects active at the given data. If project has variable FTE, the one at date is given
+     * @param date The date to check
+     * @return std::vector<fullProjectData> 
+     */
+    std::vector<fullProjectData> fetchProjectListActiveAt(timecode date, timecode window){
+        // date should NOT be null- it will be used
+
+        std::string cmd = "SELECT projects.id, name, FTE, start_date, end_date FROM projects INNER JOIN project_dates ON projects.id = project_dates.project_id WHERE (start_date <= ? OR start_date IS NULL) AND (end_date >= ? OR end_date IS NULL) ORDER by name;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        //Start is either before given date or before end of the window
+        if(window != timecodeNull){
+          sqlite3_bind_int64(prep_cmd, 1, date+window);
+        }else{
+           sqlite3_bind_int64(prep_cmd, 1, date);
+        }
+        //End is after given date
+        sqlite3_bind_int64(prep_cmd, 2, date);
         
         std::vector<fullProjectData> ret;
         while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
@@ -464,70 +581,104 @@ class databaseStore{
             proj.uid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0)));
             proj.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1));
             proj.FTE.set(sqlite3_column_int(prep_cmd, 2));
-            timecode tmp = sqlite3_column_int64(prep_cmd, 3);
-            if(tmp != 0){ // TODO fix 0 to true null
-              proj.start = tmp;
+            if(sqlite3_column_type(prep_cmd, 3) != SQLITE_NULL){
+              proj.start = sqlite3_column_int64(prep_cmd, 3);
               proj.useStart = true;
             }else{
               proj.start = timecodeNull;
               proj.useStart = false;
             }
-            tmp = sqlite3_column_int64(prep_cmd, 4);
-            if(tmp != 0){ // TODO fix 0 to true null
-              proj.end = tmp;
+            if(sqlite3_column_type(prep_cmd, 4) != SQLITE_NULL){
+              proj.end = sqlite3_column_int64(prep_cmd, 4);
               proj.useEnd = true;
             }else{
               proj.end = timecodeNull;
               proj.useEnd = false;
             }
-            
+
             ret.push_back(proj);
         }
         if(err != SQLITE_DONE){
-            throw std::runtime_error("Failed to fetch project list");
+            sqlite3_finalize(prep_cmd);
+            std::cerr<<sqlite3_errmsg(DB)<<std::endl;
+            throw std::runtime_error("Failed to fetch project list for time");
         }
         sqlite3_finalize(prep_cmd);
         return ret;
     }
-    std::vector<fullProjectData> fetchProjectListActiveAt(timecode date){
-        // date should NOT be null- it will be used
-
-        // Assuming for now that '0' is the null date
-        std::string cmd = "SELECT id, name, FTE, start_date, end_date FROM projects WHERE (start_date <= ? or start_date == ?) AND (end_date >= ? OR end_date == ?) ORDER by name;";
+    /**
+     * @brief Read the time slicing data for project
+     *
+     * Returns object containing an ordered list of the slices (ordered by start_date, then end_date). If there are entries with null dates these are included
+     * @param id Project id to fetch
+     * @return projectSliceData
+     */
+    projectSliceData readProjectTimes(proIds::Uuid const & id){
+        const std::string id_str = id.to_string();
+        std::string cmd = "SELECT FTE, start_date, end_date, name FROM project_dates INNER JOIN projects on projects.id=project_dates.project_id WHERE project_id = ? ORDER by start_date, end_date;";
         sqlite3_stmt * prep_cmd;
         int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
-        sqlite3_bind_int64(prep_cmd, 1, date);
-        sqlite3_bind_int64(prep_cmd, 2, 0); //TODO - use null value not plain 0
-        sqlite3_bind_int64(prep_cmd, 3, date);
-        sqlite3_bind_int64(prep_cmd, 4, 0); //TODO - use null value not plain 0
-        
-        std::vector<fullProjectData> ret;
-        while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
-            fullProjectData proj;
-            proj.uid = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0)));
-            proj.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 1));
-            proj.FTE.set(sqlite3_column_int(prep_cmd, 2));
-            timecode tmp = sqlite3_column_int64(prep_cmd, 3);
-            if(tmp != 0){ // TODO fix 0 to true null
-              proj.start = tmp;
-              proj.useStart = true;
-            }else{
-              proj.start = timecodeNull;
-              proj.useStart = false;
-            }
-            tmp = sqlite3_column_int64(prep_cmd, 4);
-            if(tmp != 0){ // TODO fix 0 to true null
-              proj.end = tmp;
-              proj.useEnd = true;
-            }else{
-              proj.end = timecodeNull;
-              proj.useEnd = false;
-            }
+        sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
 
-            ret.push_back(proj);
+        projectSliceData ret;
+        while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            singleSlice slice;
+            slice.FTE.set(sqlite3_column_int(prep_cmd, 0));
+            //Checking for null on start_date (and end_date below)
+            if(sqlite3_column_type(prep_cmd, 1) != SQLITE_NULL){
+              slice.start = sqlite3_column_int64(prep_cmd, 1);
+            }else{
+              slice.start = timecodeNull;
+            }
+            if(sqlite3_column_type(prep_cmd, 2) != SQLITE_NULL){
+              slice.end = sqlite3_column_int64(prep_cmd, 2);
+            }else{
+              slice.end = timecodeNull;
+            }
+            ret.slices.push_back(slice);
+            ret.name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 3));
         }
         if(err != SQLITE_DONE){
-            throw std::runtime_error("Failed to fetch project list");
+            sqlite3_finalize(prep_cmd);
+            std::cerr<<sqlite3_errmsg(DB)<<std::endl;
+            throw std::runtime_error("Failed to fetch project list for time");
+        }
+        sqlite3_finalize(prep_cmd);
+        return ret;
+    }
+    std::map<proIds::Uuid, projectSliceData> readAllProjectTimesBetween(timecode start, timecode end){
+        std::string cmd = "SELECT project_id, FTE, start_date, end_date, name FROM project_dates INNER JOIN projects ON projects.id = project_dates.project_id WHERE (start_date < ? OR start_date is NULL) AND (end_date > ? OR end_date is NULL) ORDER BY project_id, start_date, end_date;";
+
+        sqlite3_stmt * prep_cmd;
+        int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+        //Reverse the order - start is before end of period, end is after start
+        sqlite3_bind_int64(prep_cmd, 2, start);
+        sqlite3_bind_int64(prep_cmd, 1, end);
+        std::map<proIds::Uuid, projectSliceData> ret;
+        while((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+            singleSlice slice;
+            slice.FTE.set(sqlite3_column_int(prep_cmd, 1));
+            //Checking for null on start_date (and end_date below)
+            if(sqlite3_column_type(prep_cmd, 2) != SQLITE_NULL){
+              slice.start = sqlite3_column_int64(prep_cmd, 2);
+            }else{
+              slice.start = timecodeNull;
+            }
+            if(sqlite3_column_type(prep_cmd, 3) != SQLITE_NULL){
+              slice.end = sqlite3_column_int64(prep_cmd, 3);
+            }else{
+              slice.end = timecodeNull;
+            }
+            auto id = proIds::Uuid(reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0)));
+            //Creates if does not exist
+            ret[id].slices.push_back(slice);
+            ret[id].name = reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 4));
+            ret[id].uid = id;
+        }
+        if(err != SQLITE_DONE){
+            sqlite3_finalize(prep_cmd);
+            std::cerr<<sqlite3_errmsg(DB)<<std::endl;
+            throw std::runtime_error("Failed to fetch project list for time");
         }
         sqlite3_finalize(prep_cmd);
         return ret;
@@ -769,14 +920,12 @@ class databaseStore{
       return 0;
     }
 
-    std::vector<timeStamp> fetchTrackerEntries(timecode start=-1, timecode end=-1){
-        //TODO - should the Uid tags be handled down here?
-      //TODO - is there an elegant way to do this with prepared statements?
+    std::vector<timeStamp> fetchTrackerEntries(timecode start=timecodeNull, timecode end=timecodeNull){
       std::string where_clause ="";
-      if(start != -1){
+      if(start != timecodeNull){
         where_clause += "t.time >="+std::to_string(start);
       }
-      if(end != -1){
+      if(end != timecodeNull){
         if(where_clause != "") where_clause += " AND ";
         where_clause += "t.time <="+std::to_string(end);
       }

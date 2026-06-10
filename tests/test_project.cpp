@@ -2,20 +2,36 @@
 
 #include "project.h"
 
+projectSliceData makeSimpleSlice(float FTE){
+  projectSliceData slice;
+  singleSlice sl;
+  sl.FTE.set(FTE);
+  sl.start = timecodeNull;
+  sl.end = timecodeNull;
+  slice.slices.push_back(sl);
+  return slice;
+}
+projectSliceData makeTimedSlice(float FTE, timecode start, timecode end){
+  projectSliceData slice;
+  singleSlice sl;
+  sl.FTE.set(FTE);
+  sl.start = start;
+  sl.end = end;
+  slice.slices.push_back(sl);
+  return slice;
+}
 TEST_CASE("Project Creation and describe", "[Basic]"){
   fullProjectData pd;
   uniqueIdGenerator theGen;
   pd.name = "Test Proj";
-  pd.FTE.set(0.3);
   pd.uid = theGen.getNextId();
-  pd.useStart = false;
-  pd.useEnd = false;
-  project p{pd};
- 
+  auto slice = makeSimpleSlice(0.3);
+  project p{pd, slice};
+
   SECTION("Checking creation"){
     REQUIRE(p.getName() == pd.name);
     REQUIRE(p.getUid() == pd.uid);
-    REQUIRE(p.getFTE() == pd.FTE);
+    REQUIRE(p.getFTE() == slice.slices[0].FTE);
   }
   SECTION("Describing"){
     std::string str = p.describe();
@@ -61,37 +77,26 @@ TEST_CASE("Project Start/End dates", "[Basic]"){
   fullProjectData pd;
   uniqueIdGenerator theGen;
   pd.name = "Test Proj";
-  pd.FTE.set(0.3);
   pd.uid = theGen.getNextId();
-  pd.useStart = true;
-  pd.start = 10;
-  pd.useEnd = true;
-  pd.end = 20;
-  project p{pd};
+  auto slice = makeTimedSlice(0.3, 10, 20);
+  project p{pd, slice};
 
   REQUIRE(p.getName() == pd.name);
   REQUIRE(p.getUid() == pd.uid);
-  REQUIRE(p.getFTE() == pd.FTE);
+  REQUIRE(p.getFTE() == slice.slices[0].FTE);
   auto ran = p.getDateRange();
-  REQUIRE(ran.first == pd.start);
-  REQUIRE(ran.second == pd.end);
-
-  //Alter and check again
-  p.setDateRange(77, 97);
-  ran = p.getDateRange();
-  REQUIRE(ran.first == 77);
-  REQUIRE(ran.second == 97);
+  REQUIRE(ran.first == slice.slices[0].start);
+  REQUIRE(ran.second == slice.slices[0].end);
 
 }
+/* Remove for now, consider how to handle this facility later
 TEST_CASE("Project Start/End dates - one ended", "[Basic]"){
   fullProjectData pd;
   uniqueIdGenerator theGen;
   pd.name = "Test Proj";
-  pd.FTE.set(0.3);
   pd.uid = theGen.getNextId();
-  pd.useStart = false;
-  pd.useEnd = false;
-  project p{pd};
+  auto slice = makeSimpleSlice(0.3);
+  project p{pd, slice};
 
   p.setDateRange(10, timecodeNull);
   auto ran = p.getDateRange();
@@ -104,7 +109,7 @@ TEST_CASE("Project Start/End dates - one ended", "[Basic]"){
   REQUIRE(ran.second == 10);
   REQUIRE(ran.first == timecodeNull);
 
-}
+}*/
 TEST_CASE("Subproject Creation", "[Basic]"){
   fullSubProjectData sd;
   uniqueIdGenerator theGen;
@@ -177,11 +182,9 @@ TEST_CASE("Adding Subproject", "[Basic]"){
   fullProjectData pd;
   uniqueIdGenerator theGen;
   pd.name = "Test Parent";
-  pd.FTE.set(0.8);
   pd.uid = theGen.getNextId();
-  pd.useStart = false;
-  pd.useEnd = false;
-  project p{pd};
+  auto slice = makeSimpleSlice(0.8);
+  project p{pd, slice};
   auto sd = theGen.getNextId();
   p.addSubproject(sd);
   auto sd2 = theGen.getNextId();
@@ -198,11 +201,9 @@ TEST_CASE("Project to Selectable", "[Basic]"){
   fullProjectData pd;
   uniqueIdGenerator theGen;
   pd.name = "Test Proj";
-  pd.FTE.set(0.3);
   pd.uid = theGen.getNextId();
-  pd.useStart = false;
-  pd.useEnd = false;
-  project p{pd};
+  auto slice = makeSimpleSlice(0.3);
+  project p{pd, slice};
   
   selectableEntity s = p;
   REQUIRE(s.name == pd.name);

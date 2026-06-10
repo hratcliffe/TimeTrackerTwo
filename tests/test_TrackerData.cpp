@@ -63,6 +63,14 @@ TEST_CASE("Config round trip", "[QTAware]"){
   REQUIRE(c == "Version c6qe");
 }
 
+TEST_CASE("Temporary Ids", "[QTAware]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig()};
+  auto id = td.getTemporaryId();
+  auto id2 = td.getTemporaryId();
+  REQUIRE( id != proIds::NullUid);
+  REQUIRE(id != id2);
+}
 //--- Adding/creating ----------------------------------------------------------------------------
 
 proIds::Uuid InferIDFromName(const std::map<proIds::Uuid, projectDetails> & map, std::string name){
@@ -139,7 +147,8 @@ TEST_CASE("Create and read - with helper", "[QTAware, Slots]"){
 
   SignalCatcher sig;
   //OK - these signals have different types so will not collide
-  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListNeedsUpdateEvent, [&td](){td.projectListUpdate(1);});
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListIsUpdatedEvent, &sig, &SignalCatcher::emitOrderedProjectList);
   QAbstractEventDispatcher::connect(&td, &TrackerData::projectTotalUpdateEvent, &sig, &SignalCatcher::emitEBFloatX2);
   td.createProject(pd);
 
@@ -169,7 +178,8 @@ TEST_CASE("Create and read - subproj", "[QTAware, Slots]"){
   spd.frac.set(0.3);
 
   SignalCatcher sig;
-  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListNeedsUpdateEvent, [&td](){td.projectListUpdate(1);});
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListIsUpdatedEvent, &sig, &SignalCatcher::emitOrderedProjectList);
   td.createSubproject(spd, pid);
 
   std::vector<selectableEntity> list;
@@ -182,6 +192,61 @@ TEST_CASE("Create and read - subproj", "[QTAware, Slots]"){
 
 }
 
+TEST_CASE("Create and read - variable FTE", "[QTAware, Slots]"){
+  auto app = dummyApp();
+  auto config = basicConfig();
+  TrackerData td{config};
+
+  projectData pd;
+  pd.name = "XYZ Created by Tracker Mk3";
+  pd.FTE.set(0.54);
+  pd.useStart = false;
+  pd.useEnd = false;
+
+  singleSlice slice1, slice2;
+  slice1.start = 300;
+  slice1.end = 400;
+  slice1.FTE.set(0.2);
+  slice2.start = 400;
+  slice2.end = 800;
+  slice2.FTE.set(0.27);
+  projectSliceData slices;
+  slices.slices.push_back(slice1);
+  slices.slices.push_back(slice2);
+
+  SECTION("Currently active"){
+    td.createProjectAdvanced(pd, slices, 500); //Slice2 should be current
+    auto descr = td.projectDetailsRequired();
+    auto pid = InferIDFromName(descr, pd.name);
+    auto pd_in = descr[pid];
+
+    auto slices_in = td.projectTimesRequired(0, 900)[pid];
+    REQUIRE(slices_in.slices.size() == 2);
+    REQUIRE(pd_in.FTE == slice2.FTE);
+    auto f1 = [slice1](const singleSlice & sl){return sl == slice1;};
+    REQUIRE(std::find_if(slices_in.slices.begin(), slices_in.slices.end(), f1) != slices_in.slices.end());
+    auto f2 = [slice2](const singleSlice & sl){return sl == slice2;};
+    REQUIRE(std::find_if(slices_in.slices.begin(), slices_in.slices.end(), f2) != slices_in.slices.end());
+  }
+  SECTION("Project in future"){
+    td.createProjectAdvanced(pd, slices, 100);//Before any slice
+     auto descr = td.projectDetailsRequired();
+    auto pid = InferIDFromName(descr, pd.name);
+    auto slices_in = td.projectTimesRequired(0, 900)[pid];
+    REQUIRE(slices_in.slices.size() == 2);
+    auto f1 = [slice1](const singleSlice & sl){return sl == slice1;};
+    REQUIRE(std::find_if(slices_in.slices.begin(), slices_in.slices.end(), f1) != slices_in.slices.end());
+    auto f2 = [slice2](const singleSlice & sl){return sl == slice2;};
+    REQUIRE(std::find_if(slices_in.slices.begin(), slices_in.slices.end(), f2) != slices_in.slices.end());
+
+    //New Tracker - loads projects fresh from backend
+    TrackerData td2{config};
+    td2.loadProjects(100);
+    descr = td2.projectDetailsRequired();
+    REQUIRE(descr.count(pid) == 0);
+    //TODO - what is expected in the original PM?
+  }
+}
 TEST_CASE("Updating One-Off Id", "[QTAware, Slots]"){
   auto app = dummyApp();
   TrackerData td{basicConfig()};
@@ -254,7 +319,8 @@ TEST_CASE("Verifying data consistency", "[QTAware]"){
     spd.name = "SubXYZ Created by Tracker Mk3";
     spd.frac.set(0.3);
     SignalCatcher sig;
-    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListNeedsUpdateEvent, [&td](){td.projectListUpdate(1);});
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListIsUpdatedEvent, &sig, &SignalCatcher::emitOrderedProjectList);
     td.createSubproject(spd, pid);
 
     std::vector<selectableEntity> list;
@@ -298,7 +364,8 @@ TEST_CASE("Verifying data consitency - deliberately broken", "[QTAware]"){
     spd.name = "SubXYZ Created by Tracker Mk3";
     spd.frac.set(0.3);
     SignalCatcher sig;
-    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListNeedsUpdateEvent, [&td](){td.projectListUpdate(1);});
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListIsUpdatedEvent, &sig, &SignalCatcher::emitOrderedProjectList);
     td.createSubproject(spd, pid);
 
     std::vector<selectableEntity> list;
@@ -327,7 +394,8 @@ TEST_CASE("Verifying data consitency - deliberately broken", "[QTAware]"){
     spd.name = "SubXYZ Created by Tracker Mk3";
     spd.frac.set(0.3);
     SignalCatcher sig;
-    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListNeedsUpdateEvent, [&td](){td.projectListUpdate(1);});
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListIsUpdatedEvent, &sig, &SignalCatcher::emitOrderedProjectList);
     td.createSubproject(spd, pid);
 
     std::vector<selectableEntity> list;
@@ -434,8 +502,10 @@ TEST_CASE("Marking", "[QTAware, Slots]"){
     std::string str;
     str = sig.what(str);
     REQUIRE(str == name);
-
-  // TODO - Now check we wrote the mark...
+    auto data = td.trackerEntriesRequired(id);
+    REQUIRE(data.size() == 1);
+    REQUIRE(data[0].projectUid == id);
+    REQUIRE(data[0].time == 242);
   }
   SECTION("One Off"){
     std::string name = "One off project for mark dfh";
@@ -453,7 +523,8 @@ TEST_CASE("Marking", "[QTAware, Slots]"){
     spd.frac.set(0.3);
 
     //Awful round-about way to get the ID for a created project
-    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListNeedsUpdateEvent, [&td](){td.projectListUpdate(1);});
+    QAbstractEventDispatcher::connect(&td, &TrackerData::projectListIsUpdatedEvent, &sig, &SignalCatcher::emitOrderedProjectList);
     td.createSubproject(spd, id);
     std::vector<selectableEntity> list;
     list = sig.what(list);
@@ -981,7 +1052,8 @@ TEST_CASE("Known Data - Load projects", "[QTAware]"){
   TrackerData td{basicConfig("./InputData/KnownDatabase.db")};
 
   SignalCatcher sig;
-  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListUpdateEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListNeedsUpdateEvent, [&td](){td.projectListUpdate(1);});
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListIsUpdatedEvent, &sig, &SignalCatcher::emitOrderedProjectList);
   QAbstractEventDispatcher::connect(&td, &TrackerData::projectTotalUpdateEvent, &sig, &SignalCatcher::emitEBFloatX2);
 
   td.loadProjects(0);
@@ -1035,6 +1107,46 @@ TEST_CASE("Known Data - Load projects with active One-Off project", "[QTAware]")
   str = sig.what(str);
   REQUIRE(str == "Tuesday Coffee");
 
+}
+TEST_CASE("Known Data - Load projects with start and end dates", "[QTAware]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./InputData/KnownDatabaseDates.db")};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListIsUpdatedEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectTotalUpdateEvent, &sig, &SignalCatcher::emitEBFloatX2);
+
+  SECTION("Both up"){
+    td.loadProjects(150);
+    std::vector<selectableEntity> list;
+    list = sig.what(list);
+    REQUIRE(list.size() == 5);
+    //Assume if size if right, content probably is here
+  }
+  SECTION("Before Start"){
+    td.loadProjects(50);
+    std::vector<selectableEntity> list;
+    list = sig.what(list);
+    REQUIRE(list.size() == 2);
+    {auto check = [](selectableEntity & se){return se.name == "Project Beta" && se.uid.to_string() == "{8af5d44a-2921-4666-b33b-053459e2ced6}" && se.level == 0;};
+    REQUIRE(std::find_if(list.begin(), list.end(), check) != list.end());}
+    //Subprojects:
+    {auto check = [](selectableEntity & se){return se.name == "Important Title" && se.uid.to_string() == "{07e453ad-b698-47b8-aa52-c7ef2306731d}" && se.level == 1;};
+    REQUIRE(std::find_if(list.begin(), list.end(), check) != list.end());}
+  }
+  SECTION("After end"){
+    td.loadProjects(250);
+    std::vector<selectableEntity> list;
+    list = sig.what(list);
+    REQUIRE(list.size() == 3);
+    {auto check = [](selectableEntity & se){return se.name == "Project Alpha" && se.uid.to_string() == "{cc467402-acd5-494f-9c58-466f3aa6f117}" && se.level == 0;};
+    REQUIRE(std::find_if(list.begin(), list.end(), check) != list.end());}
+    //Subprojects:
+    {auto check = [](selectableEntity & se){return se.name == "Documentation" && se.uid.to_string() == "{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}" && se.level == 1;};
+    REQUIRE(std::find_if(list.begin(), list.end(), check) != list.end());}
+    {auto check = [](selectableEntity & se){return se.name == "Testing" && se.uid.to_string() == "{de58a6f8-d0bb-46c8-af18-aed15e92060c}" && se.level == 1;};
+    REQUIRE(std::find_if(list.begin(), list.end(), check) != list.end());}
+  }
 }
 
 // ---------- Merging and deleting Projects ---------------------------------------------------------------------
@@ -1125,7 +1237,7 @@ TEST_CASE("Merging project data - project to another project - move from has sub
   }
 }
 
-TEST_CASE("Merging project data - project to another project - move from has NO subs", "[Failing]"){
+TEST_CASE("Merging project data - project to another project - move from has NO subs", "[QTAware, Slots]"){
   auto app = dummyApp();
   TrackerData td{basicConfig("./Scratch/KnownDatabaseForMergeS.db")};
   td.loadProjects(1); // No start-end times so load for any time...
@@ -1226,6 +1338,22 @@ TEST_CASE("Merging project data - sub to another sub of same parent"){
   {
     auto chk = [ts_id](timeDigestEntry td){return td.projectUid == ts_id && td.duration ==6219+3046;};
     REQUIRE(std::find_if(lst.begin(), lst.end(), chk) != lst.end());
+  }
+}
+
+TEST_CASE("Merging project unimplemented cases", "[QTAware]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./Scratch/KnownDatabaseMergeDates.db")};
+
+  td.loadProjects(150);
+
+  proIds::Uuid id1{"{cc467402-acd5-494f-9c58-466f3aa6f117}"};
+  proIds::Uuid id2{"{8af5d44a-2921-4666-b33b-053459e2ced6}"};
+  REQUIRE_THROWS_AS(td.mergeProject(id1, proIds::NullUid, id2, proIds::NullUid), trackerMergeError);
+  try{
+    td.mergeProject(id1, proIds::NullUid, id2, proIds::NullUid);
+  }catch(const trackerMergeError & e){
+    REQUIRE(e.kind == trackerTypes::mergeErrorKind::not_implemented);
   }
 }
 
@@ -1525,7 +1653,7 @@ TEST_CASE("Deleting Stamps - no-op cases", "[QTAware]"){
   }
 }
 
-TEST_CASE("Deleting Stamps - by list", "[Failing]"){
+TEST_CASE("Deleting Stamps - by list", "[QTAware, Slots]"){
   auto app = dummyApp();
   TrackerData td{basicConfig("./Scratch/KnownDatabaseForDelete3.db")};
 
@@ -1570,3 +1698,63 @@ TEST_CASE("Marking Nonexistent Project", "[QTAware, Slots]"){
 
 }
 
+TEST_CASE("Reprocessing to Gantt", "[QTAware]"){
+  auto app = dummyApp();
+  auto config = appConfig();
+  config.dataFileName = "./InputData/KnownDatabaseSlices.db";
+  config.read_only = true;
+  TrackerData td{config};
+
+  //gets all entries which apply to the given interval
+  // This time it is DURATION for second arg
+  auto entries = td.projectTimesRequired(50, 300-50);
+
+  REQUIRE(entries.size() == 5);
+  std::vector<timecode> s_edges{50, 125, 200, 275, 300}; // Expected common bin edges
+  SECTION("Combined bins"){
+    auto id = proIds::NullUid;
+    REQUIRE(entries[id].slices.size() == 4);
+    std::vector<eb_float> cumulates{eb_float{5000+2200+100}, eb_float{5000+1000+2200+100}, eb_float{5000+1200+2200+100}, eb_float{5000+1500+2200+100} };
+    for(size_t i = 0; i< 3; i++){
+      auto slice1 = singleSlice{s_edges[i], s_edges[i+1], cumulates[i]};
+      REQUIRE(entries[id].slices[i] == slice1);
+    }
+  }
+  SECTION("Unspecified ends"){
+    auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+    REQUIRE(entries[id].slices.size() == 4);
+    //Same FTE, but now 3 bins
+    for(size_t i = 0; i< 3; i++){
+      auto slice1 = singleSlice{s_edges[i], s_edges[i+1], eb_float{5000}};
+      REQUIRE(entries[id].slices[i] == slice1);
+    }
+  }
+  SECTION("Fully specified"){
+    auto id = proIds::Uuid("{2c531a42-d999-4c0f-b6fd-f9417e69e715}");
+    REQUIRE(entries[id].slices.size() == 3);
+    auto slice1 = singleSlice{125, 200, eb_float{1000}};
+    REQUIRE(entries[id].slices[0] == slice1);
+    slice1 = singleSlice{200, 275, eb_float{1200}};
+    REQUIRE(entries[id].slices[1] == slice1);
+    slice1 = singleSlice{275, 300, eb_float{1500}};
+    REQUIRE(entries[id].slices[2] == slice1);
+  }
+  SECTION("No end specified"){
+    auto id = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+    REQUIRE(entries[id].slices.size() == 4);
+    //Same FTE, but now 3 bins
+    for(size_t i = 0; i< 3; i++){
+      auto slice1 = singleSlice{s_edges[i], s_edges[i+1], eb_float{2200}};
+      REQUIRE(entries[id].slices[i] == slice1);
+    }
+  }
+  SECTION("No start specifed"){
+    auto id = proIds::Uuid("{7228d8fe-0782-4205-9ed3-dca2693c0d1f}");
+    REQUIRE(entries[id].slices.size() == 4);
+    //Same FTE, but now 3 bins
+    for(size_t i = 0; i< 3; i++){
+      auto slice1 = singleSlice{s_edges[i], s_edges[i+1], eb_float{100}};
+      REQUIRE(entries[id].slices[i] == slice1);
+    }
+  }
+}

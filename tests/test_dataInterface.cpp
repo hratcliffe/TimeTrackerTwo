@@ -60,7 +60,32 @@ TEST_CASE("Int -Reading Known Data - Project", "[Database]"){
   REQUIRE(pd.name == "Project Alpha");
   REQUIRE(pd.FTE == 0.5);
   REQUIRE(pd.uid == id);
-  //TODO - start and end
+}
+TEST_CASE("Int-Reading Known Data - Project with dates", "[Database]"){
+  databaseIO theDB{"./InputData/KnownDatabaseDates.db", true};
+
+  SECTION("Start"){
+    auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+    auto pd = theDB.readProject(id);
+
+    REQUIRE(pd.name == "Project Alpha");
+    REQUIRE(pd.FTE == 0.5);
+    REQUIRE(pd.uid == id);
+    REQUIRE(pd.useStart);
+    REQUIRE(pd.start == 100);
+    REQUIRE_FALSE(pd.useEnd);
+  }
+  SECTION("End"){
+    auto id = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+    auto pd = theDB.readProject(id);
+
+    REQUIRE(pd.name == "Project Beta");
+    REQUIRE(pd.FTE == 0.25);
+    REQUIRE(pd.uid == id);
+    REQUIRE(pd.useEnd);
+    REQUIRE(pd.end == 200);
+    REQUIRE_FALSE(pd.useStart);
+  }
 }
 TEST_CASE("Int -Reading Known Data - Sub", "[Database]"){
   databaseIO theDB{"./InputData/KnownDatabase.db", true};
@@ -81,16 +106,94 @@ TEST_CASE("Int -Reading Known Data - Oneoff", "[Database]"){
   REQUIRE(oo.uid == id);
   REQUIRE(oo.description == "Special Coffee Meeting");
 }
+TEST_CASE("Int - Reading Known Data - Project Dates", "[Database]"){
+  databaseIO theDB{"./InputData/KnownDatabaseSlices.db", true};
 
+  SECTION("Project with ONLY full specified"){
+    auto id = proIds::Uuid("{2c531a42-d999-4c0f-b6fd-f9417e69e715}");
+    auto proj = theDB.readProject(id);
+    REQUIRE(proj.variableFTE);
+    // Expect 2 entries
+    auto data = theDB.readProjectTimes(id);
+    REQUIRE(data.slices.size() == 3);
+    { auto slice1 = singleSlice{125, 200, eb_float{1000}};
+    REQUIRE(data.slices[0] == slice1); }
+    { auto slice1 = singleSlice{200, 275, eb_float{1200}};
+    REQUIRE(data.slices[1] == slice1); }
+    { auto slice1 = singleSlice{275, 565, eb_float{1500}};
+    REQUIRE(data.slices[2] == slice1); }
+  }
+  SECTION("Project with unspecified envelope"){
+    auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+    //First check that project is not marked as variable FTE
+    auto proj = theDB.readProject(id);
+    REQUIRE_FALSE(proj.variableFTE);
+    auto data = theDB.readProjectTimes(id);
+    REQUIRE(data.slices.size() == 1);
+    { auto slice1 = singleSlice{timecodeNull, timecodeNull, eb_float{5000}};
+    REQUIRE(data.slices[0] == slice1); }
+  }
+  SECTION("Project with free start"){
+    auto id = proIds::Uuid("{7228d8fe-0782-4205-9ed3-dca2693c0d1f}");
+    auto proj = theDB.readProject(id);
+    REQUIRE(proj.variableFTE);
+    // Expect 2 entries - ordered by start so null first
+    auto data = theDB.readProjectTimes(id);
+    REQUIRE(data.slices.size() == 2);
+    { auto slice1 = singleSlice{timecodeNull, 2022, eb_float{100}};
+    REQUIRE(data.slices[0] == slice1); }
+    { auto slice1 = singleSlice{2022, 2025, eb_float{200}};
+    REQUIRE(data.slices[1] == slice1); }
+  }
+  SECTION("Project with free end"){
+    auto id = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+    //First check that project is marked as variable FTE
+    auto proj = theDB.readProject(id);
+    REQUIRE(proj.variableFTE);
+    // Expect 2 entries - ordered by start
+    auto data = theDB.readProjectTimes(id);
+    REQUIRE(data.slices.size() == 2);
+    { auto slice1 = singleSlice{20, 50, eb_float{2500}};
+    REQUIRE(data.slices[0] == slice1); }
+    { auto slice1 = singleSlice{50, timecodeNull, eb_float{2200}};
+    REQUIRE(data.slices[1] == slice1); }
+  }
+}
+TEST_CASE("Int- Reading Known Data - All Project Dates", "[Database]"){
+  databaseIO theDB{"./InputData/KnownDatabaseSlices.db", true};
+  auto entries = theDB.readAllProjectTimesBetween(100, 200);
+  REQUIRE(entries.size() == 4);
+  //Checking first
+  { auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+    REQUIRE(entries[id].slices.size() == 1);
+    { auto slice1 = singleSlice{timecodeNull, timecodeNull, eb_float{5000}};
+    REQUIRE(entries[id].slices[0] == slice1); }
+  }
+  { auto id = proIds::Uuid("{2c531a42-d999-4c0f-b6fd-f9417e69e715}");
+    REQUIRE(entries[id].slices.size() == 1);
+    { auto slice1 = singleSlice{125, 200, eb_float{1000}};
+    REQUIRE(entries[id].slices[0] == slice1); }
+  }
+  { auto id = proIds::Uuid("{7228d8fe-0782-4205-9ed3-dca2693c0d1f}");
+    REQUIRE(entries[id].slices.size() == 1);
+    { auto slice1 = singleSlice{timecodeNull, 2022, eb_float{100}};
+    REQUIRE(entries[id].slices[0] == slice1); }
+  }
+  {auto id = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+    REQUIRE(entries[id].slices.size() == 1);
+    { auto slice1 = singleSlice{50, timecodeNull, eb_float{2200}};
+    REQUIRE(entries[id].slices[0] == slice1); }
+  }
+}
 // Fetch lists
 //NOTE: projects list order is NOT guaranteed per contract
 
 TEST_CASE("Int -List fetch - projects", "[Database]"){
-  databaseIO theDB{"./InputData/KnownDatabase.db", true};
+  databaseIO theDB{"./InputData/KnownDatabaseDates.db", true};
   auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
   auto id2 = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
 
-  auto projList = theDB.fetchProjectList();
+  auto projList = theDB.fetchProjectListActiveAt(150);
 
   REQUIRE(projList.size() == 2);
   {
@@ -98,14 +201,18 @@ TEST_CASE("Int -List fetch - projects", "[Database]"){
   REQUIRE(pd.name == "Project Alpha");
   REQUIRE(pd.FTE == 0.5);
   REQUIRE(pd.uid == id);
-  //TODO - start and end
+  REQUIRE(pd.useStart);
+  REQUIRE(pd.start == 100);
+  REQUIRE_FALSE(pd.useEnd);
   }
   {
   auto pd = projList[1];
   REQUIRE(pd.name == "Project Beta");
   REQUIRE(pd.FTE == 0.25);
   REQUIRE(pd.uid == id2);
-  //TODO - start and end
+  REQUIRE(pd.useEnd);
+  REQUIRE(pd.end == 200);
+  REQUIRE_FALSE(pd.useStart);
   }
 }
 
@@ -246,8 +353,40 @@ TEST_CASE("Int -Writing Project", "[Database]"){
   REQUIRE(pd.name == pd_in.name);
   REQUIRE(pd.FTE == pd_in.FTE);
   REQUIRE(pd.uid == pd_in.uid);
-  REQUIRE(pd.start == pd_in.start);
-  REQUIRE(pd.end == pd_in.end);
+  REQUIRE( (!pd.useStart || pd.start == pd_in.start) );
+  REQUIRE( (!pd.useEnd || pd.end == pd_in.end) );
+}
+
+TEST_CASE("Int - Writing variable FTE project", "[Database]"){
+  databaseIO theDB{getScratchFileName(), false};
+  uniqueIdGenerator theGen;
+  auto pid = theGen.getNextId();
+
+  fullProjectData pd;
+  pd.name = "Written Project";
+  pd.uid = pid;
+  
+  singleSlice slice1, slice2;
+  slice1.start = 300;
+  slice1.end = 400;
+  slice1.FTE.set(0.2);
+  slice2.start = 400;
+  slice2.end = 800;
+  slice2.FTE.set(0.27);
+  projectSliceData slices;
+  slices.slices.push_back(slice1);
+  slices.slices.push_back(slice2);
+  theDB.writeVariableFTEProject(pd, slices);
+
+  auto pd_in = theDB.readProject(pid);
+  auto slices_in = theDB.readProjectTimes(pid);
+  REQUIRE(slices_in.slices.size() == 2);
+  REQUIRE(pd_in.variableFTE);
+  auto f1 = [slice1](const singleSlice & sl){return sl == slice1;};
+  REQUIRE(std::find_if(slices_in.slices.begin(), slices_in.slices.end(), f1) != slices_in.slices.end());
+  auto f2 = [slice2](const singleSlice & sl){return sl == slice2;};
+  REQUIRE(std::find_if(slices_in.slices.begin(), slices_in.slices.end(), f2) != slices_in.slices.end());
+
 }
 
 TEST_CASE("Int -Writing Sub Project", "[Database]"){
@@ -360,8 +499,8 @@ TEST_CASE("Int -Edit project", "[Database]"){
   REQUIRE(pd.name == pd_in.name);
   REQUIRE(pd.FTE == pd_in.FTE);
   REQUIRE(pd.uid == pd_in.uid);
-  REQUIRE(pd.start == pd_in.start);
-  REQUIRE(pd.end == pd_in.end);
+  REQUIRE( (!pd.useStart ||  pd.start == pd_in.start) );
+  REQUIRE( (!pd.useEnd || pd.end == pd_in.end) );
 }
 
 TEST_CASE("Int -Edit subproject", "[Database]"){
@@ -587,8 +726,6 @@ TEST_CASE("Int -Reading Known Data - Digest Periods", "[Database]"){
   REQUIRE(dp[1].duration == 100);
   REQUIRE(dp[0].start == 100);
   REQUIRE(dp[1].start == 200);
-
-  //TODO start and end
 }
 TEST_CASE("Int -Reading Known Data - Digest By Period", "[Database]"){
   databaseIO theDB{"./InputData/KnownDatabase.db", true};

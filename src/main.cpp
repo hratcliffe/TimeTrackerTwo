@@ -47,8 +47,6 @@ TODO - add option to move a sub, either by fraction or FTE
 // TODO - FINISH: replace 'delete' project button with 'merge', implement
 // TODO - allow actual delete of project with NO stamps
 
-// TODO Put in start/end dates in : summary view, project fetch/display, implement deactivate, refresh projects periodically
-
 // TODO both FTE and frac seem to cut off 1 tick too early at 99
 
 // TODO - some of the classes are HUGE. Cut them down
@@ -71,6 +69,71 @@ TODO - add option to move a sub, either by fraction or FTE
  * Enforce that the min increment is now a multiple of 0.01%
  */
 
+
+/* TODO
+Start and end dates
+If ADDING via the UI, always use midnight.
+Project has optional start and/or end - either may be set alone
+    Subprojects share parent start and end
+Dates dictate whether something is active and can be marked
+    Perhaps later allow merge and also 'merge' the dates
+Dates should be seen in:
+    summary view (only show for projects active within given range)
+    stamp review ?
+    tracker view via project fetch/display (the buttons)
+    projects tab should add button like 'one-offs to examine older projects
+
+Also:
+    implement deactivate (this is NOT dates, but is an additional factor)
+        Is this stored? It should be
+            Use additional table with time of marking logged - maybe state, last-up, last-down, total-downtime
+        Should we also display inactive projects but disallow marking?
+    refresh views of projects periodically against dates
+
+TASKS:
+DONE when generate project lists for tracker, only include active-and-within date
+DONE fix/test read/write of dates
+DONE    true null
+DONE    test read/write at DB store
+    DONE test further up
+    add read/write of plain 'active' status
+        use its own table for up-down-summ
+DONE add a periodic (1 minute?) refresh of tracker display
+add date range selector to summary
+    initially just "past week, past month, past year, all time"
+    NOW FTE percents need to be calculated against the project duration
+DONE? hook up projects tab to same refresh as tracker
+add old-project-review to projects tab
+
+Do SOMETHING about overlapped FTE......
+  DONE  Split dates and FTE into separate table,
+  DONE allow multiple time-FTE entries against a project
+    DONE allow to set different amounts over time
+    DONE when adding a new project, allow splitting into parts
+        DONE Maybe 'advanced' dialog?
+    DONE Add report showing FTE rates over time, as e.g. stacked bars
+        DONE Add ability to choose duration (30 days, 100 days, one year?)
+
+DONE WHEN read project, start should be lowest start and end latest end. Default to LOWEST FTE. BUT when reading at a given time, all are for that time
+DONE Add a flag for 'FTE varies'
+
+Add display of varying FTE to project description
+
+Do something about merging with variabel FTE
+
+Add edit of existing project
+    Synchronise this with advanced add since much of the logic is common
+
+*/
+
+//TODO - digests are mucky when combined with variable FTE, since the information matching is off
+
+//TODO - allow to set a cap of total time against a project??
+
+
+//TODO - summary doesn't show correctly up to now when something is running
+
+//TODO - when selecting delete etc on Projects tab, pre-fill with selected
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);

@@ -25,7 +25,10 @@ class dataIO{
     virtual std::string readAppConfig(std::string key) = 0;/**< \brief Read a config value */
 
     virtual void writeProject(fullProjectData const& dat) = 0;
+    virtual void writeVariableFTEProject(fullProjectData const & dat, projectSliceData const & slices) = 0;
     virtual fullProjectData readProject(proIds::Uuid const & id) = 0;
+    virtual projectSliceData readProjectTimes(proIds::Uuid const & id) = 0;
+    virtual std::map<proIds::Uuid, projectSliceData> readAllProjectTimesBetween(timecode start, timecode end) = 0;
     virtual void deleteProject(proIds::Uuid const & id) = 0;
     // For update, take fullProjectData so can read, update and pass back
     virtual void updateProject(fullProjectData const & dat) = 0;
@@ -39,8 +42,7 @@ class dataIO{
 
     virtual void writeTrackerEntry(timeStamp const & stamp) = 0;
 
-    virtual std::vector<fullProjectData> fetchProjectList() = 0; /**< \brief Fetch list of projects from the data source */
-    virtual std::vector<fullProjectData> fetchProjectListActiveAt(timecode date) = 0; /**< \brief Fetch list of projects from the data source which are active at given date */
+    virtual std::vector<fullProjectData> fetchProjectListActiveAt(timecode date, timecode window=timecodeNull) = 0; /**< \brief Fetch list of projects from the data source which are active at given date */
     virtual std::vector<fullSubProjectData> fetchSubprojectList() = 0; /**< \brief Fetch list of subprojects from the data source */
     virtual std::vector<fullSubProjectData> fetchSubprojectListForParents(std::vector<proIds::Uuid> ids) = 0;/**< \brief Fetch subprojects for specified parent ids */
     virtual std::vector<fullOneOffProjectData> fetchOneOffProjectList() = 0;
@@ -122,10 +124,26 @@ class databaseIO : public dataIO{
       // Implementation for writing project data to database
         dbStore.writeProject(dat);
     }
+    void writeVariableFTEProject(fullProjectData const & dat, projectSliceData const & slices) override{
+      dbStore.writeProject(dat);
+      auto first = true;
+      for(auto & slice: slices.slices){
+        dbStore.writeProjectSlice(dat.uid, slice, first);
+        first = false;
+      }
+    }
+
     fullProjectData readProject(proIds::Uuid const & id ) override {
       // Implementation for reading project data from database
       return dbStore.readProject(id);
     }
+    projectSliceData readProjectTimes(proIds::Uuid const & id) override{
+      return dbStore.readProjectTimes(id);
+    }
+    std::map<proIds::Uuid, projectSliceData> readAllProjectTimesBetween(timecode start, timecode end) override{
+      return dbStore.readAllProjectTimesBetween(start, end);
+    }
+
     void deleteProject(proIds::Uuid const & id) override{
       dbStore.deleteProject(id);
     }
@@ -162,13 +180,9 @@ class databaseIO : public dataIO{
       // Implementation for writing tracker entry to database
         dbStore.writeTrackerEntry(stamp);
     }
-    std::vector<fullProjectData> fetchProjectList() override {
+    std::vector<fullProjectData> fetchProjectListActiveAt(timecode date, timecode window=timecodeNull) override {
       // Implementation for fetching project list from database
-        return dbStore.fetchProjectList();
-    }
-    std::vector<fullProjectData> fetchProjectListActiveAt(timecode date) override {
-      // Implementation for fetching project list from database
-        return dbStore.fetchProjectListActiveAt(date);
+        return dbStore.fetchProjectListActiveAt(date, window);
     }
     std::vector<fullSubProjectData> fetchSubprojectList() override {
       // Implementation for fetching subproject list from database

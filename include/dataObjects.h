@@ -26,7 +26,7 @@ struct projectData{
   std::string name;/**< \brief Name of project */
   eb_float FTE;/**< \brief Fraction of FTE this uses */
   timecode start=-1, end=-1;
-  bool useStart=false, useEnd=false;
+  bool useStart=false, useEnd=false, variableFTE=false;
 };
 
 inline std::ostream& operator<< (std::ostream& stream, const projectData& data){
@@ -90,15 +90,17 @@ class fullProjectData{
     eb_float FTE{0}; /**< \brief Fraction of Full-Time Equivalent this project uses */
     timecode start=-1, end=-1;
     bool useStart=false, useEnd=false;
+    bool variableFTE = false;
 
     fullProjectData() = default;
     fullProjectData(proIds::Uuid id, projectData const &data)
-        : uid(id), name(data.name), FTE(data.FTE), start(data.start), end(data.end), useStart(data.useStart), useEnd(data.useEnd) {};
+        : uid(id), name(data.name), FTE(data.FTE), start(data.start), end(data.end), useStart(data.useStart), useEnd(data.useEnd), variableFTE(data.variableFTE) {};
 };
 inline std::ostream& operator<< (std::ostream& stream, const fullProjectData& data){
 /** \brief Stream operator for fullProjectData
 */
   stream << data.name <<", "<<data.uid<<", "<<data.FTE;
+  if(data.variableFTE) stream<<" +";
   if(data.useStart) stream<<" "<<timeWrapper::formatTime(timeWrapper::fromSeconds(data.start));
   if(data.useStart or data.useEnd) stream<< " -";
   if(data.useEnd) stream<<" "<<timeWrapper::formatTime(timeWrapper::fromSeconds(data.end));
@@ -110,6 +112,30 @@ inline bool operator==(const fullProjectData &lhs, const fullProjectData &rhs){
 inline bool operator!=(const fullProjectData &lhs, const fullProjectData &rhs){
   return !(lhs == rhs);
 }
+struct singleSlice{
+  timecode start= timecodeNull, end=timecodeNull;
+  eb_float FTE{0};
+};
+inline bool operator==(const singleSlice &lhs, const singleSlice &rhs){
+  return lhs.start == rhs.start && lhs.end == rhs.end && lhs.FTE == rhs.FTE;
+}
+inline std::ostream& operator<< (std::ostream& stream, const singleSlice & slice){
+  stream<<slice.FTE<<" ";
+  if(slice.start != timecodeNull) stream<<slice.start;
+  stream<<" - ";
+  if(slice.end != timecodeNull) stream<<slice.end;
+  return stream;
+}
+/**
+ * @brief Project time slicing
+ * Ordered list of time-bins and corresponding FTEs. Missing time is assumed to mean 0 FTE. Bins are assumed to be non-overlapping and are thus [start_date, end_date)
+ */
+class projectSliceData{
+  public:
+  proIds::Uuid uid = proIds::NullUid;
+  std::string name;
+  std::vector<singleSlice> slices;
+};
 class fullSubProjectData{
     public:
     proIds::Uuid uid=proIds::NullUid; /**< \brief Unique identifier for the subproject */

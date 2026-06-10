@@ -20,9 +20,16 @@ inline TW_timePoint fromQDateTime(QDateTime time){
   // Format  "%Y-%m-%d %H:%M:%S"
   std::string time_str;
   time_str = time.toString("yyyy-MM-dd hh:mm:ss").toStdString();
-  return timeWrapper::parseTimeZoned(time_str);
+  return timeWrapper::parseTime(time_str);
 }
-
+inline TW_timePoint fromQDate(QDate date){
+  //Convert from QT time to app time, going via a string
+  // Format  "%Y-%m-%d %H:%M:%S"
+  std::string time_str;
+  time_str = date.toString("yyyy-MM-dd").toStdString();
+  time_str += " 00:00:00";
+  return timeWrapper::parseTime(time_str);
+}
 inline QDateTime toQDateTime(TW_timePoint time){
   //Convert to QT time from app time, going via a string
   // Format  "%Y-%m-%d %H:%M:%S"

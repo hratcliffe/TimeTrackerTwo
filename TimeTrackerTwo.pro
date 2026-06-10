@@ -21,7 +21,9 @@ FORMS += GUI/Main.ui \
          GUI/ProjectTabContent.ui \
          GUI/SummaryTabContent.ui \
          GUI/ReviewTabContent.ui \
+         GUI/ReportTabContent.ui \
          GUI/AddProjectDialog.ui \
+         GUI/AddProjectAdvanced.ui \
          GUI/AddSubprojectDialog.ui \
          GUI/AddOneOffDialog.ui \
          GUI/TimeTravelDialog.ui \
@@ -36,6 +38,8 @@ HEADERS += include/Controller.h \
            include/SummaryTabUI.h \
            include/ReportTabUI.h \
            include/ReviewTabUI.h \
+           include/ChartHelpers.h \
+           include/advancedAddDialog.h \
            include/dataObjects.h \
            include/idGenerators.h \
            include/project.h \

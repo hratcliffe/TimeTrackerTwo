@@ -147,6 +147,7 @@ Q_OBJECT
         }else{
             addUi.baseStartSelect->setDisabled(false);
         }
+        updateBothChecked();
     }
     void updateEndCheck(){
         //Need to decide WHICH box to associate
@@ -156,6 +157,7 @@ Q_OBJECT
             //Pick the last one...
             updateEndCheck((addUi.endTarget->itemAt(addUi.endTarget->count()-1)->widget()));
         }
+        updateBothChecked();
     }
     void updateEndCheck(QWidget * tg){
         //Asssume it is the right sort of widget
@@ -163,6 +165,14 @@ Q_OBJECT
             tg->setDisabled(true);
         }else{
             tg->setDisabled(false);
+        }
+    }
+    void updateBothChecked(){
+        //If BOTh are checked we also disable/enable the addRows button
+        if(addUi.startCheckBox->isChecked() && addUi.endCheckBox->isChecked()){
+            addUi.addButton->setDisabled(true);
+        }else{
+            addUi.addButton->setDisabled(false);
         }
     }
     void fetchInfo(){
@@ -221,6 +231,16 @@ Q_OBJECT
             fld->setToolTip("Insufficient FTE for this window");
         }
     }
+    void alertIncompatible(std::string msg, std::string hint=""){
+        auto fld = addUi.extraValidationMsg;
+        fld->setText(msg.c_str());
+        fld->setStyleSheet("QLabel { background-color : darkRed; color : white;}");
+        if(hint != ""){
+            fld->setToolTip(hint.c_str());
+        }else{
+            fld->setToolTip("Validation issue");
+        }
+    }
     void clearAlerts(){
         auto tmp = addUi.baseRowHint;
         tmp->setStyleSheet("QLabel {}");
@@ -242,8 +262,16 @@ Q_OBJECT
     }
     bool validateBasic(){
         bool pass = true;
+
+        // Error if both open start and open end are checked but there are multiple rows
+        if(addUi.startCheckBox->isChecked() && addUi.endCheckBox->isChecked() && result.slices.size()>1){
+            alertIncompatible("Excess Rows", "Cannot have multiple rows with Open Start AND End");
+        }
         //Check that each row has an end after its start
         for(size_t i = 0; i<result.slices.size(); i++){
+          //Skipping rows corresponding to open start and end
+          if(i == 0 && result.slices[i].start == -1) continue;
+          if(i == result.slices.size()-1 && result.slices[i].end == -1) continue;
           auto diff = result.slices[i].end - result.slices[i].start;
           if(diff < 1){
             alertDates(i-1);
@@ -268,6 +296,9 @@ Q_OBJECT
         // can't really validate
         bool pass = true;
 
+        //If there are no avails, then we are free to assign anything consistent, so just return
+        if(avails.slices.size() == 0) return pass;
+
         std::map<proIds::Uuid, projectSliceData> codata;
         codata[proIds::NullUid] = avails;
         codata[proIds::NullUid].uid = proIds::NullUid;
@@ -280,7 +311,8 @@ Q_OBJECT
         //Then check that each bin is satisfyable
         std::vector<size_t> badTimes;
         //Remember that one of the lists may not start at bin 0
-        if(result.slices[0].start >= avails.slices[0].start){
+        // '-1' means back into the past. Validate for as far bask as we have fetched....
+        if(result.slices[0].start == -1 || result.slices[0].start >= avails.slices[0].start){
           size_t avail_offset = (remapping[proIds::NullUid][0].first - remapping[tmpId][0].first);
           for(size_t i = 0; i < codata[tmpId].slices.size(); i++){
             //Check that available + requested is within range

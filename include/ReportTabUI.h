@@ -3,12 +3,21 @@
 
 #include <QWidget>
 #include <QLabel>
+#include <QMargins>
 #include <QLayout>
+#include <QGraphicsLayout>
 #include <QChart>
 #include <QChartView>
 #include <QPieSeries>
 #include <QLegendMarker>
+#include <QStackedBarSeries>
+#include <QBarSet>
+#include <QBarCategoryAxis>
+#include <QValueAxis>
+#include <QScrollArea>
 #include "QLocalShortcuts.h"
+#include "ChartHelpers.h"
+#include "ui_ReportTabContent.h"
 
 #include "support.h"
 #include "idGenerators.h"
@@ -16,52 +25,58 @@
 #include "projectbutton.h"
 #include "timeWrapper.h"
 
-//Currently does not have internal UI to setup, just plonks straight into the target layout
-
 class ReportTabUI : public QWidget
 {
     Q_OBJECT
-
-    QGridLayout * target;
-public:
-    
-  explicit ReportTabUI(QWidget *parent, QGridLayout * target_in) : QWidget(parent){target=target_in;}
-
-  void fillReports(std::map<proIds::Uuid, projectDetails> details){
-
-    QPieSeries *series = new QPieSeries();
-    int i=0;
-    std::vector<std::string> labels, legendText;
-    for(auto & item : details){
-      if(item.second.FTE > 0.0){
-        series->append(item.second.name.c_str(), item.second.FTE*100);
-        labels.push_back(displayFloat(item.second.FTE*100)+" %");
-        legendText.push_back(item.second.name);
-        //auto & slice = series->at(qsizetype(i));
-        //slice.setLabel((displayFloat(item.second.FTE*100)+" %").c_str());
+  private:
+    void clearContent(){
+      if (auto vl = ui.v_items->layout()) {
+        QLayoutItem *item;
+        while ((item = vl->takeAt(0)) != nullptr) {
+          // If this item is a layout (e.g., our QHBoxLayout row),
+          // iterate through its children and delete widgets
+          if (auto layout = item->layout()) {
+            QLayoutItem *child;
+            while ((child = layout->takeAt(0)) != nullptr) {
+              if (child->widget()) delete child->widget();
+              delete child;
+            }
+            // Don't manually delete layout - let the item cleanup handle it
+          }
+          // Deleting the item cleans up the nested layout if it has one
+          delete item;
+        }
       }
-    }
-    series->setLabelsVisible();
-    series->setLabelsPosition(QPieSlice::LabelInsideHorizontal);
-    for(auto & slice : series->slices()){
-      slice->setLabel(labels[i].c_str());
-      i++;
-    }
+  }
+public:
+  Ui::ReportTabContent ui;
 
-    QChart *chart = new QChart();
-    chart->addSeries(series);
-    chart->setTitle("Project FTE Breakdown");
-    i=0;
-    for(auto &item : chart->legend()->markers()){
-      item->setLabel(legendText[i].c_str());
-      i++;
-    }
+  explicit ReportTabUI(QWidget *parent=nullptr) : QWidget(parent){
+    ui.setupUi(this);
+  }
 
-    QChartView *chartview = new QChartView(chart);
-    target->addWidget(chartview);
+ void fillReports(std::map<proIds::Uuid, projectDetails> details){
+
+    QChartView *chartview = PieChartHelper::generate(details);
+    ui.v_items->addWidget(chartview);
 
   }
 
+  /**
+   * @brief Create a bar chart of FTE over time
+   *
+   * Plots the bar chart of FTE over time for the entries in the times map. All sets of slices in times are assumed to have the same set of bin edges, except that some can be missing at start and/or end. The info map should contain the same ids as the times map, and is used to map from ID to name.
+   *
+   * @param times 
+   * @param info 
+   */
+  void fillReportsStackedBar(std::map<proIds::Uuid, projectSliceData> times){
+ 
+    clearContent();
+
+    auto chartView = BarChartHelper::generate(times);
+    ui.v_items->addWidget(chartView);
+  }
 
 };
 #endif

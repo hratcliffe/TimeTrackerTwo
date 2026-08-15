@@ -30,7 +30,7 @@ TEST_CASE("Generator with Tagged Ids", "[Basic]"){
 projectData createProj(){
   projectData pd;
   pd.name = "Project Alpha";
-  pd.FTE = 0.4;
+  pd.FTE.set(0.4);
   pd.useStart = false;
   pd.useEnd = false;
   return pd;
@@ -66,7 +66,7 @@ TEST_CASE("Verifying a project", "[Basic]"){
 subprojectData createSubProj(){
   subprojectData pd;
   pd.name = "Sub Project Alpha";
-  pd.frac = 0.4;
+  pd.frac.set(0.4);
   return pd;
 }
 
@@ -106,22 +106,22 @@ TEST_CASE("Verifying a subproject", "[Basic]"){
 TEST_CASE("Used and Available FTE", "[Basic]"){
   projectManager pm;
   auto pd = createProj();
-  pd.FTE = 0.3;
+  pd.FTE.set(0.3);
   pm.addProject(pd);
   auto avail = pm.availableFTE();
   auto used = pm.allocatedFTE();
   //Default is sum to 1.0
-  REQUIRE_THAT(used, WithinAbs(0.3, margin));
-  REQUIRE_THAT(avail+used,  WithinAbs(1.0, margin));
+  REQUIRE(used == 0.3);
+  REQUIRE((avail+used) == 1.0);
 
   //Adding another
-  pd.FTE = 0.35;
+  pd.FTE.set(0.35);
   pm.addProject(pd);
   avail = pm.availableFTE();
   used = pm.allocatedFTE();
 
-  REQUIRE_THAT(used, WithinAbs(0.3+0.35, margin));
-  REQUIRE_THAT(avail+used, WithinAbs(1.0, margin));
+  REQUIRE(used == (0.3+0.35));
+  REQUIRE((avail+used) == 1.0);
 }
 // Checking the fraction left under a project
 TEST_CASE("Checking sub frac", "[Basic]"){
@@ -132,7 +132,7 @@ TEST_CASE("Checking sub frac", "[Basic]"){
   REQUIRE(pm.subprojectCount() == 2);
   // 0.4 each - 0.2 left
   auto frac = pm.availableSubFrac(pid);
-  REQUIRE_THAT(frac, WithinAbs(0.2, margin));
+  REQUIRE(frac == 0.2);
 }
 TEST_CASE("Checking counts - no projects", "[Basic]"){
   projectManager pm;
@@ -148,17 +148,17 @@ TEST_CASE("Checking counts - nonexistent project", "[Basic]"){
 }
 TEST_CASE("Checking FTE - no projects", "[Basic]"){
   projectManager pm;
-  REQUIRE_THAT(pm.availableFTE(), WithinAbs(1.0, margin));
-  REQUIRE_THAT(pm.allocatedFTE(), WithinAbs(0.0, margin));
+  REQUIRE(pm.availableFTE() == 1.0);
+  REQUIRE(pm.allocatedFTE() == 0.0);
 }
 TEST_CASE("Checking sub frac - no projects", "[Basic]"){
   projectManager pm;
-  REQUIRE_THAT(pm.availableSubFrac(proIds::NullUid), WithinAbs(0.0, margin));
+  REQUIRE(pm.availableSubFrac(proIds::NullUid) == 0.0);
 }
 TEST_CASE("Checking sub frac - nonexistent project", "[Basic]"){
   projectManager pm;
   pm.addProject(createProj());
-  REQUIRE_THAT(pm.availableSubFrac(proIds::NullUid), WithinAbs(0.0, margin));
+  REQUIRE(pm.availableSubFrac(proIds::NullUid) == 0.0);
 }
 TEST_CASE("Getting Project name and FTE", "[Basic]"){
   projectManager pm;
@@ -171,7 +171,7 @@ TEST_CASE("Getting Subproject name and frac", "[Basic]"){
   projectManager pm;
   auto pd = createSubProj();
   pd.name = "BB9E0";
-  pd.frac = 0.43;
+  pd.frac.set(0.43);;
   auto pid = pm.addProject(createProj());
   proIds::Uuid proj = pm.addSubproject(pd, pid);
   REQUIRE(pm.getName(proj) == pd.name);
@@ -191,7 +191,7 @@ TEST_CASE("Getting list of subs from parent", "[Basic]"){
   projectManager pm;
   auto pd = createSubProj();
   pd.name = "BB9E0";
-  pd.frac = 0.43;
+  pd.frac.set(0.43);
   auto pid = pm.addProject(createProj());
   auto sid1 = pm.addSubproject(pd, pid);
   pd.name = "dfhk";
@@ -213,34 +213,34 @@ TEST_CASE("Getting list of subs from parent", "[Basic]"){
 TEST_CASE("Deleting project", "[Basic]"){
   projectManager pm;
   auto pd = createProj();
-  pd.FTE = 0.11;
+  pd.FTE.set(0.11);
   proIds::Uuid proj = pm.addProject(pd);
   //Add a second, to check we remove correct one
   auto pd2 = createProj();
-  pd2.FTE = 0.22;
+  pd2.FTE.set(0.22);
   auto proj2 = pm.addProject(pd2);
   REQUIRE(pm.projectCount() == 2);
   pm.deleteProjectById(proj);
   REQUIRE(pm.projectCount() == 1);
-  REQUIRE_THAT(pm.getFTE(proj2), WithinAbs(0.22, margin));
+  REQUIRE(pm.getFTE(proj2) == 0.22);
 
 }
 TEST_CASE("Deleting sub-project", "[Basic]"){
   projectManager pm;
   auto pd = createSubProj();
-  pd.frac = 0.33;
+  pd.frac.set(0.33);;
   auto parent = createProj();
   auto pid = pm.addProject(parent);
   proIds::Uuid proj = pm.addSubproject(pd, pid);
   REQUIRE(pm.subprojectCount() == 1);
   auto pd2 = createSubProj();
-  pd2.frac = 0.45;
+  pd2.frac.set(0.45);
   proIds::Uuid proj2 = pm.addSubproject(pd2, pid);
   REQUIRE(pm.subprojectCount() == 2);
 
   pm.deleteSubprojectById(proj);
   REQUIRE(pm.subprojectCount() == 1);
-  REQUIRE_THAT(pm.getFrac(proj2), WithinAbs(0.45, margin));
+  REQUIRE(pm.getFrac(proj2) == 0.45);
   REQUIRE(pm.subprojectCount(pid) == 1);
 }
 //  Remove sub from parent, but not completely
@@ -248,12 +248,12 @@ TEST_CASE("Remove sub", "[Basic]"){
   // Does not delete anything, but removes sub ref from parent list
   projectManager pm;
   auto pd = createSubProj();
-  pd.frac = 0.33;
+  pd.frac.set(0.33);
   auto parent = createProj();
   auto pid = pm.addProject(parent);
   proIds::Uuid proj = pm.addSubproject(pd, pid);
   auto pd2 = createSubProj();
-  pd2.frac = 0.45;
+  pd2.frac.set(0.45);
   proIds::Uuid proj2 = pm.addSubproject(pd2, pid);
   REQUIRE(pm.subprojectCount() == 2);
 
@@ -269,12 +269,11 @@ TEST_CASE("Restoring Project", "[Basic]"){
   projectManager pm;
   fullProjectData pd;
   pd.name = "Project from file";
-  pd.FTE = 0.7;
-  pd.useEnd = false;
-  pd.useStart = false;
+  projectSliceData slices;
+  slices.slices.push_back({timecodeNull, timecodeNull, eb_float{0.7}});
   pd.uid = uniqueIdGenerator().getNextId();
 
-  pm.restoreProject(pd, 10);
+  pm.restoreProject(pd, slices, 10);
   REQUIRE(pm.projectCount() == 1);
   REQUIRE(pm.getName(pd.uid) == pd.name);
 }
@@ -284,16 +283,15 @@ TEST_CASE("Restoring Subproject", "[Basic]"){
   //Parent:
   fullProjectData pd;
   pd.name = "Project from file";
-  pd.FTE = 0.7;
-  pd.useEnd = false;
-  pd.useStart = false;
+  projectSliceData slices;
+  slices.slices.push_back({timecodeNull, timecodeNull, eb_float{0.7}});
   pd.uid = theGen.getNextId();
 
-  pm.restoreProject(pd, 10);
+  pm.restoreProject(pd, slices, 10);
 
   fullSubProjectData sd;
   sd.name = "Subproject from file";
-  sd.frac = 0.7;
+  sd.frac.set(0.7);
   sd.uid = theGen.getNextId();
   sd.uid.tag(proIds::uidTag::sub);
   sd.parentUid = pd.uid;
@@ -310,79 +308,144 @@ TEST_CASE("Restoring Time-specified Project", "[Basic]"){
   projectManager pm;
   fullProjectData pd;
   pd.name = "Project from file with time";
-  pd.FTE = 0.7;
   pd.uid = uniqueIdGenerator().getNextId();
 
   SECTION("Start time - active"){
-    pd.useEnd = false;
-    pd.useStart = true;
-    pd.start = 5;
-    pm.restoreProject(pd, 10);
+    projectSliceData slices;
+    slices.slices.push_back({5, timecodeNull, eb_float{0.7}});
+    pm.restoreProject(pd, slices, 10);
     REQUIRE(pm.projectCount() == 1);
     REQUIRE(pm.getName(pd.uid) == pd.name);
-    REQUIRE(pm.isActiveProject(pd.uid));
+    REQUIRE(pm.isActiveProject(pd.uid, 10));
   }
   SECTION("End time - active"){
-    pd.useEnd = true;
-    pd.useStart = false;
-    pd.end = 15;
-    pm.restoreProject(pd, 10);
+    projectSliceData slices;
+    slices.slices.push_back({timecodeNull, 15, eb_float{0.7}});
+    pm.restoreProject(pd, slices, 10);
     REQUIRE(pm.projectCount() == 1);
     REQUIRE(pm.getName(pd.uid) == pd.name);
-    REQUIRE(pm.isActiveProject(pd.uid));
+    REQUIRE(pm.isActiveProject(pd.uid, 10));
   }
   SECTION("Start time - in-active"){
-    pd.useEnd = false;
-    pd.useStart = true;
-    pd.start = 5;
-    pm.restoreProject(pd, 3);
+    projectSliceData slices;
+    slices.slices.push_back({5, timecodeNull, eb_float{0.7}});
+    pm.restoreProject(pd, slices, 3);
     REQUIRE(pm.projectCount() == 1);
     REQUIRE(pm.getName(pd.uid) == pd.name);
-    REQUIRE_FALSE(pm.isActiveProject(pd.uid));
+    REQUIRE_FALSE(pm.isActiveProject(pd.uid, 3));
   }
-  SECTION("End time - active"){
-    pd.useEnd = true;
-    pd.useStart = false;
-    pd.end = 15;
-    pm.restoreProject(pd, 20);
+  SECTION("End time - in-active"){
+    projectSliceData slices;
+    slices.slices.push_back({timecodeNull, 15, eb_float{0.7}});
+    pm.restoreProject(pd, slices, 20);
     REQUIRE(pm.projectCount() == 1);
     REQUIRE(pm.getName(pd.uid) == pd.name);
-    REQUIRE_FALSE(pm.isActiveProject(pd.uid));
+    REQUIRE_FALSE(pm.isActiveProject(pd.uid, 20));
   }
 }
-TEST_CASE("Restoring Time-specified Project - inactive", "[Basic]"){
+TEST_CASE("Restoring with multiple time slices", "[Basic]"){
   projectManager pm;
   fullProjectData pd;
   pd.name = "Project from file with time";
-  pd.FTE = 0.7;
-  pd.useEnd = false;
-  pd.useStart = true;
-  pd.start = 15;
   pd.uid = uniqueIdGenerator().getNextId();
 
-  pm.restoreProject(pd, 10);
-  REQUIRE(pm.projectCount() == 1);
-  REQUIRE(pm.getName(pd.uid) == pd.name);
-  REQUIRE_FALSE(pm.isActiveProject(pd.uid));
+  SECTION("Start time - active"){
+    projectSliceData slices;
+    slices.slices.push_back({5, 20, eb_float{0.7}});
+    slices.slices.push_back({20, timecodeNull, eb_float{0.5}});
+    pm.restoreProject(pd, slices, 10);
+    REQUIRE(pm.projectCount() == 1);
+    REQUIRE(pm.getName(pd.uid) == pd.name);
+    REQUIRE(pm.isActiveProject(pd.uid, 10));
+    REQUIRE(pm.isVariableFTE(pd.uid));
+  }
+  SECTION("End time - active"){
+    projectSliceData slices;
+    slices.slices.push_back({timecodeNull, 15, eb_float{0.7}});
+    slices.slices.push_back({15, 20, eb_float{0.5}});
+    pm.restoreProject(pd, slices, 10);
+    REQUIRE(pm.projectCount() == 1);
+    REQUIRE(pm.getName(pd.uid) == pd.name);
+    REQUIRE(pm.isActiveProject(pd.uid, 10));
+    REQUIRE(pm.isVariableFTE(pd.uid));
+  }
+  SECTION("Start time - in-active"){
+    projectSliceData slices;
+    slices.slices.push_back({5, 20, eb_float{0.7}});
+    slices.slices.push_back({20, timecodeNull, eb_float{0.5}});
+    pm.restoreProject(pd, slices, 3);
+    REQUIRE(pm.projectCount() == 1);
+    REQUIRE(pm.getName(pd.uid) == pd.name);
+    REQUIRE_FALSE(pm.isActiveProject(pd.uid, 3));
+    REQUIRE(pm.isVariableFTE(pd.uid));
+  }
+  SECTION("End time - in-active"){
+    projectSliceData slices;
+    slices.slices.push_back({timecodeNull, 10, eb_float{0.7}});
+    slices.slices.push_back({10, 15, eb_float{0.5}});
+    pm.restoreProject(pd, slices, 20);
+    REQUIRE(pm.projectCount() == 1);
+    REQUIRE(pm.getName(pd.uid) == pd.name);
+    REQUIRE_FALSE(pm.isActiveProject(pd.uid, 20));
+    REQUIRE(pm.isVariableFTE(pd.uid));
+  }
+  SECTION("Both times, FTE at"){
+    projectSliceData slices;
+    slices.slices.push_back({3, 10, eb_float{0.7}});
+    slices.slices.push_back({10, 25, eb_float{0.5}});
+    pm.restoreProject(pd, slices, 20);
+    REQUIRE(pm.getFTEAt(pd.uid, 4) == eb_float{0.7});
+    REQUIRE(pm.getFTEAt(pd.uid, 12) == eb_float{0.5});
+    REQUIRE(pm.getFTEAt(pd.uid, 2) == eb_float{0.0});
+    REQUIRE(pm.getFTEAt(pd.uid, 30) == eb_float{0.0});
+  }
+  SECTION("Open start, FTE at"){
+    projectSliceData slices;
+    slices.slices.push_back({timecodeNull, 10, eb_float{0.7}});
+    slices.slices.push_back({10, 25, eb_float{0.5}});
+    pm.restoreProject(pd, slices, 20);
+    REQUIRE(pm.getFTEAt(pd.uid, 2) == eb_float{0.7});
+    REQUIRE(pm.getFTEAt(pd.uid, 12) == eb_float{0.5});
+    REQUIRE(pm.getFTEAt(pd.uid, 30) == eb_float{0.0});
+  }
+  SECTION("Open end, FTE at"){
+    projectSliceData slices;
+    slices.slices.push_back({1, 10, eb_float{0.7}});
+    slices.slices.push_back({10, timecodeNull, eb_float{0.5}});
+    pm.restoreProject(pd, slices, 20);
+    REQUIRE(pm.getFTEAt(pd.uid, 2) == eb_float{0.7});
+    REQUIRE(pm.getFTEAt(pd.uid, 12) == eb_float{0.5});
+    REQUIRE(pm.getFTEAt(pd.uid, 30) == eb_float{0.5});
+  }
+  SECTION("Both Open, FTE at"){
+    projectSliceData slices;
+    slices.slices.push_back({timecodeNull, 10, eb_float{0.7}});
+    slices.slices.push_back({10, timecodeNull, eb_float{0.5}});
+    pm.restoreProject(pd, slices, 20);
+    REQUIRE(pm.getFTEAt(pd.uid, 2) == eb_float{0.7});
+    REQUIRE(pm.getFTEAt(pd.uid, 12) == eb_float{0.5});
+    REQUIRE(pm.getFTEAt(pd.uid, 30) == eb_float{0.5});
+  }
 }
+
 //Now describe, to check the active flag works
 
 //--------- Modifying --------------------------------------------------------------
 TEST_CASE("Updating Project FTE", "[Basic]"){
   projectManager pm;
   auto pd = createProj();
-  pd.FTE = 0.3;
+  pd.FTE.set(0.3);
   proIds::Uuid proj = pm.addProject(pd);
   //Adding another
-  pd.FTE = 0.35;
+  pd.FTE.set(0.35);
   pm.addProject(pd);
 
   //Modifying the first one
-  pm.setFTE(proj, 0.25);
+  pm.setFTE(proj, eb_float{0.25});
   auto avail = pm.availableFTE();
   auto used = pm.allocatedFTE();
-  REQUIRE_THAT(used, WithinAbs(0.25+0.35, margin));
-  REQUIRE_THAT(avail+used, WithinAbs(1.0, margin) );
+  REQUIRE(used == (0.25+0.35));
+  REQUIRE(avail+used == 1.0);
 }
 
 TEST_CASE("Updating sub frac", "[Basic]"){
@@ -392,23 +455,23 @@ TEST_CASE("Updating sub frac", "[Basic]"){
   pm.addSubproject(createSubProj(), pid);
   // 0.4 each - 0.2 left
   // Update first to 0.33 -> 0.73 used, 0.27 left
-  pm.setFrac(proj, 0.33);
+  pm.setFrac(proj, eb_float{0.33});
   auto frac = pm.availableSubFrac(pid);
-  REQUIRE_THAT(frac, WithinAbs(0.27, margin));
+  REQUIRE(frac == 0.27);
 }
 
 // Transferring a sub between parents
 TEST_CASE("Moving sub between parents - valid case", "[Basic]"){
   projectManager pm;
   auto sd = createSubProj();
-  sd.frac = 0.5;
+  sd.frac.set(0.5);
   auto pd = createProj();
-  pd.FTE = 0.3;
+  pd.FTE.set(0.3);
   auto pid = pm.addProject(pd);
   auto sid = pm.addSubproject(sd, pid);
   auto pd2 = createProj();
   pd2.name = "New parent Proj";
-  pd2.FTE = 0.45;
+  pd2.FTE.set(0.45);;
   auto pid2 = pm.addProject(pd2);
 
   SECTION("Transfer FTE"){
@@ -416,39 +479,39 @@ TEST_CASE("Moving sub between parents - valid case", "[Basic]"){
     REQUIRE(pm.isSubProject(sid));
     auto det = pm.getSubDetails(sid);
     REQUIRE(det.name == sd.name);
-    REQUIRE_THAT(pm.getFTE(pid), WithinAbs(0.15, margin));
-    REQUIRE_THAT(pm.getFTE(pid2), WithinAbs(0.6, margin));
-    REQUIRE_THAT(pm.getFrac(sid), WithinAbs(0.25, margin)); //Is 1/4 of the new FTE
+    REQUIRE(pm.getFTE(pid) == 0.15);
+    REQUIRE(pm.getFTE(pid2) == 0.6);
+    REQUIRE(pm.getFrac(sid) == 0.25); //Is 1/4 of the new FTE
   }
   SECTION("Fixed FTE"){
     pm.moveSubproject(pid, sid, pid2, true);
     REQUIRE(pm.isSubProject(sid));
     auto det = pm.getSubDetails(sid);
     REQUIRE(det.name == sd.name);
-    REQUIRE_THAT(pm.getFTE(pid), WithinAbs(0.3, margin));
-    REQUIRE_THAT(pm.getFTE(pid2), WithinAbs(0.45, margin));
-    REQUIRE_THAT(pm.getFrac(sid), WithinAbs(0.3333, margin)); //Is 1/4 of the new FTE
+    REQUIRE(pm.getFTE(pid) == 0.3);
+    REQUIRE(pm.getFTE(pid2) == 0.45);
+    REQUIRE(pm.getFrac(sid) == 0.3333); //Is 1/4 of the new FTE
   }
 }
 TEST_CASE("Moving sub between parents - valid case, multiple subs", "[Basic]"){
   projectManager pm;
   auto sd = createSubProj();
-  sd.frac = 0.5;
+  sd.frac.set(0.5);
   auto pd = createProj();
-  pd.FTE = 0.3;
+  pd.FTE.set(0.3);
   auto pid = pm.addProject(pd);
   auto sid = pm.addSubproject(sd, pid);
   auto sd2 = createSubProj();
   sd2.name = "Wibble";
-  sd2.frac = 0.4;
+  sd2.frac.set(0.4);
   auto sid2 = pm.addSubproject(sd2, pid);
   auto pd2 = createProj();
   pd2.name = "New parent Proj";
-  pd2.FTE = 0.45;
+  pd2.FTE.set(0.45);;
   auto pid2 = pm.addProject(pd2);
   auto sd3 = createSubProj();
   sd2.name = "Wobble";
-  sd2.frac = 0.4;
+  sd2.frac.set(0.4);
   auto sid3 = pm.addSubproject(sd3, pid2); // Existing sub...
 
   SECTION("Transfer FTE"){
@@ -456,22 +519,22 @@ TEST_CASE("Moving sub between parents - valid case, multiple subs", "[Basic]"){
     REQUIRE(pm.isSubProject(sid));
     auto det = pm.getSubDetails(sid);
     REQUIRE(det.name == sd.name);
-    REQUIRE_THAT(pm.getFTE(pid), WithinAbs(0.15, margin));
-    REQUIRE_THAT(pm.getFTE(pid2), WithinAbs(0.6, margin));
-    REQUIRE_THAT(pm.getFrac(sid), WithinAbs(0.25, margin)); //Is 1/4 of the new FTE
-    REQUIRE_THAT(pm.getFrac(sid2), WithinAbs(0.8, margin)); //This should go up - to maintain the FTE
-    REQUIRE_THAT(pm.getFrac(sid3), WithinAbs(0.3, margin)); // 0.45*0.4 -> 0.18 FTE, stays same
+    REQUIRE(pm.getFTE(pid) == 0.15);
+    REQUIRE(pm.getFTE(pid2) == 0.6);
+    REQUIRE(pm.getFrac(sid) == 0.25); //Is 1/4 of the new FTE
+    REQUIRE(pm.getFrac(sid2) == 0.8); //This should go up - to maintain the FTE
+    REQUIRE(pm.getFrac(sid3) == 0.3); // 0.45*0.4 -> 0.18 FTE, stays same
   }
   SECTION("Fixed FTE"){
     pm.moveSubproject(pid, sid, pid2, true);
     REQUIRE(pm.isSubProject(sid));
     auto det = pm.getSubDetails(sid);
     REQUIRE(det.name == sd.name);
-    REQUIRE_THAT(pm.getFTE(pid), WithinAbs(0.3, margin));
-    REQUIRE_THAT(pm.getFTE(pid2), WithinAbs(0.45, margin));
-    REQUIRE_THAT(pm.getFrac(sid), WithinAbs(0.3333, margin)); //Is 1/4 of the new FTE
-    REQUIRE_THAT(pm.getFrac(sid2), WithinAbs(0.4, margin)); //This should be unchanged - still 0.4 of the unchanged FTE
-    REQUIRE_THAT(pm.getFrac(sid3), WithinAbs(0.4, margin)); //Also unchanged
+    REQUIRE(pm.getFTE(pid) == 0.3);
+    REQUIRE(pm.getFTE(pid2) == 0.45);
+    REQUIRE(pm.getFrac(sid) == 0.3333); //Is 1/4 of the new FTE
+    REQUIRE(pm.getFrac(sid2) == 0.4); //This should be unchanged - still 0.4 of the unchanged FTE
+    REQUIRE(pm.getFrac(sid3) == 0.4); //Also unchanged
   }
 }
 //Transfer failure cases
@@ -479,14 +542,14 @@ TEST_CASE("Moving sub between parents - simple invalid", "[Basic]"){
   auto theGen = uniqueIdGenerator();
   projectManager pm;
   auto sd = createSubProj();
-  sd.frac = 0.5;
+  sd.frac.set(0.5);
   auto pd = createProj();
-  pd.FTE = 0.3;
+  pd.FTE.set(0.3);
   auto pid = pm.addProject(pd);
   auto sid = pm.addSubproject(sd, pid);
   auto pd2 = createProj();
   pd2.name = "A second Proj";
-  pd2.FTE = 0.45;
+  pd2.FTE.set(0.45);;
   auto pid2 = pm.addProject(pd2);
 
   SECTION("Not the parent - invalid"){
@@ -509,22 +572,22 @@ TEST_CASE("Moving sub between parents - insufficient frac", "[Basic]"){
   //In this case we try to transfer more FTE than can be absorbed
   projectManager pm;
   auto sd = createSubProj();
-  sd.frac = 0.5;
+  sd.frac.set(0.5);
   auto pd = createProj();
-  pd.FTE = 0.4;
+  pd.FTE.set(0.4);
   auto pid = pm.addProject(pd);
   auto sid = pm.addSubproject(sd, pid);
   auto pd2 = createProj();
   pd2.name = "New parent Proj";
 
   SECTION("New parent simply too small"){
-    pd2.FTE = 0.18;
+    pd2.FTE.set(0.18);
     auto pid2 = pm.addProject(pd2);
     REQUIRE_THROWS(pm.moveSubproject(pid, sid, pid2, true));
   }
   SECTION("New parent already assigned"){
-    pd2.FTE = 0.4;
-    sd.frac = 0.75;
+    pd2.FTE.set(0.4);
+    sd.frac.set(0.75);
     //Used up 0.75 of 0.4 = 0.3 leaving only 0.1
     auto pid2 = pm.addProject(pd2);
     auto sid2 = pm.addSubproject(sd, pid2);
@@ -536,7 +599,7 @@ TEST_CASE("Moving sub between parents - insufficient frac", "[Basic]"){
 TEST_CASE("Get project and sub Details"){
   projectManager pm;
   auto pd = createSubProj();
-  pd.frac = 0.74;
+  pd.frac.set(0.74);
   auto proj = createProj();
   proj.name = "ABCVD";
   auto pid = pm.addProject(proj);
@@ -548,7 +611,7 @@ TEST_CASE("Get project and sub Details"){
     REQUIRE(details.active);
     REQUIRE(details.FTE == proj.FTE);
     REQUIRE(details.subprojectCount == 1);
-    REQUIRE_THAT(details.assignedSubprojFraction, WithinAbs(0.74, margin));
+    REQUIRE(details.assignedSubprojFraction == 0.74);
     REQUIRE(details.subs[0].name == pd.name);
     REQUIRE(details.uid == pid);
   }
@@ -571,16 +634,16 @@ TEST_CASE("Fetching list of projects", "[Display]"){
   projectManager pm;
   auto pd = createSubProj();
   pd.name = "Namey McName";
-  pd.frac = 0.81;
+  pd.frac.set(0.81);
   auto parent = createProj();
   parent.name = "Another title";
-  parent.FTE = 0.2;
+  parent.FTE.set(0.2);
   auto pid = pm.addProject(parent);
   pm.addSubproject(pd, pid);
 
   auto parent2 = createProj();
   parent2.name = "Project Wonky Pineapple";
-  parent2.FTE = 0.4;
+  parent2.FTE.set(0.4);
   pm.addProject(parent2);
 
   auto list = pm.getToplevelProjectList();
@@ -610,10 +673,10 @@ TEST_CASE("Summaring a project with subs", "[Display]"){
   projectManager pm;
   auto pd = createSubProj();
   pd.name = "Fancier label";
-  pd.frac = 0.81;
+  pd.frac.set(0.81);
   auto parent = createProj();
   parent.name = "Another title";
-  parent.FTE = 0.2;
+  parent.FTE.set(0.2);
   auto pid = pm.addProject(parent);
   pm.addSubproject(pd, pid);
 
@@ -638,7 +701,7 @@ TEST_CASE("Summarising a one-off", "[Display]"){
 TEST_CASE("Adding a project with insufficient FTE"){
   projectManager pm;
   auto pd = createProj();
-  pd.FTE = 0.8;
+  pd.FTE.set(0.8);
   pm.addProject(pd);
   auto pd2 = createProj();
   pd2.name = "Too much";
@@ -649,11 +712,11 @@ TEST_CASE("Adding a project with invalid FTE values"){
   projectManager pm;
   auto pd = createProj();
   SECTION("More than 100%"){
-    pd.FTE = 1.2;
+    pd.FTE.value = 12000; //Working around setter...
     REQUIRE_THROWS(pm.addProject(pd));
   }
   SECTION("Negative"){
-    pd.FTE = -0.2;
+    pd.FTE.value = -20;
     REQUIRE_THROWS(pm.addProject(pd));
   }
 }
@@ -680,7 +743,7 @@ TEST_CASE("Adding a sub with insufficient frac"){
   auto pd = createProj();
   auto pid = pm.addProject(pd);
   auto sd = createSubProj();
-  sd.frac = 0.8;
+  sd.frac.set(0.8);
   pm.addSubproject(sd, pid);
   sd.name = "New name";
   REQUIRE_THROWS(pm.addSubproject(sd, pid));
@@ -692,11 +755,11 @@ TEST_CASE("Adding a sub with invalid fraction"){
   auto pid = pm.addProject(pd);
   auto sd = createSubProj();
   SECTION("Greater than 1"){
-    sd.frac = 1.1;
+    sd.frac.value = 11000;
     REQUIRE_THROWS(pm.addSubproject(sd, pid));
   }
   SECTION("Negative"){
-    sd.frac = -0.1;
+    sd.frac.value = -10;
     REQUIRE_THROWS(pm.addSubproject(sd, pid));
   }
 }
@@ -725,11 +788,11 @@ TEST_CASE("Getting Name for absent project", "[Basic]"){
 }
 TEST_CASE("Getting FTE for absent project", "[Basic]"){
   projectManager pm;
-  REQUIRE_THAT(pm.getFTE(uniqueIdGenerator().getNextId()), WithinAbs(0.0, margin));
+  REQUIRE(pm.getFTE(uniqueIdGenerator().getNextId()) == 0.0);
 }
 TEST_CASE("Getting frac for absent project", "[Basic]"){
   projectManager pm;
-  REQUIRE_THAT(pm.getFrac(uniqueIdGenerator().getNextId()), WithinAbs(0.0, margin));
+  REQUIRE(pm.getFrac(uniqueIdGenerator().getNextId()) == 0.0);
 }
 
 //Active check for invalid project
@@ -760,15 +823,15 @@ TEST_CASE("Getting parent name for absent project", "[Basic]"){
 TEST_CASE("Setting FTE for nonexistent project"){
   projectManager pm;
   //Includes subproject as this cannot be a project
-  REQUIRE_THROWS(pm.setFTE(uniqueIdGenerator().getNextId(), 0.5));
+  REQUIRE_THROWS(pm.setFTE(uniqueIdGenerator().getNextId(), eb_float{0.5}));
 }
 TEST_CASE("Setting frac for nonexistent subproject"){
   projectManager pm;
   SECTION("Subproject ID, but does not exist"){
-    REQUIRE_THROWS(pm.setFrac(uniqueIdGenerator().getNextId().tag(proIds::uidTag::sub), 0.5));
+    REQUIRE_THROWS(pm.setFrac(uniqueIdGenerator().getNextId().tag(proIds::uidTag::sub), eb_float{0.5}));
   }
   SECTION("Is not even a subproject"){
-    REQUIRE_THROWS(pm.setFrac(uniqueIdGenerator().getNextId(), 0.5));
+    REQUIRE_THROWS(pm.setFrac(uniqueIdGenerator().getNextId(), eb_float{0.5}));
   }
 }
 TEST_CASE("Setting FTE to invalid value", "[Basic]"){
@@ -776,20 +839,20 @@ TEST_CASE("Setting FTE to invalid value", "[Basic]"){
   auto pd = createProj();
   auto pid = pm.addProject(pd);
   SECTION("More than 100%"){
-    REQUIRE_THROWS(pm.setFTE(pid, 1.2));
+    REQUIRE_THROWS(pm.setFTE(pid, eb_float{1.2}));
   }
   SECTION("Negative"){
-    REQUIRE_THROWS(pm.setFTE(pid, -0.2));
+    REQUIRE_THROWS(pm.setFTE(pid, eb_float{-0.2}));
   }
 }
 TEST_CASE("Setting FTE higher than available", "[Basic]"){
   projectManager pm;
   auto pd = createProj();
-  pd.FTE = 0.4;
+  pd.FTE.set(0.4);
   auto pid = pm.addProject(pd);
   pd.name = "fgdjhjsgfl";
   pm.addProject(pd);
-  REQUIRE_THROWS(pm.setFTE(pid, 0.8));
+  REQUIRE_THROWS(pm.setFTE(pid, eb_float{0.8}));
 }
 TEST_CASE("Setting frac wrongly", "[Basic]"){
   projectManager pm;
@@ -797,18 +860,18 @@ TEST_CASE("Setting frac wrongly", "[Basic]"){
   auto pid = pm.addProject(pd);
   subprojectData sd;
   sd.name = "Sub AA";
-  sd.frac = 0.5;
+  sd.frac.set(0.5);
   auto sid = pm.addSubproject(sd, pid);
   SECTION("Setting frac too high"){
-    REQUIRE_THROWS(pm.setFrac(sid, 1.2));
+    REQUIRE_THROWS(pm.setFrac(sid, eb_float{1.2}));
   }
   SECTION("Setting frac -ve"){
-    REQUIRE_THROWS(pm.setFrac(sid, -0.2));
+    REQUIRE_THROWS(pm.setFrac(sid, eb_float{-0.2}));
   }
   SECTION("Setting frac higher than available"){
     sd.name = "BB";
     pm.addSubproject(sd, pid);
-    REQUIRE_THROWS(pm.setFrac(sid, 0.8));
+    REQUIRE_THROWS(pm.setFrac(sid, eb_float{0.8}));
   }
 }
 
@@ -817,26 +880,24 @@ TEST_CASE("Restoring a project using invalid id"){
   projectManager pm;
   fullProjectData pd;
   pd.name = "Project from file";
-  pd.FTE = 0.7;
-  pd.useEnd = false;
-  pd.useStart = false;
   pd.uid = uniqueIdGenerator().getNextId();
+  projectSliceData slices;
 
   SECTION("Subproject tag"){
     pd.uid.tag(proIds::uidTag::sub);
-    REQUIRE_THROWS(pm.restoreProject(pd, 10));
+    REQUIRE_THROWS(pm.restoreProject(pd, slices, 10));
   }
   SECTION("One off tag"){
     pd.uid.tag(proIds::uidTag::oneoff);
-    REQUIRE_THROWS(pm.restoreProject(pd, 10));
+    REQUIRE_THROWS(pm.restoreProject(pd, slices, 10));
   }
   SECTION("Null uid"){
     pd.uid = proIds::NullUid;
-    REQUIRE_THROWS(pm.restoreProject(pd, 10));
+    REQUIRE_THROWS(pm.restoreProject(pd, slices, 10));
   }
   SECTION("Restoring twice (id taken)"){
-    pm.restoreProject(pd, 10);
-    REQUIRE_THROWS(pm.restoreProject(pd, 10));
+    pm.restoreProject(pd, slices, 10);
+    REQUIRE_THROWS(pm.restoreProject(pd, slices, 10));
   }
 }
 TEST_CASE("Restoring a subproject using invalid id"){
@@ -844,7 +905,7 @@ TEST_CASE("Restoring a subproject using invalid id"){
   auto pid = pm.addProject(createProj());
   fullSubProjectData pd;
   pd.name = "Project from file";
-  pd.frac = 0.7;
+  pd.frac.set(0.7);
   pd.uid = uniqueIdGenerator().getNextId();
   pd.parentUid = pid;
 
@@ -865,7 +926,7 @@ TEST_CASE("Restoring a subproject with no parent"){
   projectManager pm;
   fullSubProjectData pd;
   pd.name = "Project from file";
-  pd.frac = 0.7;
+  pd.frac.set(0.7);
   pd.uid = uniqueIdGenerator().getNextId();
   pd.uid.tag(proIds::uidTag::sub);
   SECTION("Parent invalid"){
@@ -900,7 +961,7 @@ TEST_CASE("Restoring a subproject repeatedly"){
 
   fullSubProjectData sd;
   sd.name = "Subproject from file";
-  sd.frac = 0.7;
+  sd.frac.set(0.7);
   sd.uid = uniqueIdGenerator().getNextId();
   sd.uid.tag(proIds::uidTag::sub);
 
@@ -922,16 +983,16 @@ TEST_CASE("Deleting a Parent before subs"){
   projectManager pm;
   auto pd = createSubProj();
   pd.name = "Namey McName";
-  pd.frac = 0.81;
+  pd.frac.set(0.81);
   auto parent = createProj();
   parent.name = "Another title";
-  parent.FTE = 0.2;
+  parent.FTE.set(0.2);
   auto pid = pm.addProject(parent);
   pm.addSubproject(pd, pid);
 
   auto parent2 = createProj();
   parent2.name = "Project Wonky Pineapple";
-  parent2.FTE = 0.4;
+  parent2.FTE.set(0.4);
   pm.addProject(parent2);
   SECTION("Deleting parent"){
     REQUIRE_THROWS(pm.deleteProjectById(pid));

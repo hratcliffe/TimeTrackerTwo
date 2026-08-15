@@ -20,6 +20,7 @@ Q_OBJECT
   TW_duration digestCheckPeriod;
   TW_timePoint lastDigestCreationTime;
   TW_duration digestCreationDelay;
+  TW_timePoint lastRefresh = timeWrapper::fromSeconds(0); //Set on first refresh after creation
 
   public:
   Controller(appConfig config){
@@ -30,6 +31,7 @@ Q_OBJECT
 
     currentData = new TrackerData(config);
     currentData->writeState("Opened", clock->now());
+    //TODO write ref time IFF file is new
 
     connectSignals();
     [[maybe_unused]] timecode lastClose=0;
@@ -38,7 +40,6 @@ Q_OBJECT
     }catch(badLookup & e){
       //No prior close mark to check
     }
-    //TODO - do something if it's been a while since last closed?
     currentData->loadProjects(clock->now());
 
     disableDigests = config.digestConfig.disableDigests;
@@ -129,7 +130,12 @@ Q_OBJECT
     connect(currentData, &TrackerData::popAlert, themainWindow, &mainWindow::showSimpleAlert);
 
     // Update the view when the project list changes
-    connect(currentData, &TrackerData::projectListUpdateEvent, themainWindow, &mainWindow::projectListUpdated);
+    // Checking on a schedule
+    connect(this, &Controller::refreshProjects, [this](){currentData->projectListUpdate(this->clock->now());});
+    //List needs to be updated to now
+    connect(currentData, &TrackerData::projectListNeedsUpdateEvent, [this](){currentData->projectListUpdate(this->clock->now());});
+    //List has changed, refresh display
+    connect(currentData, &TrackerData::projectListIsUpdatedEvent, themainWindow, &mainWindow::projectListUpdated);
     connect(currentData, &TrackerData::projectTotalUpdateEvent, themainWindow, &mainWindow::projectTimeUpdated);
 
     // Connect the project selection to the TrackerData to mark projects
@@ -143,10 +149,17 @@ Q_OBJECT
     connect(themainWindow->trackerTab, &TrackerTabContent::oneOffIdRequired, currentData, &TrackerData::oneOffIdRequired);
     connect(currentData, &TrackerData::oneOffIdUpdate, themainWindow->trackerTab, &TrackerTabContent::updateOneOffId);
 
+    //To add a project, need the data on existing ones. Default to 2 years
+    connect(themainWindow, &mainWindow::projectConfigDataRequested, [this](auto functor){
+      auto details = currentData->projectTimesRequired(timeWrapper::toSeconds(timeWrapper::startOfMonth(timeWrapper::fromSeconds(this->clock->now()))), timeWrapper::toSeconds(timeWrapper::makeDuration(0,0,365*2)));
+      functor(themainWindow, details, currentData->getTemporaryId());});
     //To add a subproject, view needs an up-to-date list of projects - gather this and then call the provided callback
     connect(themainWindow, &mainWindow::projectDetailsRequiredAll, [this](auto functor){functor(themainWindow, currentData->projectDetailsRequired());});
     //To delete, we need to verify the marks
     connect(themainWindow, &mainWindow::projectDetailsRequiredSpecial, [this](auto functor, auto id){functor(themainWindow,  currentData->projectDetailsRequired(id), currentData->checkProjectRunning(id), currentData->checkTimeOnProjectOrSub(id));});
+    connect(themainWindow, &mainWindow::projectDetailsRequiredTimes, [this](int days, auto functor){functor(themainWindow, currentData->projectTimesRequired(timeWrapper::toSeconds(timeWrapper::startOfMonth(timeWrapper::fromSeconds(this->clock->now()))), timeWrapper::toSeconds(timeWrapper::makeDuration(0,0,days))));});
+    //365 days is not a year, but it is good enough for now
+    connect(themainWindow, &mainWindow::projectDetailsRequiredYearly, [this](auto functor){functor(themainWindow, currentData->projectTimesRequired(timeWrapper::toSeconds(timeWrapper::startOfYear(timeWrapper::fromSeconds(this->clock->now()))), timeWrapper::toSeconds(timeWrapper::makeDuration(0,0,365))));});
 
     //Pausing a project:
     connect(themainWindow, &mainWindow::pauseRequested, [this](){currentData->pauseProject(this->clock->now());});
@@ -166,7 +179,7 @@ Q_OBJECT
     connect(currentData, &TrackerData::projectSummaryReady, themainWindow->projectTab, &ProjectTabUI::summaryDisplayUpdated);
 
     //Adding project and sub
-    connect(themainWindow, &mainWindow::projectAddRequested, currentData, &TrackerData::createProject);
+    connect(themainWindow, &mainWindow::advancedProjectAddRequested, [this](projectData data, const projectSliceData & slices){currentData->createProjectAdvanced(data, slices, clock->now());});
     connect(themainWindow, &mainWindow::subprojectAddRequested, currentData, &TrackerData::createSubproject);
     connect(themainWindow, &mainWindow::projectOneOffAdd, currentData, &TrackerData::createOneOff);
 
@@ -197,6 +210,8 @@ Q_OBJECT
     //Since clock is already updating every second we can use this to trigger timed events with sufficient fidelity
     //Connecting to 'midnight' rollovers
     connect(clockTicker, &QTimer::timeout, [this](){checkTimedEvents();});
+    // Other refresh events
+    connect(clockTicker, &QTimer::timeout, [this](){checkGenericRefreshEvents();});
 
     //Time traveling:
     //To show a dialog, view needs to know the time now:
@@ -207,9 +222,19 @@ Q_OBJECT
     connect(currentData, &TrackerData::popTT, themainWindow, &mainWindow::showTTOption);
   }
 
+  void checkGenericRefreshEvents(){
+    const auto now = timeWrapper::now();
+    //One minute
+    if(now > timeWrapper::addDuration(lastRefresh, 1, 0, 0)){
+      //Emit signals for any refresh events here
+      emit refreshProjects();
+      lastRefresh = now;
+    }
+  }
+
   void checkTimedEvents(){
     //This is REAL system time, not app time!
-    auto now = timeWrapper::now();
+    const auto now = timeWrapper::now();
 
     // Create Daily Digests for any data which is between lastDigestCreationTime
     // and now - digestCreationDelay.
@@ -254,5 +279,6 @@ Q_OBJECT
   signals:
 
   void clockUpdated(std::string newTime); // Signal from controller as appClock is not QT aware
+  void refreshProjects();
 
 };

@@ -2,6 +2,7 @@
 #define ____trackerData__
 
 #include <QWidget>
+
 #include <vector>
 #include <sstream>
 
@@ -12,6 +13,7 @@
 #include "dataInterface.h"
 #include "timeWrapper.h"
 #include "timestampProcessor.h"
+#include "ganttProcessor.h"
 
 namespace trackerTypes{
 
@@ -101,14 +103,64 @@ Q_OBJECT
       //Create a new project from data - adds it to the manager and writes to the backend
       auto id = thePM.addProject(dat);
       dataHandler->writeProject(fullProjectData(id, dat)); // Write to data handler
-      emit projectListUpdateEvent(thePM.getOrderedProjectList());
+      emit projectListNeedsUpdateEvent();
+      emit projectTotalUpdateEvent(thePM.allocatedFTE(), thePM.availableFTE());
+    }
+    /**
+     * @brief Create a Project using advanced input
+     *
+     * This configures a variable FTE project
+     * @param dat Basic project data. Must contain name, other fields will be ignored
+     * @param slices Time slice data, must contain at least one slice and must be IN ORDER
+     */
+    void createProjectAdvanced(projectData dat, const projectSliceData & slices, timecode now){
+      //Set dat to match the start and end from slices, and to have the current FTE value
+      dat.start = slices.slices[0].start;
+      if(dat.start != timecodeNull) dat.useStart = true;
+      dat.end = slices.slices[slices.slices.size()-1].end;
+      if(dat.end != timecodeNull) dat.useEnd = true;
+      if(slices.slices.size() > 1) dat.variableFTE = true;
+      for(auto &slice : slices.slices){
+        if(slice.end >= now && slice.start <= now){
+            dat.FTE = slice.FTE;
+            break;
+        }
+      }
+      //Write to PM to get id
+      auto id = thePM.addProject(dat);
+      dataHandler->writeVariableFTEProject(fullProjectData(id, dat), slices); // Write to data handler
+      emit projectListNeedsUpdateEvent();
       emit projectTotalUpdateEvent(thePM.allocatedFTE(), thePM.availableFTE());
     }
     void createSubproject(const subprojectData & dat, const proIds::Uuid & parentId){
       //Create a new sub under and existing project
       auto idS = thePM.addSubproject(dat, parentId);
       dataHandler->writeSubproject(fullSubProjectData(idS, dat, parentId)); // Write to data handler
-      emit projectListUpdateEvent(thePM.getOrderedProjectList());
+      emit projectListNeedsUpdateEvent();
+    }
+
+    void projectListUpdate(timecode now){
+      //Fresh fetch of only active projects
+      auto projectList = dataHandler->fetchProjectListActiveAt(now);
+      std::vector<proIds::Uuid> ids;
+      for(auto p : projectList){ids.push_back(p.uid);};
+      //Fetch only corresponding subs
+      auto subprojectList = dataHandler->fetchSubprojectListForParents(ids);
+
+      for(const auto & it : projectList){
+        // TODO - use the read into a map instead of one per project?
+        projectSliceData slices = dataHandler->readProjectTimes(it.uid);
+        thePM.restoreProject(it, slices, now, true);
+      }
+      for(const auto & it : subprojectList){
+        thePM.restoreSubproject(it, true);
+      }
+      //Remove middleman here
+      emit projectListIsUpdatedEvent(thePM.getOrderedProjectList(now));
+      emit projectTotalUpdateEvent(thePM.allocatedFTE(), thePM.availableFTE());
+
+
+      emit projectListIsUpdatedEvent(thePM.getOrderedProjectList(now));
     }
 
     void createOneOff(proIds::Uuid uid, std::string name, std::string descr){
@@ -121,6 +173,15 @@ Q_OBJECT
       proIds::Uuid id = thePM.getNextOneOffId();
       emit oneOffIdUpdate(id);
     }
+    /**
+     * @brief Get a temporary Uuid
+     *
+     * I.e. get a new id. But this is not intended for labelling a project, it's for using as an ID for special purposes.
+     * @return auto 
+     */
+    auto getTemporaryId(){
+      return thePM.getNextOneOffId();
+    }
 
     std::map<proIds::Uuid, projectDetails> projectDetailsRequired(){
       //Get for all Ids
@@ -130,25 +191,48 @@ Q_OBJECT
       return thePM.getDetails(id);
     }
 
+    std::map<proIds::Uuid, projectSliceData> projectTimesRequired(timecode start, timecode dur){
+      auto entries = dataHandler->readAllProjectTimesBetween(start, start+dur);
+      // trims to exactly the interval
+      if(entries.size()>0){
+        entries = ganttProcessor::envelope(entries, start, start+dur);
+        entries = ganttProcessor::reprocess(entries);
+      }else{
+        singleSlice s{start, start+dur, eb_float{0.0}};
+        projectSliceData pd;
+        pd.slices.push_back(s);
+        pd.name="";
+        pd.uid = proIds::NullUid;
+        entries[proIds::NullUid] = pd;
+      }
+      return entries;
+    }
+
     auto trackerEntriesRequired(proIds::Uuid id){
       return dataHandler->fetchTrackerEntries(id);
     }
 
     //Load existing projects from the data backend
-    // TODO - use start and end dates
     void loadProjects(timecode now){
       if(! dataHandler) throw std::runtime_error("No Data Backend Found");
 
-      auto projectList = dataHandler->fetchProjectList();
-      auto subprojectList = dataHandler->fetchSubprojectList();
+      //Fetch only active projects
+      auto projectList = dataHandler->fetchProjectListActiveAt(now);
+      std::vector<proIds::Uuid> ids;
+      for(auto p : projectList){ids.push_back(p.uid);};
+      //Fetch only corresponding subs
+      auto subprojectList = dataHandler->fetchSubprojectListForParents(ids);
 
       for(const auto & it : projectList){
-        thePM.restoreProject(it, now);
+        // TODO - use map read
+        projectSliceData slices = dataHandler->readProjectTimes(it.uid);
+        thePM.restoreProject(it, slices, now);
       }
       for(const auto & it : subprojectList){
         thePM.restoreSubproject(it);
       }
-      emit projectListUpdateEvent(thePM.getOrderedProjectList());
+      //Remove middleman here
+      emit projectListIsUpdatedEvent(thePM.getOrderedProjectList(now));
       emit projectTotalUpdateEvent(thePM.allocatedFTE(), thePM.availableFTE());
 
       // Check if there is an ongoing project
@@ -189,7 +273,6 @@ Q_OBJECT
      * @param uid Uuid to check
      */
     void verifyProjectOrSub(proIds::Uuid uid){
-      const float float_margin = 1e-4; //Constant for A==B in FP
       if(uid.isTaggedAs(proIds::uidTag::oneoff)){
         throw verifyError<trackerTypes::verifyErrorKind::badId>("One off project cannot be verified this way");
       }else if(uid.isTaggedAs(proIds::uidTag::sub)){
@@ -218,7 +301,7 @@ Q_OBJECT
             msg += " Name mismatch ";
             detailsBad = true;
           }
-          if(std::abs(det.frac - dat.frac) > float_margin){
+          if(det.frac != dat.frac){
             msg += " Fraction mismatch ";
             detailsBad = true;
           }
@@ -257,7 +340,7 @@ Q_OBJECT
           msg += " Name mismatch ";
           detailsBad = true;
         }
-        if( std::abs(det.FTE - dat.FTE) > float_margin){
+        if( det.FTE != dat.FTE ){
           msg += " FTE mismatch ";
           detailsBad = true;
         }
@@ -269,7 +352,7 @@ Q_OBJECT
           for(auto sub : det.subs){
             auto subDB = dataHandler->readSubproject(sub.uid);
             if(subDB.name != sub.name) throw std::runtime_error(" Sub name bad ");
-            if( std::abs(subDB.frac - sub.frac) > float_margin) throw std::runtime_error(" Sub frac bad ");
+            if(subDB.frac != sub.frac) throw std::runtime_error(" Sub frac bad ");
             if(subDB.parentUid != thePM.getParentId(sub.uid)) throw std::runtime_error(" Sub parent bad ");
          }
         }catch(std::runtime_error & e){
@@ -392,8 +475,8 @@ Q_OBJECT
     }
     void generateToplevelSummary(){
       std::stringstream ss;
-      ss<<thePM.projectCount()<<" projects active \n "<<(int)(thePM.allocatedFTE()*100);
-      ss<<" % FTE allocated\n "<<(int)(thePM.availableFTE()*100)<<" % FTE available\n";
+      ss<<thePM.projectCount()<<" projects active \n "<<integerPercent(thePM.allocatedFTE());
+      ss<<" % FTE allocated\n "<<integerPercent(thePM.availableFTE())<<" % FTE available\n";
       emit projectSummaryReady(ss.str());
     }
     void generateOneOffSummary(){
@@ -529,7 +612,7 @@ Q_OBJECT
         summary.push_back(item);
 
         float frac = (float)(time+subTimes)/(float)uptime; //See above - uptime cannot be zero here
-        float FTE = proj->getFTE();
+        float FTE = (float)proj->getFTE();
         timeSummaryStatus tag = timeSummaryStatus::onTarget;
         if(frac - FTE > targetThresholdFTE){
           tag = timeSummaryStatus::overTarget;
@@ -547,12 +630,12 @@ Q_OBJECT
             auto subOnlyTime = durations.count(sub->getUid()) > 0 ? durations[sub->getUid()]: 0;
             tag = timeSummaryStatus::onTarget;
             frac = (float)subOnlyTime/(float)(time+subTimes); // Cannot be zero per if above
-            if(frac - sub->getFrac() > targetThresholdFractionFrac){
+            if( (frac - (float)sub->getFrac()) > targetThresholdFractionFrac){
               tag = timeSummaryStatus::overTarget;
-            }else if(sub->getFrac() - frac > targetThresholdFractionFrac){
+            }else if((float)sub->getFrac() - frac > targetThresholdFractionFrac){
               tag = timeSummaryStatus::underTarget;
             }
-            item = {"Fraction on sub " + displayFloat(frac*100, 0) +"% (target " +displayFloat(sub->getFrac()*100,0)+"%)", tag};
+            item = {"Fraction on sub " + displayFloat(frac*100, 0) +"% (target " +displayFloat((float)sub->getFrac()*100,0)+"%)", tag};
             summary.push_back(item);
           }
         }else if(subs.size() > 0){
@@ -601,6 +684,8 @@ Q_OBJECT
         total_dur += item.second;
         digest.push_back(timeDigestEntry{-1, item.second, item.first});
       }
+      //TODO - remove this null entry
+      //TODO - perhaps should also create a day-start and day-end entry somewhere?
       digest.push_back(timeDigestEntry{-1, total_dur, proIds::NullUid});
       timeDigestPeriod period{-1, start_of_day, end-start_of_day};
       dataHandler->writeDigestEntries(period, digest);
@@ -648,6 +733,10 @@ Q_OBJECT
      * @param force True - delete along with associated time; False - do not delete if there is associated time
      */
     void deleteProject(proIds::Uuid uid, bool force=NO_FORCE){
+      // Can't delete project if it is running
+      if(checkProjectRunning(uid)){
+        throw std::runtime_error("Trying to delete a running project - aborting");
+      }
       //Re-do the check for being marked
       bool marked = checkTimeOnProjectOrSub(uid);
       if(marked && !force) throw std::runtime_error("Project has associated time, cannot delete");
@@ -664,7 +753,7 @@ Q_OBJECT
         dataHandler->deleteSubproject(uid);
         thePM.deleteSubprojectById(uid);
       }
-      emit projectListUpdateEvent(thePM.getOrderedProjectList());
+      emit projectListNeedsUpdateEvent();
    }
     void mergeProject(proIds::Uuid current, proIds::Uuid sub,  proIds::Uuid target, proIds::Uuid sub_target){
       // Merge a project into another
@@ -682,7 +771,9 @@ Q_OBJECT
         throw trackerMergeError("Null uids are not valid", trackerTypes::mergeErrorKind::invalid);
       }else if(current == target && sub == sub_target){
         throw trackerMergeError("Cannot merge with itself", trackerTypes::mergeErrorKind::invalid);
-      };
+      }else if(thePM.isVariableFTE(current) || thePM.isVariableFTE(target)){
+         throw trackerMergeError("Not implemented merge for variable FTE case", trackerTypes::mergeErrorKind::not_implemented);
+      }
 
       bool current_has_subs = false;
       if(current.isProj()){
@@ -714,7 +805,7 @@ Q_OBJECT
           auto free_frac = thePM.availableSubFrac(current);
           auto targetData = dataHandler->readProject(target);
 
-          targetData.FTE += (thePM.getFTE(current) * free_frac); // Transferring parent-not-sub FTE
+          targetData.FTE += eb_float{(float)thePM.getFTE(current) * (float)free_frac}; // Transferring parent-not-sub FTE
           thePM.setFTE(target, targetData.FTE);
 
           //Transferring subs
@@ -775,8 +866,9 @@ Q_OBJECT
     }
 
     signals:
-      void projectListUpdateEvent(std::vector<selectableEntity> const & newList);
-      void projectTotalUpdateEvent(float usedFTE, float freeFTE);
+      void projectListNeedsUpdateEvent();
+      void projectListIsUpdatedEvent(std::vector<selectableEntity> const & newList);
+      void projectTotalUpdateEvent(eb_float usedFTE, eb_float freeFTE);
       void projectSummaryReady(std::string summary); /**< \brief Signal emitted when a summary is ready, with the summary text */
       void timeSummaryReady(std::vector<timeSummaryItem> summary);
       void timeDigestReady(std::vector<timeDigestEntry> digest);

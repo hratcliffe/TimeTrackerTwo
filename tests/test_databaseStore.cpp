@@ -68,9 +68,34 @@ TEST_CASE("Reading Known Data - Project", "[Database]"){
   auto pd = theDB.readProject(id);
 
   REQUIRE(pd.name == "Project Alpha");
-  REQUIRE_THAT(pd.FTE, WithinAbs(0.5, margin));
+  REQUIRE(pd.FTE == 0.5);
   REQUIRE(pd.uid == id);
-  //TODO - start and end
+}
+TEST_CASE("Reading Known Data - Project with dates", "[Database]"){
+  databaseStore theDB{"./InputData/KnownDatabaseDates.db", true};
+
+  SECTION("Start"){
+    auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+    auto pd = theDB.readProject(id);
+
+    REQUIRE(pd.name == "Project Alpha");
+    REQUIRE(pd.FTE == 0.5);
+    REQUIRE(pd.uid == id);
+    REQUIRE(pd.useStart);
+    REQUIRE(pd.start == 100);
+    REQUIRE_FALSE(pd.useEnd);
+  }
+  SECTION("End"){
+    auto id = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+    auto pd = theDB.readProject(id);
+
+    REQUIRE(pd.name == "Project Beta");
+    REQUIRE(pd.FTE == 0.25);
+    REQUIRE(pd.uid == id);
+    REQUIRE(pd.useEnd);
+    REQUIRE(pd.end == 200);
+    REQUIRE_FALSE(pd.useStart);
+  }
 }
 TEST_CASE("Reading Known Data - Sub", "[Database]"){
   databaseStore theDB{"./InputData/KnownDatabase.db", true};
@@ -78,7 +103,7 @@ TEST_CASE("Reading Known Data - Sub", "[Database]"){
   auto sd = theDB.readSubproject(id);
 
   REQUIRE(sd.name == "Documentation");
-  REQUIRE_THAT(sd.frac, WithinAbs(0.3, margin));
+  REQUIRE(sd.frac == 0.3);
   REQUIRE(sd.uid == id);
   REQUIRE(sd.parentUid == proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}"));
 }
@@ -91,31 +116,122 @@ TEST_CASE("Reading Known Data - Oneoff", "[Database]"){
   REQUIRE(oo.uid == id);
   REQUIRE(oo.description == "Special Coffee Meeting");
 }
+TEST_CASE("Reading Known Data - Project Dates", "[Database]"){
+  databaseStore theDB{"./InputData/KnownDatabaseSlices.db", true};
 
+  SECTION("Project with ONLY full specified"){
+    auto id = proIds::Uuid("{2c531a42-d999-4c0f-b6fd-f9417e69e715}");
+    auto proj = theDB.readProject(id);
+    REQUIRE(proj.variableFTE);
+    // Expect 2 entries
+    auto data = theDB.readProjectTimes(id);
+    REQUIRE(data.slices.size() == 3);
+    REQUIRE(data.name == "Project Delta");
+    { auto slice1 = singleSlice{125, 200, eb_float{1000}};
+    REQUIRE(data.slices[0] == slice1); }
+    { auto slice1 = singleSlice{200, 275, eb_float{1200}};
+    REQUIRE(data.slices[1] == slice1); }
+    { auto slice1 = singleSlice{275, 565, eb_float{1500}};
+    REQUIRE(data.slices[2] == slice1); }
+  }
+  SECTION("Project with only unspecified envelope"){
+    auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+    //First check that project is NOT marked as variable FTE
+    auto proj = theDB.readProject(id);
+    REQUIRE_FALSE(proj.variableFTE);
+    // Expect 3 entries - the envelope first, then the others
+    auto data = theDB.readProjectTimes(id);
+    REQUIRE(data.name == "Project Alpha");
+    REQUIRE(data.slices.size() == 1);
+    { auto slice1 = singleSlice{timecodeNull, timecodeNull, eb_float{5000}};
+    REQUIRE(data.slices[0] == slice1); }
+  }
+  SECTION("Project with free start"){
+    auto id = proIds::Uuid("{7228d8fe-0782-4205-9ed3-dca2693c0d1f}");
+    auto proj = theDB.readProject(id);
+    REQUIRE(proj.variableFTE);
+    // Expect 2 entries - ordered by start so null first
+    auto data = theDB.readProjectTimes(id);
+    REQUIRE(data.name == "Project Gamma");
+    REQUIRE(data.slices.size() == 2);
+    { auto slice1 = singleSlice{timecodeNull, 2022, eb_float{100}};
+    REQUIRE(data.slices[0] == slice1); }
+    { auto slice1 = singleSlice{2022, 2025, eb_float{200}};
+    REQUIRE(data.slices[1] == slice1); }
+  }
+  SECTION("Project with free end"){
+    auto id = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+    //First check that project is marked as variable FTE
+    auto proj = theDB.readProject(id);
+    REQUIRE(proj.variableFTE);
+    // Expect 2 entries - ordered by start
+    auto data = theDB.readProjectTimes(id);
+    REQUIRE(data.name == "Project Beta");
+    REQUIRE(data.slices.size() == 2);
+    { auto slice1 = singleSlice{20, 50, eb_float{2500}};
+    REQUIRE(data.slices[0] == slice1); }
+    { auto slice1 = singleSlice{50, timecodeNull, eb_float{2200}};
+    REQUIRE(data.slices[1] == slice1); }
+  }
+}
+TEST_CASE("Reading Known Data - All Project Dates", "[Database]"){
+  databaseStore theDB{"./InputData/KnownDatabaseSlices.db", true};
+  auto entries = theDB.readAllProjectTimesBetween(100, 200);
+  REQUIRE(entries.size() == 4);
+  //Checking first
+  { auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+    REQUIRE(entries[id].slices.size() == 1);
+    REQUIRE(entries[id].name == "Project Alpha");
+    { auto slice1 = singleSlice{timecodeNull, timecodeNull, eb_float{5000}};
+    REQUIRE(entries[id].slices[0] == slice1); }
+  }
+  { auto id = proIds::Uuid("{2c531a42-d999-4c0f-b6fd-f9417e69e715}");
+    REQUIRE(entries[id].slices.size() == 1);
+    REQUIRE(entries[id].name == "Project Delta");
+    { auto slice1 = singleSlice{125, 200, eb_float{1000}};
+    REQUIRE(entries[id].slices[0] == slice1); }
+  }
+  { auto id = proIds::Uuid("{7228d8fe-0782-4205-9ed3-dca2693c0d1f}");
+    REQUIRE(entries[id].slices.size() == 1);
+    REQUIRE(entries[id].name == "Project Gamma");
+    { auto slice1 = singleSlice{timecodeNull, 2022, eb_float{100}};
+    REQUIRE(entries[id].slices[0] == slice1); }
+  }
+  {auto id = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
+    REQUIRE(entries[id].slices.size() == 1);
+    REQUIRE(entries[id].name == "Project Beta");
+    { auto slice1 = singleSlice{50, timecodeNull, eb_float{2200}};
+    REQUIRE(entries[id].slices[0] == slice1); }
+  }
+}
 // Fetch lists
 //NOTE: projects list order is NOT guaranteed per contract
 
 TEST_CASE("List fetch - projects", "[Database]"){
-  databaseStore theDB{"./InputData/KnownDatabase.db", true};
+  databaseStore theDB{"./InputData/KnownDatabaseDates.db", true};
   auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
   auto id2 = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
 
-  auto projList = theDB.fetchProjectList();
+  auto projList = theDB.fetchProjectListActiveAt(150, timecodeNull);
 
   REQUIRE(projList.size() == 2);
   {
   auto pd = projList[0];
   REQUIRE(pd.name == "Project Alpha");
-  REQUIRE_THAT(pd.FTE, WithinAbs(0.5, margin));
+  REQUIRE(pd.FTE == 0.5);
   REQUIRE(pd.uid == id);
-  //TODO - start and end
+  REQUIRE(pd.useStart);
+  REQUIRE(pd.start == 100);
+  REQUIRE_FALSE(pd.useEnd);
   }
   {
   auto pd = projList[1];
   REQUIRE(pd.name == "Project Beta");
-  REQUIRE_THAT(pd.FTE, WithinAbs(0.25, margin));
+  REQUIRE(pd.FTE == 0.25);
   REQUIRE(pd.uid == id2);
-  //TODO - start and end
+  REQUIRE(pd.useEnd);
+  REQUIRE(pd.end == 200);
+  REQUIRE_FALSE(pd.useStart);
   }
 }
 TEST_CASE("List fetch - project active", "[Database]"){
@@ -124,19 +240,19 @@ TEST_CASE("List fetch - project active", "[Database]"){
   auto id2 = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
 
   //Base case - no dates set, both active
-  auto projList = theDB.fetchProjectListActiveAt(10);
+  auto projList = theDB.fetchProjectListActiveAt(10, timecodeNull);
 
   REQUIRE(projList.size() == 2);
   {
   auto pd = projList[0];
   REQUIRE(pd.name == "Project Alpha");
-  REQUIRE_THAT(pd.FTE, WithinAbs(0.5, margin));
+  REQUIRE(pd.FTE == 0.5);
   REQUIRE(pd.uid == id);
   }
   {
   auto pd = projList[1];
   REQUIRE(pd.name == "Project Beta");
-  REQUIRE_THAT(pd.FTE, WithinAbs(0.25, margin));
+  REQUIRE(pd.FTE == 0.25);
   REQUIRE(pd.uid == id2);
   }
 }
@@ -152,15 +268,15 @@ TEST_CASE("List fetch - subprojects", "[Database]"){
   auto lst = theDB.fetchSubprojectList();
   REQUIRE(lst.size() == 3);
   {
-    auto cmp = [id, pid](fullSubProjectData & sd){ return sd.uid == id && sd.parentUid == pid && sd.name =="Documentation" && std::abs(sd.frac - 0.3) < margin;};
+    auto cmp = [id, pid](fullSubProjectData & sd){ return sd.uid == id && sd.parentUid == pid && sd.name =="Documentation" && (sd.frac == 0.3);};
     REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
   }
   {
-    auto cmp = [id2, pid](fullSubProjectData & sd){ return sd.uid == id2 && sd.parentUid == pid && sd.name =="Testing" && std::abs(sd.frac -0.7) < margin;};
+    auto cmp = [id2, pid](fullSubProjectData & sd){ return sd.uid == id2 && sd.parentUid == pid && sd.name =="Testing" && (sd.frac == 0.7);};
     REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
   }
   {
-    auto cmp = [id3, pid2](fullSubProjectData & sd){ return sd.uid == id3 && sd.parentUid == pid2 && sd.name == "Important Title" && std::abs(sd.frac -0.23) < margin;};
+    auto cmp = [id3, pid2](fullSubProjectData & sd){ return sd.uid == id3 && sd.parentUid == pid2 && sd.name == "Important Title" && (sd.frac == 0.23);};
     REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
   }
 
@@ -175,11 +291,11 @@ TEST_CASE("List fetch - subprojects by parent", "[Database]"){
   auto lst = theDB.fetchSubprojectListForParents({pid});// Takes a vector, pass single-el-vec
   REQUIRE(lst.size() == 2);
   {
-    auto cmp = [id, pid](fullSubProjectData & sd){ return sd.uid == id && sd.parentUid == pid && sd.name =="Documentation" && std::abs(sd.frac -0.3) < margin;};
+    auto cmp = [id, pid](fullSubProjectData & sd){ return sd.uid == id && sd.parentUid == pid && sd.name =="Documentation" && (sd.frac == 0.3);};
     REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
   }
   {
-    auto cmp = [id2, pid](fullSubProjectData & sd){ return sd.uid == id2 && sd.parentUid == pid && sd.name =="Testing" && std::abs(sd.frac -0.7) < margin;};
+    auto cmp = [id2, pid](fullSubProjectData & sd){ return sd.uid == id2 && sd.parentUid == pid && sd.name =="Testing" && (sd.frac == 0.7);};
     REQUIRE(std::find_if(lst.begin(), lst.end(), cmp) != lst.end());
   }
   //Nothing assoc with the other parent
@@ -253,10 +369,10 @@ fullProjectData writeProj(databaseStore & theDB, proIds::Uuid & pid){
 
   fullProjectData pd;
   pd.name = "Written Project";
-  pd.FTE = 0.4;
+  pd.FTE.set(0.4);
   pd.useStart = false;
   pd.useEnd = false;
-  pd.start = -1;
+  pd.start = -1; //Any value as useStart is false
   pd.end = -1;
   pd.uid = pid;
   theDB.writeProject(pd);
@@ -274,10 +390,117 @@ TEST_CASE("Writing Project", "[Database]"){
   REQUIRE(pd.name == pd_in.name);
   REQUIRE(pd.FTE == pd_in.FTE);
   REQUIRE(pd.uid == pd_in.uid);
-  REQUIRE(pd.start == pd_in.start);
-  REQUIRE(pd.end == pd_in.end);
+  REQUIRE(pd.useStart == pd_in.useStart);
+  REQUIRE( (!pd.useStart || pd.start == pd_in.start)); //If useStart, then must be equal
+  REQUIRE(pd.useEnd == pd_in.useEnd);
+  REQUIRE( (!pd.useEnd || pd.end == pd_in.end));
 }
+TEST_CASE("Writing project with dates", "[Database]"){
+  databaseStore theDB{getScratchFileName(), false};
+  uniqueIdGenerator theGen;
+  auto pid = theGen.getNextId();
 
+  fullProjectData pd;
+  pd.name = "Written Project";
+  pd.FTE.set(0.4);
+  pd.useStart = true;
+  pd.useEnd = true;
+  pd.start = 100;
+  pd.end = 200;
+  pd.uid = pid;
+  theDB.writeProject(pd);
+  auto pd_in = theDB.readProject(pid);
+
+  REQUIRE(pd.name == pd_in.name);
+  REQUIRE(pd.FTE == pd_in.FTE);
+  REQUIRE(pd.uid == pd_in.uid);
+  REQUIRE(pd.useStart == pd_in.useStart);
+  REQUIRE( (!pd.useStart || pd.start == pd_in.start)); //If useStart, then must be equal
+  REQUIRE(pd.useEnd == pd_in.useEnd);
+  REQUIRE( (!pd.useEnd || pd.end == pd_in.end));
+
+}
+TEST_CASE("Writing project slice", "[Database]"){
+  databaseStore theDB{getScratchFileName(), false};
+  uniqueIdGenerator theGen;
+  auto pid = theGen.getNextId();
+
+  fullProjectData pd;
+  pd.name = "Written Project";
+  pd.uid = pid;
+  theDB.writeProject(pd);
+
+  SECTION("Slice, fully qualified"){
+    singleSlice slice;
+    slice.start = 300;
+    slice.end = 400;
+    slice.FTE.set(0.2);
+    theDB.writeProjectSlice(pid, slice, true);
+    auto pd_in = theDB.readProject(pid);
+
+    REQUIRE(pd.name == pd_in.name);
+    REQUIRE(pd_in.FTE == slice.FTE);
+    REQUIRE(pd.uid == pd_in.uid);
+    REQUIRE_FALSE(pd.variableFTE);
+    REQUIRE(pd_in.useStart);
+    REQUIRE(pd_in.start == slice.start);
+    REQUIRE(pd_in.useEnd);
+    REQUIRE(pd_in.end == slice.end);
+  }
+  SECTION("Slice, free start"){
+    singleSlice slice;
+    slice.start = timecodeNull;
+    slice.end = 400;
+    slice.FTE.set(0.2);
+    theDB.writeProjectSlice(pid, slice, true);
+    auto pd_in = theDB.readProject(pid);
+
+    REQUIRE(pd.name == pd_in.name);
+    REQUIRE(pd_in.FTE == slice.FTE);
+    REQUIRE(pd.uid == pd_in.uid);
+    REQUIRE_FALSE(pd.variableFTE);
+    REQUIRE_FALSE(pd_in.useStart);
+    REQUIRE(pd_in.useEnd);
+    REQUIRE(pd_in.end == 400);
+  }
+  SECTION("Slice, free end"){
+    singleSlice slice;
+    slice.start = 300;
+    slice.end = timecodeNull;
+    slice.FTE.set(0.4);
+    theDB.writeProjectSlice(pid, slice, true);
+    auto pd_in = theDB.readProject(pid);
+
+    REQUIRE(pd.name == pd_in.name);
+    REQUIRE(pd_in.FTE == slice.FTE);
+    REQUIRE(pd.uid == pd_in.uid);
+    REQUIRE_FALSE(pd.variableFTE);
+    REQUIRE(pd_in.useStart);
+    REQUIRE(pd_in.start == slice.start);
+    REQUIRE_FALSE(pd_in.useEnd);
+  }
+  SECTION("Multiple slices"){
+    //Write one with clobber, then a second
+    singleSlice slice1, slice2;
+    slice1.start = 300;
+    slice1.end = 400;
+    slice1.FTE.set(0.2);
+    slice2.start = 400;
+    slice2.end = 800;
+    slice2.FTE.set(0.27);
+    theDB.writeProjectSlice(pid, slice1, true);
+    theDB.writeProjectSlice(pid, slice2, false);
+    auto pd_in = theDB.readProject(pid);
+    auto slices_in = theDB.readProjectTimes(pid);
+    REQUIRE(slices_in.slices.size() == 2);
+    REQUIRE(pd_in.variableFTE);
+    auto f1 = [slice1](const singleSlice & sl){return sl == slice1;};
+    REQUIRE(std::find_if(slices_in.slices.begin(), slices_in.slices.end(), f1) != slices_in.slices.end());
+    auto f2 = [slice2](const singleSlice & sl){return sl == slice2;};
+    REQUIRE(std::find_if(slices_in.slices.begin(), slices_in.slices.end(), f2) != slices_in.slices.end());
+
+  }
+}
 TEST_CASE("Writing Sub Project", "[Database]"){
   databaseStore theDB{getScratchFileName(), false};
 
@@ -288,7 +511,7 @@ TEST_CASE("Writing Sub Project", "[Database]"){
 
   fullSubProjectData sd;
   sd.name = "Written Subproject";
-  sd.frac = 0.3;
+  sd.frac.set(0.3);
   sd.uid = id;
   sd.parentUid = pid;
 
@@ -345,7 +568,7 @@ TEST_CASE("Deleting Sub Project", "[Database]"){
 
   fullSubProjectData sd;
   sd.name = "Written Subproject";
-  sd.frac = 0.3;
+  sd.frac.set(0.3);
   sd.uid = id;
   sd.parentUid = pid;
 
@@ -384,12 +607,11 @@ TEST_CASE("Edit project", "[Database]"){
   theDB.writeProject(pd);
 
   auto pd_in = theDB.readProject(pid);
-
   REQUIRE(pd.name == pd_in.name);
   REQUIRE(pd.FTE == pd_in.FTE);
   REQUIRE(pd.uid == pd_in.uid);
-  REQUIRE(pd.start == pd_in.start);
-  REQUIRE(pd.end == pd_in.end);
+  REQUIRE( (!pd.useStart ||  pd.start == pd_in.start) );
+  REQUIRE( (!pd.useEnd || pd.end == pd_in.end) );
 }
 
 TEST_CASE("Edit subproject", "[Database]"){
@@ -403,7 +625,7 @@ TEST_CASE("Edit subproject", "[Database]"){
 
   fullSubProjectData sd;
   sd.name = "Written Subproject";
-  sd.frac = 0.3;
+  sd.frac.set(0.3);
   sd.uid = id;
   sd.parentUid = pid;
 
@@ -411,7 +633,7 @@ TEST_CASE("Edit subproject", "[Database]"){
 
   //Write with a modification
   sd.name = "Modified Subproject";
-  sd.frac = 0.21;
+  sd.frac.set(0.21);
   theDB.writeSubproject(sd);
 
   // Read it back:

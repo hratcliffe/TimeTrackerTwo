@@ -54,7 +54,10 @@ TEST_CASE( "Clock format round trip", "[BasicTime]" ) {
     std::string str = "2020-05-03 11:45:13";
     REQUIRE(tw::formatTimeAsClock(tw::parseTimeZoned(str)) == "11:45");
 }
-
+TEST_CASE( "String format short date", "[BasicTime]" ) {
+    std::string str = "2020-05-03 11:45:13";
+    REQUIRE(tw::formatTimeAsShortDate(tw::parseTimeZoned(str)) == "03-05-20");
+}
 
 // Time adjustments
 
@@ -71,7 +74,13 @@ TEST_CASE("Start of Month", "[AdjustTime]"){
     auto day = tw::parseTimeZoned(str);
     REQUIRE(tw::formatTime(tw::startOfMonth(day)) == str2);
 }
-
+TEST_CASE("Start of Year", "[AdjustTime]"){
+    std::string str = "2023-03-07 13:00:00";
+    //TODO - do something better about DST since dates in April come out an hour too early...
+    std::string str2 = "2023-01-01 00:00:00";
+    auto day = tw::parseTimeZoned(str);
+    REQUIRE(tw::formatTime(tw::startOfYear(day)) == str2);
+}
 TEST_CASE("Duration Construction", "[AdjustTime]"){
     auto dur = tw::makeDuration(10, 0, 0);
     REQUIRE(tw::toSeconds(dur) == 600);
@@ -98,4 +107,34 @@ TEST_CASE("Duration Difference", "[AdjustTime]"){
     tw::timePoint day2 = tw::parseTimeZoned(str2);
     REQUIRE(tw::toSeconds(tw::getDifference(day2, day)) == 71);
 }
+TEST_CASE("Days between", "[BasicTime]"){
 
+    SECTION("Same Month"){
+        std::string str = "2023-03-23 00:00:00";
+        std::string str2 = "2023-03-26 00:00:00";
+        tw::timePoint day = tw::parseTimeZoned(str);
+        tw::timePoint day2 = tw::parseTimeZoned(str2);
+        REQUIRE(timeWrapper::getDays(day, day2) == 3);
+    }
+    SECTION("Same Month"){
+        std::string str = "2023-03-23 00:00:00";
+        std::string str2 = "2023-03-26 23:59:59";
+        tw::timePoint day = tw::parseTimeZoned(str);
+        tw::timePoint day2 = tw::parseTimeZoned(str2);
+        REQUIRE(timeWrapper::getDays(day, day2) == 3); //Duration is _floor_ of 24 hours
+    }
+    SECTION("Approx month"){
+        std::string str = "2023-03-23 00:00:00";
+        std::string str2 = "2023-04-23 00:00:00";
+        tw::timePoint day = tw::parseTimeZoned(str);
+        tw::timePoint day2 = tw::parseTimeZoned(str2);
+        REQUIRE(timeWrapper::getDays(day, day2) == 30); // Midnight at _start_ of day2
+    }
+    SECTION("February"){
+        std::string str = "2023-02-01 00:00:00";
+        std::string str2 = "2023-03-01 00:00:00";
+        tw::timePoint day = tw::parseTimeZoned(str);
+        tw::timePoint day2 = tw::parseTimeZoned(str2);
+        REQUIRE(timeWrapper::getDays(day, day2) == 28);
+    }
+}

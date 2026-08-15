@@ -21,19 +21,19 @@ class projectManager{
 
     std::map<proIds::Uuid, project> projects; /**< \brief Project store. Contains projects only*/
     std::map<proIds::Uuid, subproject> subprojects; /**< \brief Subproject store. Contains subprojects only*/
-    float maxFTE = 1.0;
+    eb_float maxFTE{1.0};
     void setupGenerator(){this->gen = new uniqueIdGenerator();}; 
-    float availableSubFracImpl(const project & proj){
-      float total = 0.0;
+    eb_float availableSubFracImpl(const project & proj){
+      eb_float total{0};
       for(auto & sub : proj.subprojects){
         total += subprojects[sub].getFrac();
       }
-      return 1.0 - total;
+      return oneMinus(total);
     }
-    float allocatedFTEImpl(){
-      float fte = 0.0;
+    eb_float allocatedFTEImpl(){
+      eb_float fte{0};
       for(auto & proj: projects){
-        if(proj.second.active) fte += proj.second.FTE;
+        if(proj.second.active) fte += proj.second.getFTE();
       }
       return fte;
     }
@@ -54,15 +54,15 @@ class projectManager{
         return 0;
       }
     }
-    float allocatedFTE(){return allocatedFTEImpl();}
-    float availableFTE(){return maxFTE - allocatedFTE();}
-    bool checkFTE(float requested){return (allocatedFTE() + requested) <= maxFTE + 1e-5;} //Tiny rounding error allowance
+    eb_float allocatedFTE(){return allocatedFTEImpl();}
+    eb_float availableFTE(){return maxFTE - allocatedFTE();}
+    bool checkFTE(eb_float requested){return (maxFTE >= (allocatedFTE() + requested));} //Tiny rounding error allowance
 
-    float availableSubFrac(const proIds::Uuid & proj){
+    eb_float availableSubFrac(const proIds::Uuid & proj){
       if(projects.count(proj) > 0){
         return availableSubFracImpl(projects[proj]);
       }else{
-        return 0.0;
+        return eb_float{0};
       }
     }
 
@@ -73,7 +73,7 @@ class projectManager{
       return subproject(data, gen->getNextId(proIds::uidTag::sub), parentUid); 
     }
     proIds::Uuid addProject(const projectData & dat){
-      if(dat.FTE < 0.0) throw std::runtime_error("Cannot add project with -ve FTE");
+      if(dat.FTE < eb_float{0}) throw std::runtime_error("Cannot add project with -ve FTE");
       if(!checkFTE(dat.FTE)) throw std::runtime_error("Not enough FTE to add project");
       project tmp = createProject(dat); 
       projects[tmp.getUid()] = tmp;
@@ -81,7 +81,7 @@ class projectManager{
     }
 
     proIds::Uuid addSubproject(const subprojectData & dat, const proIds::Uuid & parentUid){
-      if(dat.frac < 0.0) throw std::runtime_error("Cannot add subproject with -ve fraction");
+      if(dat.frac < eb_float{0}) throw std::runtime_error("Cannot add subproject with -ve fraction");
       if(parentUid.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Parent must not be a subproject");
       if(projects.count(parentUid) == 0) throw std::runtime_error("Parent is not a valid project");
       if(availableSubFrac(parentUid) < dat.frac) throw std::runtime_error("Fraction too large to add subproject");
@@ -129,38 +129,43 @@ class projectManager{
       auto &sub = subprojects[s_id];
       auto &newp = projects[new_p_id];
       if(lock_parent_FTE){
+        if(proj.variableFTE() || newp.variableFTE()) throw std::runtime_error("Not implemented FTE preserving move on variable FTE projects");
         //In this case we don't MOVE any FTE so we just rejig the fraction representation
-        float new_frac = (proj.FTE * sub.frac)/(newp.FTE); // New FTE stays the same, but frac rep. may change
+        float new_frac = ((float)proj.getFTE() * (float)sub.frac)/((float)newp.getFTE()); // New FTE stays the same, but frac rep. may change
         //update the subproject frac
-        float avail = availableSubFracImpl(projects[new_p_id]);
+        float avail = (float)availableSubFracImpl(projects[new_p_id]);
         if(avail < new_frac){
           throw std::runtime_error("Insufficient fraction to add sub");
         }
-        sub.frac = new_frac;
+        sub.frac.set(new_frac);
         proj.subprojects.erase(std::find(proj.subprojects.begin(), proj.subprojects.end(), s_id));
       }else{
+        if(proj.variableFTE() || newp.variableFTE()) throw std::runtime_error("Not implemented FTE transferring move on variable FTE projects");
         //In this case we transfer the entire FTE allocation
-        float FTE_transfer = proj.FTE * sub.frac; // FTE to be moved
-        float new_frac = FTE_transfer/(newp.FTE+FTE_transfer); // Calc fraction of updated FTE
+        // Just allow for rounding, since in general we can't perfectly match 
+        float FTE_transfer = (float)proj.getFTE() * (float)sub.frac; // FTE to be moved
+        float new_frac = FTE_transfer/((float)newp.getFTE()+FTE_transfer); // Calc fraction of updated FTE
         //update the subproject frac
-        sub.frac = new_frac;
+        sub.frac.set(new_frac);
         //Remove from proj so we can recalculate
         proj.subprojects.erase(std::find(proj.subprojects.begin(), proj.subprojects.end(), s_id));
         // And those for any other subprojects of original:
          for(auto sub_id : proj.subprojects){
           if(sub_id != s_id){
             // Recalculate the subfraction
-            setFrac(sub_id, getFrac(sub_id) * proj.FTE/(proj.FTE-FTE_transfer));
+            float new_subfrac = (float)getFrac(sub_id) * (float)proj.getFTE()/((float)proj.getFTE()-FTE_transfer);
+            setFrac(sub_id, eb_float{new_subfrac});
           }
         }
         // And those for any other subprojects of new:
         for(auto sub_id : newp.subprojects){
           // Recalculate the subfraction
-          setFrac(sub_id, getFrac(sub_id) * newp.FTE/(newp.FTE + FTE_transfer));
+          float new_subfrac = (float)getFrac(sub_id) * (float)newp.getFTE()/((float)newp.getFTE() + FTE_transfer);
+          setFrac(sub_id, eb_float{new_subfrac});
         }
         // And Transfer the FTE
-        proj.FTE -= FTE_transfer;
-        newp.FTE += FTE_transfer;
+        proj.FTE_profile[0].FTE -= eb_float{FTE_transfer};
+        newp.FTE_profile[0].FTE += eb_float{FTE_transfer};
       }
       // Now update the subproject entry to point to parent
       sub.parentUid = new_p_id;
@@ -172,33 +177,44 @@ class projectManager{
     //IMPORTANT - these do not expect Tagged Ids since we do not know what we have
     bool isProject(proIds::Uuid id ){return projects.count(id) > 0;};
     bool isSubProject(proIds::Uuid id ){return subprojects.count(id) > 0;};
-    bool isActiveProject(proIds::Uuid id){
+    bool isActiveProject(proIds::Uuid id, timecode now=timecodeNull){
       if(isProject(id)){
-        return projects[id].active;
+        auto & proj = projects[id];
+        if(!proj.active){
+          //Forced in-active for some reason
+          return false;
+        }else{
+          //Checking dates:
+          if(now != timecodeNull){
+            return proj.getFTEAt(now) != eb_float{0.0};
+          }else{
+            return true;
+          }
+        }
       }else{
+        //Not even a project...
         throw std::runtime_error("Cannot check active state - not a valid project");
       }
     }
-
+    bool isVariableFTE(proIds::Uuid id){
+      return isProject(id) && projects[id].variableFTE();
+    }
     proIds::Uuid getNextOneOffId(){
       return gen->getNextId(proIds::uidTag::oneoff);
     }
 
-    void restoreProject(const fullProjectData & dat, timecode now){
+    void restoreProject(const fullProjectData & dat, const projectSliceData & slices, [[maybe_unused]] timecode now, bool ignorePresent=false){
       //Restore a project from e.g. file - i.e. one that already HAS a uid
       auto id = dat.uid;
       if(id == proIds::NullUid) throw std::runtime_error("Cannot restore project with Null Uid");
       if(!id.isTaggedAs(proIds::uidTag::none)) throw std::runtime_error("Id is not for a project");
-      if(projects.count(id) > 0) throw std::runtime_error("Project already exists, not restoring");
-      project tmp = project(dat);
-      bool active = true;
-      if(tmp.hasStart && tmp.start > now) active = false;
-      if(tmp.hasEnd && tmp.end < now) active = false;
-      tmp.active = active;
+      if(!ignorePresent && projects.count(id) > 0) throw std::runtime_error("Project already exists, not restoring");
+      project tmp = project(dat, slices);
+      tmp.active = true;//Active is independent of dates
       projects[id] = tmp;
     }
 
-    void restoreSubproject(const fullSubProjectData & dat){
+    void restoreSubproject(const fullSubProjectData & dat, bool ignorePresent=false){
       // Restore a subproject. Parent MUST exist already
       auto id = dat.uid;
       auto parentUid = dat.parentUid;
@@ -206,20 +222,20 @@ class projectManager{
       if(parentUid.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Parent must not be a subproject");
       if(!id.isTaggedAs(proIds::uidTag::sub)) throw std::runtime_error("Id is not for a subproject");
       if(projects.count(parentUid) == 0 ) throw std::runtime_error("Parent project does not exist");
-      if(subprojects.count(id) > 0) throw std::runtime_error("Subproject already exists, not restoring");
+      if(!ignorePresent && subprojects.count(id) > 0) throw std::runtime_error("Subproject already exists, not restoring");
       subprojects[id] = subproject(dat);
       projects[parentUid].addSubproject(id);
     }
 
     /** \brief Get list of projects
      * 
-     * Returns a COPY vector of the projects. They are in order - so subprojects follow their parent
+     * Returns a COPY vector of the projects. They are in order - so subprojects follow their parent. If activeOnly is true, then only projects which are active by flag, and active by date are included
      */
-    std::vector<selectableEntity> getOrderedProjectList(bool activeOnly=true){
+    std::vector<selectableEntity> getOrderedProjectList(timecode now, bool activeOnly=true){
       std::vector<selectableEntity> ret, proj;
       for(auto & it : projects){
         // Include all OR active projects only
-        if(!activeOnly || it.second.active){
+        if(!activeOnly || isActiveProject(it.first, now)){
           proj.push_back(it.second);
         }
       }
@@ -337,43 +353,54 @@ class projectManager{
       }
     }
 
-    float getFTE(proIds::Uuid uid){
+    eb_float getFTE(proIds::Uuid uid){
       if(projects.count(uid) > 0){
-        return projects[uid].FTE;
+        return projects[uid].getFTE();
       }else{
-        return 0.0;
+        return eb_float{0.0};
       }
     }
-    void setFTE(proIds::Uuid uid, float FTE){
-      if(FTE < 0.0){
+    eb_float getFTEAt(proIds::Uuid uid, timecode now){
+      if(projects.count(uid) > 0){
+        return projects[uid].getFTEAt(now);
+      }else{
+        return eb_float{0.0};
+      }
+    }
+    void setFTE(proIds::Uuid uid, eb_float FTE){
+      if(FTE.value < 0){
         throw std::runtime_error("Cannot set FTE to negative value");
       }
       if(projects.count(uid) > 0){
-        float bump = FTE - projects[uid].FTE; // MAY be -ve
-        if(availableFTE() >= bump){
-          projects[uid].FTE = FTE;
+        int bump = FTE.value - projects[uid].getFTE().value; // MAY be -ve
+        if(!projects[uid].variableFTE()){
+          if(availableFTE().value >= bump){
+           projects[uid].setFTE(FTE);
+          }else{
+            throw std::runtime_error("Cannot set FTE - value exceeds available amount");
+          }
         }else{
-          throw std::runtime_error("Cannot set FTE - value exceeds available amount");
+          throw std::runtime_error("Cannot set FTE this way on variable FTE project");
         }
       }else{
         throw std::runtime_error("Cannot set FTE - id is not a project");
       }
     }
-    float getFrac(proIds::Uuid uid){
+    eb_float getFrac(proIds::Uuid uid){
       if(subprojects.count(uid) > 0){
         return subprojects[uid].frac;
       }else{
-        return 0.0;
+        return eb_float{0};
       }
     }
-    void setFrac(proIds::Uuid uid, float frac){
-      if(frac < 0.0){
+    void setFrac(proIds::Uuid uid, eb_float frac){
+      if(frac < eb_float{0}){
         throw std::runtime_error("Cannot set frac to negative value");
       }
       if(subprojects.count(uid) > 0){
         auto parent_uid = getParentId(uid);
-        float bump = frac - subprojects[uid].frac; // MAY be -ve
-        if(availableSubFrac(parent_uid) >= bump){
+        int bump = frac.value - subprojects[uid].frac.value; // MAY be -ve
+        if(availableSubFrac(parent_uid).value >= bump){
           subprojects[uid].frac = frac;
         }else{
           throw std::runtime_error("Cannot set frac - value exceeds available amount");
@@ -400,9 +427,9 @@ class projectManager{
         auto & proj = projects[uid];
         details.uid = uid;
         details.name = proj.name;
-        details.FTE = proj.FTE;
+        details.FTE = proj.getFTE();
         details.subprojectCount = proj.subprojects.size();
-        details.assignedSubprojFraction = 1.0 - availableSubFracImpl(proj);
+        details.assignedSubprojFraction = oneMinus(availableSubFracImpl(proj));
         details.active = true;
         if(proj.subprojects.size()> 0){
           for(auto & sub_id: proj.subprojects){

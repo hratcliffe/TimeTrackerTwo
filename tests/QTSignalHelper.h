@@ -55,6 +55,7 @@ public slots:
   void emitId(proIds::Uuid p){stashPayloadForReturn(p);}
 
   void emitDoubleX2(double a, double b){stashPayloadForReturn(a, b);}
+  void emitEBFloatX2(eb_float a, eb_float b){stashPayloadForReturn(a, b);}
 
   void emitOrderedProjectList(std::vector<selectableEntity> p){stashPayloadForReturn(p);}
   void emitTimeSummary(std::vector<timeSummaryItem> s){stashPayloadForReturn(s);}

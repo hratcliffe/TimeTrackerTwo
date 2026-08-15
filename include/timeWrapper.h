@@ -53,6 +53,12 @@ class timeWrapper{
       std::strftime(buffer, sizeof(buffer), "%H:%M", std::localtime(&time)); /**< \brief Format time as a string */
       return std::string(buffer);
     }
+    static std::string formatTimeAsShortDate(timePoint tp){
+      std::time_t time = clock::to_time_t(tp);
+      char buffer[100];
+      std::strftime(buffer, sizeof(buffer), "%d-%m-%y", std::localtime(&time));
+      return std::string(buffer);
+    }
     static timePoint parseTime(const std::string &timeStr) {
       //Assumes string is GMT, does not attempt to parse any zoning
       std::tm tm = {};
@@ -93,6 +99,16 @@ class timeWrapper{
       timeInfo->tm_sec = 0;
       return clock::from_time_t(mktime(timeInfo));
     }
+    static timePoint startOfYear(timePoint tp){
+      std::time_t theTime = clock::to_time_t(tp);
+      auto timeInfo = localtime(&theTime);
+      timeInfo->tm_mon = 0;
+      timeInfo->tm_mday = 1;
+      timeInfo->tm_hour = 0;
+      timeInfo->tm_min = 0;
+      timeInfo->tm_sec = 0;
+      return clock::from_time_t(mktime(timeInfo));
+    }
 
     static duration makeDuration(long minutes, long hours, long days){
       duration offset{0};
@@ -115,6 +131,12 @@ class timeWrapper{
       return total;
     }
 
+    static long getDays(timePoint tp1, timePoint tp2){
+      //APPROX days - this will give the floored number of 24 hour periods
+      auto diff = tp2 - tp1;
+      long days = std::chrono::duration_cast<std::chrono::hours>(diff).count() / 24;
+      return days;
+    }
   };
 
 

@@ -149,9 +149,9 @@ Q_OBJECT
     connect(themainWindow->trackerTab, &TrackerTabContent::oneOffIdRequired, currentData, &TrackerData::oneOffIdRequired);
     connect(currentData, &TrackerData::oneOffIdUpdate, themainWindow->trackerTab, &TrackerTabContent::updateOneOffId);
 
-    //To add a project, need the data on existing ones. Default to 2 years
+    //To add a project, need the data on existing ones. Default to 3 years, starting 1 year ago
     connect(themainWindow, &mainWindow::projectConfigDataRequested, [this](auto functor){
-      auto details = currentData->projectTimesRequired(timeWrapper::toSeconds(timeWrapper::startOfMonth(timeWrapper::fromSeconds(this->clock->now()))), timeWrapper::toSeconds(timeWrapper::makeDuration(0,0,365*2)));
+      auto details = currentData->projectTimesRequired(timeWrapper::toSeconds(timeWrapper::oneYearAgo(timeWrapper::midnightBefore(timeWrapper::fromSeconds(clock->now())))), timeWrapper::toSeconds(timeWrapper::makeDuration(0,0,365*3)));
       functor(themainWindow, details, currentData->getTemporaryId());});
     //To add a subproject, view needs an up-to-date list of projects - gather this and then call the provided callback
     connect(themainWindow, &mainWindow::projectDetailsRequiredAll, [this](auto functor){functor(themainWindow, currentData->projectDetailsRequired());});

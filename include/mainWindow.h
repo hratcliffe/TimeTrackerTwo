@@ -64,12 +64,15 @@ Q_OBJECT
 
     eb_float usedFTE{0}, freeFTE{0}; //Tracks FTE fractions
     viewProperties prop; //TODO - should there be any way to alter this? - maybe settings and some presets?
+    appUIConfig conf;
 
-  mainWindow(){
+  mainWindow(appUIConfig conf_in){
 
     main = new outerWindow();
     ui = new Ui::main_window();
     ui->setupUi(main);
+
+    conf = conf_in;
 
     //NOTE: This class acts as a switch-yard between the UI functions and the wider app
     // Some cases connect fron the tab bodies directly via the controller, others come through
@@ -359,7 +362,7 @@ Q_OBJECT
 
       showBarChartBackground(details);
       //This is a complex dialog so done as a separate class
-      auto dialog = advancedAddDialog(this, toQDateTime(timeWrapper::startOfMonth(timeWrapper::now())).date());
+      auto dialog = advancedAddDialog(this, toQDateTime(timeWrapper::startOfMonth(timeWrapper::now())).date(), conf.fte);
       dialog.enableValidation(details, tmp);
       bool result = dialog.exec();
       if(result){

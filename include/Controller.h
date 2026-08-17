@@ -25,7 +25,7 @@ Q_OBJECT
   public:
   Controller(appConfig config){
 
-    themainWindow = new mainWindow();
+    themainWindow = new mainWindow(config.UIConfig);
 
     clock = new appClock();
 

@@ -69,7 +69,7 @@ class dataIO{
     virtual size_t countDigestEntries(std::vector<proIds::Uuid> const & ids) = 0;/**< \brief Count the number of timestamps under the given list of ids */
 
     // Manipulation and editing
-    virtual void rewriteTrackerProjectId(proIds::Uuid current, proIds::Uuid target) = 0;
+    virtual void rewriteTrackerProjectId(proIds::Uuid current, proIds::Uuid target, bool noDigest=false) = 0;
 
 };
 
@@ -254,17 +254,18 @@ class databaseIO : public dataIO{
 
 
     // Editing and manipulation
-    void rewriteTrackerProjectId(proIds::Uuid current, proIds::Uuid target) override{
+    void rewriteTrackerProjectId(proIds::Uuid current, proIds::Uuid target, bool noDigest) override{
       // Rewrite the Uid for timestamp and digest entries from current to target
       dbStore.updateTimestampEntriesId(current, target);
-      // TODO - this doesn't work - need to MERGE the digests
-      if(target != proIds::NullUid){
-        dbStore.updateDigestEntriesId(current, target);
-      }else{
-        dbStore.deleteDigestEntries(current);
+      if(!noDigest){
+        // TODO - this doesn't work - need to MERGE the digests
+        if(target != proIds::NullUid){
+          dbStore.updateDigestEntriesId(current, target);
+        }else{
+          dbStore.deleteDigestEntries(current);
+        }
       }
     }
-
 };
 
 #endif

@@ -849,6 +849,24 @@ Q_OBJECT
       }
       generateProjectSummary(target); // Effectively, a refresh
     }
+    /**
+     * @brief Merge the children onto the target
+     *
+     * Merge a list of one-offs together, onto the given target. This will rewrite all timestamps for any child entries (expected to be onne, but not required) to the target. ALL entries must be one-off uids
+     * @param target The Uuid to put all stamps against
+     * @param children The Uuids to move all stamps from
+     */
+    void mergeOneOffs(proIds::Uuid target, std::vector<proIds::Uuid> list){
+
+      if(!target.isTaggedAs(proIds::uidTag::oneoff)) throw std::runtime_error("This is not a oneoff id");
+      for(auto & current: list){
+        if(!current.isTaggedAs(proIds::uidTag::oneoff)) throw std::runtime_error("This is not a oneoff id");
+        dataHandler->rewriteTrackerProjectId(current, target);
+        // Now delete the entry for child
+        dataHandler->deleteOneOffProject(current);
+      }
+      emit timeStampListUpdateEvent();
+    }
 
     void deleteTimeStampList(std::vector<timeStamp> & stmps){
       // Delete a list of timestamps

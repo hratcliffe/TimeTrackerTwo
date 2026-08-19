@@ -815,49 +815,58 @@ TEST_CASE("Known Data - Time summary", "[QTAware, Slots]"){
   QAbstractEventDispatcher::connect(&td, &TrackerData::timeSummaryReady, &sig, &SignalCatcher::emitTimeSummary);
 
   td.loadProjects(4000);
-  td.generateTimeSummary(timeSummaryUnit::debug);
+  td.generateTimeSummary(false);
 
-  std::vector<timeSummaryItem> summary;
+  timeSummarySet summary;
   summary = sig.what(summary);
-  REQUIRE(summary.size() > 0);
+  REQUIRE(summary.projects.size() > 0);
 
   //Uptime
-  {auto check = [](timeSummaryItem & ts){return ts.text.find("8053.0 units") != std::string::npos;};
-  REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
-  /// Alpha
-  {auto check = [](timeSummaryItem & ts){return ts.text.find("Project Alpha") != std::string::npos;};
-  REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
-  // Exact format not fixed, but these strings expected:
-  {auto check = [](timeSummaryItem & ts){return ts.text.find("Time on project and sub") != std::string::npos && ts.text.find("8053.0 units")!=std::string::npos;};
-  REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
-  {auto check = [](timeSummaryItem & ts){return ts.text.find("Project Beta") != std::string::npos;};
-  REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
-  {auto check = [](timeSummaryItem & ts){return ts.text.find("Time on project and sub") != std::string::npos && ts.text.find(" 0.0 units")!=std::string::npos;};
-  REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
-
-  //Check the 3 summary lines for alpha
-  auto check = [](timeSummaryItem & ts){return ts.text.find("Project Alpha") != std::string::npos;};
-  auto fst = find_if(summary.begin(), summary.end(), check);
-  fst++; fst++; // Skip over next line
-  REQUIRE(fst->text == "Fraction of uptime 100% (target 50%)");
-  REQUIRE(fst->stat == timeSummaryStatus::overTarget);
-  auto check2 = [](timeSummaryItem & ts){return ts.text.find("Project Alpha: Documentation") != std::string::npos;};
-  fst = find_if(summary.begin(), summary.end(), check2);
+  REQUIRE(summary.uptime.time == 8053);
+  //Alpha
+  {
+  auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("Project Alpha") != std::string::npos;};
+  auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
+  fst ++;
+  REQUIRE(fst->text.getRawText().find("Time on project and subs") != std::string::npos);
+  REQUIRE(fst->time == 8053.0);
   fst++;
-  REQUIRE(fst->text == "Fraction on sub 37% (target 30%)");
+  REQUIRE(fst->text.getRawText() == "Fraction of uptime 100% (target 50%)");
   REQUIRE(fst->stat == timeSummaryStatus::overTarget);
-  auto check3 = [](timeSummaryItem & ts){return ts.text.find("Project Alpha: Testing") != std::string::npos;};
-  fst = find_if(summary.begin(), summary.end(), check3);
+  }
+  // BETA
+  {
+  auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("Project Beta") != std::string::npos;};
+  auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
   fst++;
-  REQUIRE(fst->text == "Fraction on sub 55% (target 70%)");
+  REQUIRE(fst->text.getRawText().find("Time on project and subs") != std::string::npos);
+  REQUIRE(fst->time == 0);
+  }
+  {
+  //Alpha Subproj
+  auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("Project Alpha: Documentation") != std::string::npos;};
+  auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
+  fst ++;
+  REQUIRE(fst->text.getRawText() == "Fraction on sub 37% (target 30%)");
+  REQUIRE(fst->stat == timeSummaryStatus::overTarget);
+  }
+  {
+  //Alpha Subproj 2
+  auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("Project Alpha: Testing") != std::string::npos;};
+  auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
+  fst ++;
+  REQUIRE(fst->text.getRawText() == "Fraction on sub 55% (target 70%)");
   REQUIRE(fst->stat == timeSummaryStatus::underTarget);
+  }
 
   //Exactly what happens for beta sub breakdown is not prescribed
 
   //And check the off-off
-  {auto check = [](timeSummaryItem & ts){return ts.text.find("One Off Projects: 0 units") != std::string::npos;};
-  REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
-
+  {
+  auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("One Off Projects") != std::string::npos;};
+  auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
+  REQUIRE(fst->time == 0);
+  }
 }
 TEST_CASE("Known Data - Time stamps", "[QTAware, Slots]"){
   auto app = dummyApp();
@@ -919,12 +928,12 @@ TEST_CASE("Empty Data - Time summary", "[QTAware, Slots]"){
   QAbstractEventDispatcher::connect(&td, &TrackerData::timeSummaryReady, &sig, &SignalCatcher::emitTimeSummary);
 
   td.loadProjects(4000);
-  td.generateTimeSummary(timeSummaryUnit::debug);
+  td.generateTimeSummary(false);
 
-  std::vector<timeSummaryItem> summary;
+  timeSummarySet summary;
   summary = sig.what(summary);
-  REQUIRE(summary.size() == 1);
-  REQUIRE(summary[0].text.find("No time entries found!") != std::string::npos);
+  REQUIRE(summary.projects.size() == 0);
+  REQUIRE(summary.header.text.find("No time entries found!") != std::string::npos);
 }
 
 TEST_CASE("Known Data - Time summary with downtime", "[QTAware, Slots]"){
@@ -937,27 +946,27 @@ TEST_CASE("Known Data - Time summary with downtime", "[QTAware, Slots]"){
   QAbstractEventDispatcher::connect(&td, &TrackerData::timeSummaryReady, &sig, &SignalCatcher::emitTimeSummary);
 
   td.loadProjects(17000);
-  td.generateTimeSummary(timeSummaryUnit::debug);
-  std::vector<timeSummaryItem> summary;
+  td.generateTimeSummary(false);
+  timeSummarySet summary;
   summary = sig.what(summary);
 
   //Uptime
-  {auto check = [](timeSummaryItem & ts){return ts.text.find("14955.0 units") != std::string::npos;};
-  REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
+  REQUIRE(summary.uptime.time == 14955);
   //Alpha
   {
-  auto check = [](timeSummaryItem & ts){return ts.text.find("Project Alpha") != std::string::npos;};
-  auto fst = std::find_if(summary.begin(), summary.end(), check);
-  fst++; // Next line : expect 8928
-  REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
+  auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("Project Alpha") != std::string::npos;};
+  auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
+  fst ++;
+  REQUIRE(fst->text.getRawText().find("Time on project and subs") != std::string::npos);
+  REQUIRE(fst->time == 8978);
   }
   // BETA
   {
-  auto check = [](timeSummaryItem & ts){return ts.text.find("Project Beta") != std::string::npos;};
-  auto fst = std::find_if(summary.begin(), summary.end(), check);
+  auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("Project Beta") != std::string::npos;};
+  auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
   fst++; // Next line : expect 5977
-  REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
-  REQUIRE(fst->text.find("5977.0 units") != std::string::npos);
+  REQUIRE(fst->text.getRawText().find("Time on project and subs") != std::string::npos);
+  REQUIRE(fst->time == 5977);
   }
 }
 
@@ -971,13 +980,13 @@ TEST_CASE("OneOff Marks - Time Summary", "[QTAware, Slots]"){
   QAbstractEventDispatcher::connect(&td, &TrackerData::timeSummaryReady, &sig, &SignalCatcher::emitTimeSummary);
 
   td.loadProjects(17000);
-  td.generateTimeSummary(timeSummaryUnit::debug);
-  std::vector<timeSummaryItem> summary;
+  td.generateTimeSummary(false);
+  timeSummarySet summary;
   summary = sig.what(summary);
 
-  auto check = [](timeSummaryItem & ts){return ts.text.find("One Off Projects") != std::string::npos;};
-  auto fst = std::find_if(summary.begin(), summary.end(), check);
-  REQUIRE(fst->text.find("7965 units") != std::string::npos);
+  auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("One Off Projects") != std::string::npos;};
+  auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
+  REQUIRE(fst->time == 7965);
 
 }
 
@@ -1501,28 +1510,27 @@ TEST_CASE("Deleting Stamps", "[QTAware]"){
   QAbstractEventDispatcher::connect(&td, &TrackerData::timeSummaryReady, &sig, &SignalCatcher::emitTimeSummary);
 
   td.loadProjects(16000);
-  td.generateTimeSummary(timeSummaryUnit::debug);
-  std::vector<timeSummaryItem> summary;
+  td.generateTimeSummary(false);
+  timeSummarySet summary;
   summary = sig.what(summary);
 
   //Uptime
-  {auto check = [](timeSummaryItem & ts){return ts.text.find("14905.0 units") != std::string::npos;};
-  REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
+  REQUIRE(summary.uptime.time == 14905);
   //Alpha
   {
-  auto check = [](timeSummaryItem & ts){return ts.text.find("Project Alpha") != std::string::npos;};
-  auto fst = std::find_if(summary.begin(), summary.end(), check);
-  fst++; // Next line : expect 8928
-  REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
-  REQUIRE(fst->text.find("8928.0 units") != std::string::npos);
+  auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("Project Alpha") != std::string::npos;};
+  auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
+  fst ++;
+  REQUIRE(fst->text.getRawText().find("Time on project and subs") != std::string::npos);
+  REQUIRE(fst->time == 8928);
   }
   // BETA
   {
-  auto check = [](timeSummaryItem & ts){return ts.text.find("Project Beta") != std::string::npos;};
-  auto fst = std::find_if(summary.begin(), summary.end(), check);
+  auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("Project Beta") != std::string::npos;};
+  auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
   fst++; // Next line : expect 5977
-  REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
-  REQUIRE(fst->text.find("5977.0 units") != std::string::npos);
+  REQUIRE(fst->text.getRawText().find("Time on project and subs") != std::string::npos);
+  REQUIRE(fst->time == 5977);
   }
 
   {
@@ -1533,28 +1541,27 @@ TEST_CASE("Deleting Stamps", "[QTAware]"){
     //Deletes 9023 change to Important Title, instead stay stopped
     // Uptime -> 13787, Beta -> 4889
     // Check final state
-    td.generateTimeSummary(timeSummaryUnit::debug);
-    std::vector<timeSummaryItem> summary;
+    td.generateTimeSummary(false);
+    timeSummarySet summary;
     summary = sig.what(summary);
 
     //Uptime
-    {auto check = [](timeSummaryItem & ts){return ts.text.find("13817.0 units") != std::string::npos;};
-    REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
+    REQUIRE(summary.uptime.time == 13817);
     //Alpha
     {
-    auto check = [](timeSummaryItem & ts){return ts.text.find("Project Alpha") != std::string::npos;};
-    auto fst = std::find_if(summary.begin(), summary.end(), check);
-    fst++; // Next line : expect 7898
-    REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
-    REQUIRE(fst->text.find("8928.0 units") != std::string::npos);
+    auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("Project Alpha") != std::string::npos;};
+    auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
+    fst ++;
+    REQUIRE(fst->text.getRawText().find("Time on project and subs") != std::string::npos);
+    REQUIRE(fst->time == 8928);
     }
     // BETA
     {
-    auto check = [](timeSummaryItem & ts){return ts.text.find("Project Beta") != std::string::npos;};
-    auto fst = std::find_if(summary.begin(), summary.end(), check);
+    auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("Project Beta") != std::string::npos;};
+    auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
     fst++; // Next line : expect 4889
-    REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
-    REQUIRE(fst->text.find("4889.0 units") != std::string::npos);
+    REQUIRE(fst->text.getRawText().find("Time on project and subs") != std::string::npos);
+    REQUIRE(fst->time == 4889);
     }
   }
 }
@@ -1569,28 +1576,27 @@ TEST_CASE("Deleting Stamps - no-op cases", "[QTAware]"){
   QAbstractEventDispatcher::connect(&td, &TrackerData::timeSummaryReady, &sig, &SignalCatcher::emitTimeSummary);
 
   td.loadProjects(16000);
-  td.generateTimeSummary(timeSummaryUnit::debug);
-  std::vector<timeSummaryItem> summary;
+  td.generateTimeSummary(false);
+  timeSummarySet summary;
   summary = sig.what(summary);
 
   //Uptime
-  {auto check = [](timeSummaryItem & ts){return ts.text.find("14905.0 units") != std::string::npos;};
-  REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
+  REQUIRE(summary.uptime.time == 14905);
   //Alpha
   {
-  auto check = [](timeSummaryItem & ts){return ts.text.find("Project Alpha") != std::string::npos;};
-  auto fst = std::find_if(summary.begin(), summary.end(), check);
-  fst++; // Next line : expect 8928
-  REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
-  REQUIRE(fst->text.find("8928.0 units") != std::string::npos);
+    auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("Project Alpha") != std::string::npos;};
+    auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
+    fst ++;
+    REQUIRE(fst->text.getRawText().find("Time on project and subs") != std::string::npos);
+    REQUIRE(fst->time == 8928);
   }
   // BETA
   {
-  auto check = [](timeSummaryItem & ts){return ts.text.find("Project Beta") != std::string::npos;};
-  auto fst = std::find_if(summary.begin(), summary.end(), check);
-  fst++; // Next line : expect 5977
-  REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
-  REQUIRE(fst->text.find("5977.0 units") != std::string::npos);
+    auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("Project Beta") != std::string::npos;};
+    auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
+    fst++; // Next line : expect 4889
+    REQUIRE(fst->text.getRawText().find("Time on project and subs") != std::string::npos);
+    REQUIRE(fst->time == 5977);
   }
 
   SECTION("Time span past last in list"){
@@ -1598,28 +1604,26 @@ TEST_CASE("Deleting Stamps - no-op cases", "[QTAware]"){
     REQUIRE_NOTHROW(td.deleteIndividualStamps(timeWrapper::fromSeconds(17000), timeWrapper::fromSeconds(18000)));
     // Should change nothing
     // Check final state
-    td.generateTimeSummary(timeSummaryUnit::debug);
-    std::vector<timeSummaryItem> summary;
+    td.generateTimeSummary(false);
+    timeSummarySet summary;
     summary = sig.what(summary);
-
     //Uptime
-    {auto check = [](timeSummaryItem & ts){return ts.text.find("14905.0 units") != std::string::npos;};
-    REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
+    REQUIRE(summary.uptime.time == 14905);
     //Alpha
     {
-    auto check = [](timeSummaryItem & ts){return ts.text.find("Project Alpha") != std::string::npos;};
-    auto fst = std::find_if(summary.begin(), summary.end(), check);
-    fst++; // Next line : expect 7898
-    REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
-    REQUIRE(fst->text.find("8928.0 units") != std::string::npos);
+    auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("Project Alpha") != std::string::npos;};
+    auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
+    fst ++;
+    REQUIRE(fst->text.getRawText().find("Time on project and subs") != std::string::npos);
+    REQUIRE(fst->time == 8928);
     }
     // BETA
     {
-    auto check = [](timeSummaryItem & ts){return ts.text.find("Project Beta") != std::string::npos;};
-    auto fst = std::find_if(summary.begin(), summary.end(), check);
+    auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("Project Beta") != std::string::npos;};
+    auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
     fst++; // Next line : expect 4889
-    REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
-    REQUIRE(fst->text.find("5977.0 units") != std::string::npos);
+    REQUIRE(fst->text.getRawText().find("Time on project and subs") != std::string::npos);
+    REQUIRE(fst->time == 5977);
     }
   }
   SECTION("Time span before first"){
@@ -1627,28 +1631,27 @@ TEST_CASE("Deleting Stamps - no-op cases", "[QTAware]"){
     REQUIRE_NOTHROW(td.deleteIndividualStamps(timeWrapper::fromSeconds(1), timeWrapper::fromSeconds(2)));
     // Should change nothing
     // Check final state
-    td.generateTimeSummary(timeSummaryUnit::debug);
-    std::vector<timeSummaryItem> summary;
+    td.generateTimeSummary(false);
+    timeSummarySet summary;
     summary = sig.what(summary);
 
     //Uptime
-    {auto check = [](timeSummaryItem & ts){return ts.text.find("14905.0 units") != std::string::npos;};
-    REQUIRE(find_if(summary.begin(), summary.end(), check) != summary.end()); }
+    REQUIRE(summary.uptime.time == 14905);
     //Alpha
     {
-    auto check = [](timeSummaryItem & ts){return ts.text.find("Project Alpha") != std::string::npos;};
-    auto fst = std::find_if(summary.begin(), summary.end(), check);
-    fst++; // Next line : expect 7898
-    REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
-    REQUIRE(fst->text.find("8928.0 units") != std::string::npos);
+    auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("Project Alpha") != std::string::npos;};
+    auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
+    fst ++;
+    REQUIRE(fst->text.getRawText().find("Time on project and subs") != std::string::npos);
+    REQUIRE(fst->time == 8928);
     }
     // BETA
     {
-    auto check = [](timeSummaryItem & ts){return ts.text.find("Project Beta") != std::string::npos;};
-    auto fst = std::find_if(summary.begin(), summary.end(), check);
+    auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("Project Beta") != std::string::npos;};
+    auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
     fst++; // Next line : expect 4889
-    REQUIRE(fst->text.find("Time on project and subs") != std::string::npos);
-    REQUIRE(fst->text.find("5977.0 units") != std::string::npos);
+    REQUIRE(fst->text.getRawText().find("Time on project and subs") != std::string::npos);
+    REQUIRE(fst->time == 5977);
     }
   }
 }

@@ -300,6 +300,60 @@ struct timeSummaryItem{
   std::string text;
   timeSummaryStatus stat;
 };
+struct timeSummaryDataString{
+  private:
+    std::string text="";
+  public:
+  //Allow either empty string, or one with {} to insert a number
+  timeSummaryDataString(){};
+  timeSummaryDataString(std::string text_in){
+    if(!setText(text_in)) throw std::runtime_error("Setting an invalid string");
+  }
+  bool setText(std::string text_in){
+    //Braces can be present but must match (only {} considered)
+    // Text between braces is silently dropped
+    size_t pos = 0;
+    while(true){
+      size_t pos_cl, pos_nxt;
+      pos_cl = text_in.substr(pos, text_in.length()).find_first_of('}');
+      pos_nxt = text_in.substr(pos, text_in.length()).find_first_of('{');
+      // Bad if there is an open and no close , a close and no open, OR an open before the next close (except on first pass)
+      if((pos_nxt != std::string::npos && pos_cl == std::string::npos)||
+       (pos_nxt == std::string::npos && pos_cl != std::string::npos)||
+       (pos > 0 && pos_nxt < pos_cl)) return false;
+      if(pos_nxt == std::string::npos) break;
+      pos = pos_cl + 1; //Go from close onwards
+    }
+    text = text_in;
+    return true;
+  }
+  std::string getWithInsert (std::string ins)const{
+    std::string fmted = "";
+    auto pos=text.find_first_of('{');
+    auto pos2 = text.find_first_of('}');
+    if( pos != std::string::npos && pos2 !=std::string::npos){
+      fmted = text.substr(0, pos) + ins + text.substr(pos2+1, text.length());
+    }
+    return fmted;
+  }
+  std::string getRawText()const{return text;}
+};
+struct timeSummaryEntry{
+  long long time = 0;
+  timeSummaryDataString text;
+  timeSummaryStatus stat;
+  bool show = false;
+  bool format = true;
+};
+struct timeSummarySet{
+  //All the entities that form part of a summary
+  timeSummaryItem header;
+  timeSummaryEntry duration;
+  timeSummaryEntry uptime;
+  std::vector<timeSummaryEntry> projects;
+  timeSummaryEntry oneoff;
+};
+
 inline std::ostream& operator<< (std::ostream& stream, const timeSummaryItem& ts){
   //Stream status use annotation not colour
   if(ts.stat == timeSummaryStatus::onTarget){

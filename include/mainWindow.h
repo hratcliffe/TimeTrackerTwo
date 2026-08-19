@@ -122,7 +122,7 @@ Q_OBJECT
 
     //Connecting Tab bar to refresh actions
     auto tabRefresh =  [this](int index){
-      if(index == 1) emit timeSummaryRequested(timeSummaryUnit::minute);
+      if(index == 1) emit timeSummaryRequested();
       else if(index == 3) emit reviewRequested();
       else if(index == 4) this->reportNeeded();
     };
@@ -499,7 +499,7 @@ Q_OBJECT
   signals:
     void projectSelectedTrack(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project button is clicked */
     void projectOneOffAdd(const proIds::Uuid &, const std::string &, const std::string &);
-    void timeSummaryRequested(timeSummaryUnit unit);
+    void timeSummaryRequested();
     void pauseRequested(); /**< \brief Signal emitted when the pause button is clicked */
     void resumeRequested(); /**< \brief Signal emitted when the resume button is clicked */
     void stopRequested(); /**< \brief Signal emitted when the stop button is clicked */

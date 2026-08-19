@@ -188,7 +188,7 @@ Q_OBJECT
     connect(themainWindow, &mainWindow::deleteConfirmed, currentData, &TrackerData::deleteProject);
 
     //Time summary view
-    connect(themainWindow, &mainWindow::timeSummaryRequested, currentData, &TrackerData::generateTimeSummary);
+    connect(themainWindow, &mainWindow::timeSummaryRequested, [this](){currentData->generateTimeSummary(true);});
     connect(currentData, &TrackerData::timeSummaryReady, themainWindow->summaryTab, &SummaryTabUI::timeSummaryUpdated);
 
     //Review view

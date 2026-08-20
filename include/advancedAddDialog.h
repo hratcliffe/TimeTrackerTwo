@@ -26,6 +26,7 @@ Q_OBJECT
     Ui::addProjectAdvanced addUi;
     QDialog * advDialog;
     projectSliceData result;
+    appFTEConfig conf;
     bool haveValidation = false;
     projectSliceData avails;
     proIds::Uuid tmpId;
@@ -39,6 +40,14 @@ Q_OBJECT
       bool state_ok = isValidNameString(txt);
       state_ok &= haveValidation;
       addUi.doneButton->setEnabled(state_ok);
+    }
+
+    void configureBaseRow(appFTEConfig conf){
+      //Set the min, max and increment
+      auto & fteFld = addUi.baseFTEField;
+      fteFld->setMinimum(conf.min_per.asPercent());
+      fteFld->setMaximum(conf.max_per.asPercent());
+      fteFld->setSingleStep(conf.min_inc.asPercent());
     }
 
     void connectBaseRow(QDate date){
@@ -80,6 +89,9 @@ Q_OBJECT
 
         //FTETarget
         auto FTEbox = new QSpinBox();
+        FTEbox->setMinimum(conf.min_per.asPercent());
+        FTEbox->setMaximum(conf.max_per.asPercent());
+        FTEbox->setSingleStep(conf.min_inc.asPercent());
         addUi.FTETarget->addWidget(FTEbox);
         //TODO - set maximum using passed available info
 
@@ -336,7 +348,7 @@ Q_OBJECT
     }
 
     public:
-    advancedAddDialog(QWidget * parent, QDate base){
+    advancedAddDialog(QWidget * parent, QDate base, appFTEConfig conf){
       advDialog = new QDialog(parent);
       addUi.setupUi(advDialog);
       advDialog->setWindowTitle("Adding New Project");
@@ -346,6 +358,8 @@ Q_OBJECT
       //Once name is valid and validate data is ready, can enable button
       connect(addUi.nameEdit, &QLineEdit::textChanged, [this](QString txt){enableDoneOnRequiredFields();});
 
+      // Setting the mins etc on base row
+      configureBaseRow(conf);
       //Connect up the existing row
       connectBaseRow(base);
       //Connecting:

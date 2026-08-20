@@ -110,6 +110,10 @@ class timeWrapper{
       return clock::from_time_t(mktime(timeInfo));
     }
 
+    static timePoint oneYearAgo(timePoint tp){
+      return addDuration(tp, 0, 0, -365);
+    }
+
     static duration makeDuration(long minutes, long hours, long days){
       duration offset{0};
       offset += std::chrono::minutes(minutes);

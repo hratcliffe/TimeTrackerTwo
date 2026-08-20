@@ -45,6 +45,7 @@ struct exactBoundedFloat{
   explicit exactBoundedFloat(int val){set(val);}
   explicit exactBoundedFloat(double val){set(val);} // Temporary, consider removing
   explicit operator float()const{return (double)(value)/(double)permyriad;}
+  double asPercent()const{return (double)(value)/(double)permyriad * toPercent;}
   void set(int value_in){
     if(value_in >= 0 && value_in <= permyriad){
       value = value_in;
@@ -161,12 +162,29 @@ struct timeStampIssueConfig{
   timecode aLongTime = 60*60*12; /**< An unexpected length of time to be on a single project */
 };
 
+struct appFTEConfig{
+  // 3 general ideas - per: per project
+  //                 - tot: total sum
+  //                 - inc: increment in menus etc
+  // These MOSTLY control restrictions at the UI level
+  eb_float min_per{0}; //Minimum FTE - default to 0 to allow projects with no FTE (one-offs are exempt)
+  eb_float max_per{100*eb_float::fromPercent}; // Max FTE for a single project
+  eb_float min_inc{5*eb_float::fromPercent}; // Minimum FTE increment
+  eb_float max_tot{100*eb_float::fromPercent}; // Maximum FTE
+  bool allow_oversub = false; // Disable checks on over subscription - TODO - check consequences
+};
+
+struct appUIConfig{
+  appFTEConfig fte;
+};
+
 struct appConfig{
   bool read_only = false; /**< \brief App backend should be opened in read-only mode (Many operations will fail) */
   std::string dataFileName = "";
   dataBackendType backend = dataBackendType::database; /**< \brief Type of data backend to use */
   appDigestConfig digestConfig;
   timeStampIssueConfig stampConfig;
+  appUIConfig UIConfig;
 };
 
 inline std::string displayFloat(float value, int dp=2){

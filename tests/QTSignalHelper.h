@@ -58,7 +58,7 @@ public slots:
   void emitEBFloatX2(eb_float a, eb_float b){stashPayloadForReturn(a, b);}
 
   void emitOrderedProjectList(std::vector<selectableEntity> p){stashPayloadForReturn(p);}
-  void emitTimeSummary(std::vector<timeSummaryItem> s){stashPayloadForReturn(s);}
+  void emitTimeSummary(timeSummarySet s){stashPayloadForReturn(s);}
   void emitTimeStampList(std::vector<timeStampForDisplay> l){stashPayloadForReturn(l);}
   void emitTimeDigestReady(std::vector<timeDigestEntry> l){stashPayloadForReturn(l);}
 

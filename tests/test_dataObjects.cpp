@@ -606,3 +606,36 @@ TEST_CASE("Time Digest Entry", "[Stream]"){
   REQUIRE(ss.str().find(ss_tmp.str()) != std::string::npos);
 
 }
+
+TEST_CASE("Time Summary String Formatting", "[Basic]"){
+  timeSummaryDataString str;
+  std::string ss{"This is a good { } string"};
+  std::string ss2{"This is a good xyz string"};
+  REQUIRE(str.setText(ss));
+  REQUIRE(str.getRawText() == ss);
+  REQUIRE(str.getWithInsert("xyz") == ss2);
+}
+TEST_CASE("Time Summary String Construction", "[Basic]"){
+  std::string ss{"This is a good { } string"};
+  std::string ss2{"This is a good xyz string"};
+  timeSummaryDataString str{ss};
+  REQUIRE(str.getRawText() == ss);
+  REQUIRE(str.getWithInsert("xyz") == ss2);
+}
+TEST_CASE("Time Summary String Bad Value", "[Basic]"){
+  std::string ss{"This is a bad { string"};
+  std::string ss2{"This is also a bad } string"};
+  std::string ss3{"So is this {{}}"};
+  timeSummaryDataString str;
+  REQUIRE_FALSE(str.setText(ss));
+  REQUIRE(str.getRawText() == "");
+  REQUIRE_THROWS(timeSummaryDataString(ss));
+
+  REQUIRE_FALSE(str.setText(ss2));
+  REQUIRE(str.getRawText() == "");
+  REQUIRE_THROWS(timeSummaryDataString(ss2));
+
+  REQUIRE_FALSE(str.setText(ss3));
+  REQUIRE(str.getRawText() == "");
+  REQUIRE_THROWS(timeSummaryDataString(ss3));
+}

@@ -64,12 +64,15 @@ Q_OBJECT
 
     eb_float usedFTE{0}, freeFTE{0}; //Tracks FTE fractions
     viewProperties prop; //TODO - should there be any way to alter this? - maybe settings and some presets?
+    appUIConfig conf;
 
-  mainWindow(){
+  mainWindow(appUIConfig conf_in){
 
     main = new outerWindow();
     ui = new Ui::main_window();
     ui->setupUi(main);
+
+    conf = conf_in;
 
     //NOTE: This class acts as a switch-yard between the UI functions and the wider app
     // Some cases connect fron the tab bodies directly via the controller, others come through
@@ -119,7 +122,7 @@ Q_OBJECT
 
     //Connecting Tab bar to refresh actions
     auto tabRefresh =  [this](int index){
-      if(index == 1) emit timeSummaryRequested(timeSummaryUnit::minute);
+      if(index == 1) emit timeSummaryRequested();
       else if(index == 3) emit reviewRequested();
       else if(index == 4) this->reportNeeded();
     };
@@ -359,7 +362,7 @@ Q_OBJECT
 
       showBarChartBackground(details);
       //This is a complex dialog so done as a separate class
-      auto dialog = advancedAddDialog(this, toQDateTime(timeWrapper::startOfMonth(timeWrapper::now())).date());
+      auto dialog = advancedAddDialog(this, toQDateTime(timeWrapper::startOfMonth(timeWrapper::now())).date(), conf.fte);
       dialog.enableValidation(details, tmp);
       bool result = dialog.exec();
       if(result){
@@ -496,7 +499,7 @@ Q_OBJECT
   signals:
     void projectSelectedTrack(const proIds::Uuid & projectId, const std::string & project); /**< \brief Signal emitted when a project button is clicked */
     void projectOneOffAdd(const proIds::Uuid &, const std::string &, const std::string &);
-    void timeSummaryRequested(timeSummaryUnit unit);
+    void timeSummaryRequested();
     void pauseRequested(); /**< \brief Signal emitted when the pause button is clicked */
     void resumeRequested(); /**< \brief Signal emitted when the resume button is clicked */
     void stopRequested(); /**< \brief Signal emitted when the stop button is clicked */

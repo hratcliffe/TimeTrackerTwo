@@ -529,9 +529,10 @@ Q_OBJECT
       fetchTimestamps(start, end);
     }
  
-    void generateTimeSummary(timeSummaryUnit units){
-      std::vector<timeSummaryItem> summary;
-      // A vector of items to be displayed in order - expect display to add newlines between items
+    void generateTimeSummary(bool toNow = true){
+      timeSummarySet summary;
+      // Items to be displayed - expect display to add newlines between items, format etc
+      // There are some special items to use a headers, then an ordered list for projects
 
       //TODO - add an FTE/week and compare absolute
 
@@ -543,8 +544,12 @@ Q_OBJECT
 
       // First fetch the most recent stamps
       std::vector<timeStamp> timestamps = dataHandler->fetchTrackerEntries();
+      if(toNow && currentProjectStatus.isUp()){
+        //Fake end stamp for the windowing
+        timestamps.push_back(timeStamp{timeWrapper::toSeconds(timeWrapper::now()), proIds::NullUid});
+      }
       if(timestamps.size() == 0){
-        summary.push_back({"No time entries found!", timeSummaryStatus::error});
+        summary.header = timeSummaryItem{"No time entries found!", timeSummaryStatus::error};
         emit timeSummaryReady(summary);
         return;
       }
@@ -562,28 +567,21 @@ Q_OBJECT
         }
       }
 
-      std::string unit_str = unitToString(units);
-      timecode unit_factor = unitToDivisor(units);
-
-      std::string tmp_str = displayFloatQuarters(window/timeFactors::day + 0.249); //Quarter day increment, rounding up
-      timeSummaryItem item = {"Showing summary for past " + tmp_str +" days", timeSummaryStatus::none};
-      summary.push_back(item);
+      summary.duration = timeSummaryEntry{window, std::string{"Showing summary for past {} days"}, timeSummaryStatus::none, true};
 
       timecode uptime = 0, oneoffs = 0;
       for(auto & item : durations){
         if(item.first != proIds::NullUid) uptime += item.second;
         if(!thePM.isProject(item.first) && !thePM.isSubProject(item.first) && item.first != proIds::NullUid){
           oneoffs += item.second;
-        } 
+        }
       }
 
-      tmp_str = displayFloat(uptime/unit_factor, 1); //TODO rounding
-      item = {"Total uptime "+tmp_str+" "+unit_str, timeSummaryStatus::none};
-      summary.push_back(item);
+      summary.uptime = timeSummaryEntry{uptime, std::string{"Total uptime {}"}, timeSummaryStatus::none, true};
 
       // If there's no uptime, there's no point showing projects
       if(uptime == 0){
-        summary.push_back({"Zero uptime - skipping project display", timeSummaryStatus::error});
+        summary.header = timeSummaryItem{"Zero uptime - skipping project display", timeSummaryStatus::error};
         emit timeSummaryReady(summary);
         return;
       }
@@ -595,12 +593,13 @@ Q_OBJECT
       // Fractions apply to subs against total project time
       // Fractions should add to at most 1
 
+      timeSummaryEntry item;
       auto projects = thePM.getOrderedProjectRefs();
       for(auto & proj : projects){
         auto subs = thePM.getOrderedSubRefs(*proj);
  
-        item = {proj->getName(), timeSummaryStatus::none};
-        summary.push_back(item);
+        //Project name rows don't need formatting
+        summary.projects.push_back(timeSummaryEntry{0, proj->getName(), timeSummaryStatus::none, true, false});
 
         auto time = (durations.count(proj->getUid()) > 0) ?  durations[proj->getUid()] : 0; // Time on project itself
         timecode subTimes = 0;
@@ -608,8 +607,7 @@ Q_OBJECT
           subTimes += (durations.count(sub->getUid()) > 0) ? durations[sub->getUid()] : 0; //Sum on subs
         }
 
-        item = {"Time on project and subs: "+ displayFloatQuarters((time + subTimes)/unit_factor) + " "+unit_str, timeSummaryStatus::none};
-        summary.push_back(item);
+        summary.projects.push_back(timeSummaryEntry{(time + subTimes), std::string{"Time on project and subs: {}"}, timeSummaryStatus::none, true, true});
 
         float frac = (float)(time+subTimes)/(float)uptime; //See above - uptime cannot be zero here
         float FTE = (float)proj->getFTE();
@@ -619,14 +617,12 @@ Q_OBJECT
         }else if(FTE - frac > targetThresholdFTE){
           tag = timeSummaryStatus::underTarget;
         }
-        item = {"Fraction of uptime " + displayFloat(frac*100, 0) +"% (target "+displayFloat(FTE*100, 0)+"%)", tag};
-        summary.push_back(item);
+        summary.projects.push_back(timeSummaryEntry{0, "Fraction of uptime " + displayFloat(frac*100, 0) +"% (target "+displayFloat(FTE*100, 0)+"%)", tag, true, false});
 
         if(subs.size() > 0 and time+subTimes > 0){
           // Has subprojects
           for(auto & sub : subs){
-            item = {proj->getName() + ": " + sub->getName(), timeSummaryStatus::none};
-            summary.push_back(item);
+            summary.projects.push_back(timeSummaryEntry{0, proj->getName() + ": " + sub->getName(), timeSummaryStatus::none, true, false});
             auto subOnlyTime = durations.count(sub->getUid()) > 0 ? durations[sub->getUid()]: 0;
             tag = timeSummaryStatus::onTarget;
             frac = (float)subOnlyTime/(float)(time+subTimes); // Cannot be zero per if above
@@ -635,18 +631,16 @@ Q_OBJECT
             }else if((float)sub->getFrac() - frac > targetThresholdFractionFrac){
               tag = timeSummaryStatus::underTarget;
             }
-            item = {"Fraction on sub " + displayFloat(frac*100, 0) +"% (target " +displayFloat((float)sub->getFrac()*100,0)+"%)", tag};
-            summary.push_back(item);
+            summary.projects.push_back(timeSummaryEntry{0, "Fraction on sub " + displayFloat(frac*100, 0) +"% (target " +displayFloat((float)sub->getFrac()*100,0)+"%)", tag, true, false});
           }
         }else if(subs.size() > 0){
           //Has subprojects but nothing to show
-          item = {"No time expended, omitting subproject breakdown", timeSummaryStatus::none};
-          summary.push_back(item);
+          summary.projects.push_back(timeSummaryEntry{0, std::string{"No time expended, omitting subproject breakdown"}, timeSummaryStatus::none, true, false});
         }
       }
       
       //Adding total for one-offs
-      summary.push_back({"One Off Projects: "+ std::to_string(oneoffs)+" "+unit_str, timeSummaryStatus::none});
+      summary.projects.push_back(timeSummaryEntry{oneoffs, std::string{"One Off Projects: {}"}, timeSummaryStatus::none, true, true});
       
       emit timeSummaryReady(summary);
 
@@ -870,7 +864,7 @@ Q_OBJECT
       void projectListIsUpdatedEvent(std::vector<selectableEntity> const & newList);
       void projectTotalUpdateEvent(eb_float usedFTE, eb_float freeFTE);
       void projectSummaryReady(std::string summary); /**< \brief Signal emitted when a summary is ready, with the summary text */
-      void timeSummaryReady(std::vector<timeSummaryItem> summary);
+      void timeSummaryReady(timeSummarySet summary);
       void timeDigestReady(std::vector<timeDigestEntry> digest);
       void timeStampListReady(std::vector<timeStampForDisplay> stamps);
       void timeStampListUpdateEvent(); /**< \brief Indicate that anything showing a list of stamps needs to refresh */

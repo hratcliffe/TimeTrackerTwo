@@ -31,7 +31,21 @@ Q_OBJECT
 
     currentData = new TrackerData(config);
     currentData->writeState("Opened", clock->now());
-    //TODO write ref time IFF file is new
+    auto aref = timeWrapper::toSeconds(timeWrapper::referenceTime());
+    try{
+      auto ref = currentData->readState("ReferenceTime");
+      if(ref != aref){
+        std::stringstream ss;
+        ss<<"Reference time in file "<<ref<<" does not match app "<< aref;
+        throw std::runtime_error(ss.str());
+      }
+    }catch(badLookup & e){
+      //Reference time not present, so write it now
+      currentData->writeState("ReferenceTime", aref);
+    }catch(std::runtime_error & e){
+      //Some other error - perhaps the ref time does not match?
+      std::cerr<<e.what()<<std::endl;
+    }
 
     connectSignals();
     [[maybe_unused]] timecode lastClose=0;

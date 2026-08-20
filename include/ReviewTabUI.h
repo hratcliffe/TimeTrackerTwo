@@ -188,7 +188,10 @@ public:
               parent = data[i];
               gotParent = true;
             }else{
-              lst.push_back(data[i].projectUid);
+              if(data[i].projectUid != parent.projectUid){
+                // We could have merged before, OR, the 'stop' mark could be actually a pause
+                lst.push_back(data[i].projectUid);
+              }
               if(i == selected.size()-1) mergingActive = true;
             }
           }

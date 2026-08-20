@@ -13,13 +13,22 @@
 #include "projectbutton.h"
 #include "timeWrapper.h"
 
-//TODO - WHEN click away, stash selections to restore later?
+/*
+Two options for reducing one-offs here
+- squash into a one-off but with all the stamps, and the name/decription of the First one
+- squash onto an existing project
+
+- This allows promoting, by creating a project and then doing an ONTO
+*/
+
 class ReviewTabUI : public QWidget
 {
     Q_OBJECT
 
 private:
   std::vector<timeStampForDisplay> data;
+  std::vector<bool> selected;
+
 public:
     Ui::ReviewTabContent ui;
     
@@ -27,14 +36,39 @@ public:
       ui.setupUi(this);
       ui.v_delete_button->setEnabled(true);
       connect(ui.v_delete_button, &QPushButton::clicked, [this](){this->prepareListForDelete();});
+      connect(ui.v_combine_button, &QPushButton::clicked, [this](){this->prepareConsolidationRequest();});
+    }
+
+    std::vector<bool> prepareRestoreSelections(std::vector<timeStampForDisplay> const & data_old, std::vector<timeStampForDisplay> const & data_new, std::vector<bool> const & selections)const{
+
+      std::vector<bool> new_selections;
+      new_selections.resize(data_new.size(), false);
+
+      if(selections.size() != data_old.size() || selections.size() == 0) return new_selections;// No prev list, somehow, can only say nothing selected
+
+      //Prepare list of encoded selections - use a map for quick lookup
+      std::map<std::string, bool> encoded_selections;
+      for(size_t i = 0; i < selected.size(); i++){
+        if(selected[i]) encoded_selections[data_old[i].encoded()] = true;
+      }
+      // Go over new data and check the ones which are found in the encoded_selections
+      for(size_t i = 0; i < new_selections.size(); i++){
+        std::string enc = data_new[i].encoded();
+        if(encoded_selections.count(enc) > 0){
+          //Item was selected
+          new_selections[i] = true;
+        }
+      }
+      return new_selections;
     }
 
     void reviewDisplayUpdated(std::vector<timeStampForDisplay> data_in){
 
+      //This prepares a new selected list by comparing old and new
+      selected = prepareRestoreSelections(data, data_in, selected);
       //Stash
       data = data_in;
-      //Here would stash existing check-marks. NOTE- stamp may have been deleted or added so
-      // have to MATCH them
+
       //Clearing - safely remove all items from parent layout
       if (auto vl = ui.v_items->layout()) {
         QLayoutItem *item;
@@ -57,17 +91,26 @@ public:
         ui.v_delete_button->setEnabled(false);
       }
 
-      for(int i = 0; i < data.size(); i++){
+      for(size_t i = 0; i < data.size(); i++){
         auto item = data[i];
         auto row = new QHBoxLayout();
         auto chk = new QCheckBox(this);
         auto label = new QLabel(this);
         std::string disp;
         if(item.projectUid !=proIds::NullUid){
-          disp = item.formattedTime +" "+item.projectName;
+          if(item.projectUid.isTaggedAs(proIds::uidTag::oneoff)){
+            disp = item.formattedTime +" # "+item.projectName;
+          }else{
+            disp = item.formattedTime +" "+item.projectName;
+          }
         }else{
           disp = item.formattedTime + "  ..... Stopped";
         }
+        if(selected[i]) chk->setChecked(true);
+        //Flag box as oneOff and attach encoded stamp for reference
+        chk->setProperty("isOneOff", item.projectUid.isTaggedAs(proIds::uidTag::oneoff));
+        chk->setProperty("stamp", item.encoded().c_str());
+        connect(chk, &QCheckBox::clicked, [i, this](bool state){checkOrUncheck(i, state);});
         label->setText(disp.c_str());
         row->addWidget(chk, 0);
         row->addWidget(label, 1);
@@ -75,6 +118,14 @@ public:
       }
     }
 
+    // When a box is checked or unchecked, act as needed
+    void checkOrUncheck(size_t ind, bool state){
+      selected[ind] = state; // Storing state update
+
+      updateSquashButtons();
+    }
+
+    //TODO - use selected list for this fn, or not?
     void prepareListForDelete(){
       std::vector<timeStamp> lst;
       int latestValid = 0;
@@ -104,11 +155,61 @@ public:
       emit(listDeletionRequested(lst));
     }
 
+    void updateSquashButtons(){
+      //If all checked boxes are oneOff, enable the buttons, else disable them
+      bool allOneOff = true;
+      for(size_t i = 0; i < selected.size(); i++){
+        if(selected[i] && (data[i].projectUid ==proIds::NullUid || ! data[i].projectUid.isTaggedAs(proIds::uidTag::oneoff))){
+          allOneOff &= false;
+          break;
+        }
+      }
+      if(allOneOff){
+        ui.v_combine_button->setEnabled(true);
+        ui.v_reduce_button->setEnabled(true);
+      }else{
+        ui.v_combine_button->setEnabled(false);
+        ui.v_reduce_button->setEnabled(false);
+      }
+    }
+
+    void prepareConsolidationRequest(){
+      //Double check list is all OneOffs
+      timeStampForDisplay parent;
+      bool gotParent = false;
+      bool mergingActive = false;
+      std::vector<proIds::Uuid> lst;
+      for(size_t i = 0; i < selected.size(); i++){
+        if(selected[i]){
+          if(data[i].projectUid ==proIds::NullUid || ! data[i].projectUid.isTaggedAs(proIds::uidTag::oneoff)){
+            throw std::runtime_error("Trying to Consolidate Stamps that are not one-off");
+          }else{
+            if(!gotParent){
+              parent = data[i];
+              gotParent = true;
+            }else{
+              lst.push_back(data[i].projectUid);
+              if(i == selected.size()-1) mergingActive = true;
+            }
+          }
+          //Deselect
+          selected[i] = false;
+        }
+      }
+      //If we're merging in the latest one, then we will want to set the current status display to parent
+      if(mergingActive) emit currentStatusUpdatedP(parent.projectName);
+ 
+      if(lst.size() > 0){
+        emit consolidationRequested(parent.projectUid, lst);
+      }
+    }
+
     public slots:
       void boxChecked(int i){};
       void reviewContentUpdated(std::vector<timeStampForDisplay> & lst){reviewDisplayUpdated(lst);}
     signals:
       void listDeletionRequested(std::vector<timeStamp>&);
+      void consolidationRequested(proIds::Uuid&, std::vector<proIds::Uuid>&);
       void currentStatusUpdatedP(std::string);
       void currentStatusUpdatedS();
 

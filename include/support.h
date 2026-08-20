@@ -27,6 +27,12 @@ using timecode = long long; /**< \brief Type for timecodes, representing seconds
 
 inline const timecode timecodeNull = -1; /**< \brief Sentinel for null time * * Need a sentinel - do not rely on this value, use the named constant */
 
+inline std::string timecode_as_string(timecode tt){
+  std::stringstream ss;
+  ss<< tt;
+  return ss.str();
+}
+
 // Definitions to make call-sites clearer
 const bool FORCE=true;
 const bool NO_FORCE = false;

@@ -276,6 +276,9 @@ class timeStampForDisplay{
     std::string formattedTime;
     proIds::Uuid projectUid;
     std::string projectName;
+
+    // Uid are fixed length, thus this is AN encoding
+    std::string encoded()const{return projectUid.to_string() + '/'+timecode_as_string(time);}
 };
 inline std::ostream& operator<< (std::ostream& stream, const timeStampForDisplay& ts){
 /** \brief Stream operator for timeStampForDisplay
@@ -288,6 +291,16 @@ inline bool operator ==(const timeStampForDisplay &lhs, timeStampForDisplay &rhs
 };
 inline bool operator !=(const timeStampForDisplay &lhs, timeStampForDisplay &rhs){
   return !(lhs==rhs);
+}
+inline bool isSame(const timeStampForDisplay &lhs, timeStampForDisplay &rhs){
+  //Equality based on conserved properties
+  return lhs.time == rhs.time && lhs.projectUid == rhs.projectUid;
+}
+
+inline bool isSameTimeCode(std::string & tt1, std::string && tt2){
+  //Assuming tt1 and tt2 are encoded timestamps, compare them
+  //Could add debugging here to check strings "look ok"
+  return tt1 == tt2;
 }
 
 // For display - time unit in use

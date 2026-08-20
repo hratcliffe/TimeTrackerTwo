@@ -26,7 +26,6 @@ public:
 
   void summaryDisplayUpdated(std::string summary){
     // Update the project summary display
-    // TODO swap from single string to vector of items?
     ui.p_project_info->setText(QString::fromStdString(summary));
   }
 
@@ -65,7 +64,7 @@ public:
         layout->addWidget(addButton);
 
         addButton = new QPushButton();
-        addButton->setText("One Offs"); //TODO allow selecting an interval to list these from?
+        addButton->setText("One Offs");
         addButton->setFixedWidth(100);
         connect(addButton, &QPushButton::clicked, this, &ProjectTabUI::oneoffSummarySelected);
         layout->addWidget(addButton);
@@ -106,7 +105,7 @@ public:
         addButton->setText("Deactivate"); //Remove from selections, leave data intact
         addButton->setFixedWidth(100);
         //connect(addButton, &QPushButton::clicked, this, &mainWindow::???);
-        addButton->setDisabled(1); //TODO - implement.... - note depends on project start/end date feature
+        addButton->setDisabled(1);
         layout->addWidget(addButton);
 
       }

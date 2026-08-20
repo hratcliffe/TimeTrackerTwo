@@ -69,8 +69,6 @@ Q_OBJECT
   public:
 
     TrackerData(appConfig config){
-      //TODO - flatfile would be really hard, but could allow support for other DBs so don't
-      // remove this entirely, just adjust
       if(config.backend == dataBackendType::database){
         dataHandler = new databaseIO(config.dataFileName, config.read_only);
       }else if(config.backend == dataBackendType::flatfile){
@@ -148,7 +146,6 @@ Q_OBJECT
       auto subprojectList = dataHandler->fetchSubprojectListForParents(ids);
 
       for(const auto & it : projectList){
-        // TODO - use the read into a map instead of one per project?
         projectSliceData slices = dataHandler->readProjectTimes(it.uid);
         thePM.restoreProject(it, slices, now, true);
       }
@@ -224,7 +221,6 @@ Q_OBJECT
       auto subprojectList = dataHandler->fetchSubprojectListForParents(ids);
 
       for(const auto & it : projectList){
-        // TODO - use map read
         projectSliceData slices = dataHandler->readProjectTimes(it.uid);
         thePM.restoreProject(it, slices, now);
       }
@@ -348,7 +344,7 @@ Q_OBJECT
 
         bool badSubs = false;
         try{
-          //TODO - wont detect sub in DB but not in pm...
+          //NOTE/TODO - wont detect sub in DB but not in pm...
           for(auto sub : det.subs){
             auto subDB = dataHandler->readSubproject(sub.uid);
             if(subDB.name != sub.name) throw std::runtime_error(" Sub name bad ");
@@ -534,13 +530,9 @@ Q_OBJECT
       // Items to be displayed - expect display to add newlines between items, format etc
       // There are some special items to use a headers, then an ordered list for projects
 
-      //TODO - add an FTE/week and compare absolute
-
       const float targetThresholdFTE = 0.01;
       const float targetThresholdFractionFrac = 0.01; // Ditto for sub fracs
       //Fetching timedata
-      // TODO how to select time range for summary - c.f. View - filtering dialog and data struct?
-      // NOTE: cannot filter to more fidelity than the digests offer
 
       // First fetch the most recent stamps
       std::vector<timeStamp> timestamps = dataHandler->fetchTrackerEntries();
@@ -553,7 +545,6 @@ Q_OBJECT
         emit timeSummaryReady(summary);
         return;
       }
-      //TODO - should this always go until now? C.f. previous - time range selection?
       timecode window = timeWrapper::toSeconds(timeWrapper::now()) - timestamps[0].time; 
       std::map<proIds::Uuid, timecode> durations = timestampProcessor::stampsToDurations(timestamps);
 
@@ -649,10 +640,6 @@ Q_OBJECT
     void generateDailyDigest(TW_timePoint start_tp){
       //Generate the 'per-day' version of the timestamps for the GMT day starting at start
       // ALSO adds a special entry for the TOTAL duration covered under the NULL uuid
-      // TODO - total duration is sum of the rest - why store it?
-      //TODO - perhaps should also create a day-start and day-end entry somewhere?
-      // TODO - timezones?
-      // TODO If it exists already, it should be replaced
 
       //Start and end of day timestamps
       timecode start, end, start_of_day;
@@ -678,8 +665,6 @@ Q_OBJECT
         total_dur += item.second;
         digest.push_back(timeDigestEntry{-1, item.second, item.first});
       }
-      //TODO - remove this null entry
-      //TODO - perhaps should also create a day-start and day-end entry somewhere?
       digest.push_back(timeDigestEntry{-1, total_dur, proIds::NullUid});
       timeDigestPeriod period{-1, start_of_day, end-start_of_day};
       dataHandler->writeDigestEntries(period, digest);
@@ -705,10 +690,8 @@ Q_OBJECT
     }
 
     void handleCloseRequest(bool silent, timecode now){
-      //TODO write state for last-closed time
       if(silent){
         // Just exit
-        // TODO - can we persist a pause?
       }else{
         stopProject(now);
       }

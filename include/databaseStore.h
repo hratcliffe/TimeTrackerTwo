@@ -10,9 +10,6 @@
 
 #include "dataObjects.h"
 #include "idGenerators.h"
-//TODO - configurable error logging!
-//TODO - more exceptions?
-// TODO - Ensure finalize occurs in error cases!
 
 class badLookup : public std::runtime_error{
   public:
@@ -103,7 +100,6 @@ class databaseStore{
             throw std::runtime_error("Failed to create "+tbl+" table");
           }
         }
-        // TODO - extended descriptions table - could add all sorts of extra info
     }
 
     void delete_all_tables(){
@@ -416,7 +412,7 @@ class databaseStore{
         //Unpacking
         const std::string & id = dat.uid.to_string();
         const std::string & name = dat.name;
-        const std::string & descr = dat.description; //TODO - limit length on input?
+        const std::string & descr = dat.description;
 
         std::string cmd;
         sqlite3_stmt * prep_cmd;

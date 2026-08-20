@@ -125,7 +125,6 @@ public:
       updateSquashButtons();
     }
 
-    //TODO - use selected list for this fn, or not?
     void prepareListForDelete(){
       std::vector<timeStamp> lst;
       int latestValid = 0;
@@ -150,7 +149,6 @@ public:
         }else{
           latestValid = i;
         }
-        //TODO - use a QVariant or such instead of assuming the data list is intact
       }
       emit(listDeletionRequested(lst));
     }

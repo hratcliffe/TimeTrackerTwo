@@ -110,15 +110,6 @@ Q_OBJECT
       // After forming the digest, delete the timestamps (NOTE - keep the last one IF it is an active project as this is then running into the NEXT DAY)
 
       //Reports will then use the digests plus the timestamps
-
-      // TODO What about traveling to another time Zone? 
-
-      //TODO allow editing of projects
-      //TODO - allow editing of inactive projects? For those that will start in the future? "Upcoming"
-      //TODO ditto subprojects
-
-      //TODO allow review of stamps
-      //TODO allow adding time travel on previous days and get this RIGHT
   }
 
   void writeState(){
@@ -284,7 +275,6 @@ Q_OBJECT
   }
 
   TW_timePoint fromQDateTime(QDateTime time){
-    //TODO move this to support code - has more than one instance - BUT has to be at level where QT is known...
     //Convert from QT time to app time, going via a string
     // Format  "%Y-%m-%d %H:%M:%S"
     std::string time_str;

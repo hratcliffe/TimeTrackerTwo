@@ -56,7 +56,6 @@ public:
         oneOffTrackerButton->setStyleSheet("background-color: blue;"); 
         oneOffTrackerButton->setFixedWidth(150);
         connect(oneOffTrackerButton, &projectButton::clicked, this, [this](){emit oneOffDialogNeeded(this->oneOffTrackerButton->projectId);});
-        //connect(oneOffTrackerButton, &projectButton::clicked, this, [this](){this->showOneOffDialog(this->oneOffTrackerButton->projectId);}); // TODO - have this pop up the name entry form instead....
         layout->addWidget(oneOffTrackerButton);
         emit oneOffIdRequired();
       }

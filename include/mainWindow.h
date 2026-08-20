@@ -63,7 +63,7 @@ Q_OBJECT
     ReviewTabUI * reviewTab;
 
     eb_float usedFTE{0}, freeFTE{0}; //Tracks FTE fractions
-    viewProperties prop; //TODO - should there be any way to alter this? - maybe settings and some presets?
+    viewProperties prop;
     appUIConfig conf;
 
   mainWindow(appUIConfig conf_in){
@@ -85,7 +85,6 @@ Q_OBJECT
     
     connect(trackerTab, &TrackerTabContent::oneOffDialogNeeded, this, [this](){this->showOneOffDialog(this->trackerTab->oneOffTrackerButton->projectId);});
  
-    // TODO - perhaps should move this into the tracker class?
     //Connecting buttons to downstream functions for controller to connect to
     connect(trackerTab->ui.t_close_button, &QPushButton::clicked, [this](){this->main->close();});
     connect(trackerTab->ui.t_silent_button, &QPushButton::clicked, [this](){this->main->silent=true; this->main->close();});
@@ -112,7 +111,6 @@ Q_OBJECT
     reviewTab = new ReviewTabUI();
     ui->review_target_layout->addWidget(reviewTab);
 
-    // TODO - does not clear when report is generated...
     reportTab = new ReportTabUI();
     ui->report_target_layout->addWidget(reportTab);
     connect(reportTab->ui.button1, &QPushButton::clicked, [this](){this->reportNeeded(30);});
@@ -127,9 +125,6 @@ Q_OBJECT
       else if(index == 4) this->reportNeeded();
     };
     connect(ui->tabWidget, &QTabWidget::currentChanged, tabRefresh);
-    //TODO - minutes for dev, -> hours for real
-    //TODO - add summary filtering dialog
-
 
     updateLFooter("Not Tracking");
     updateAvailableActions(false);
@@ -163,8 +158,6 @@ Q_OBJECT
 
   void updateAvailableActions(bool active, bool paused=false){
     // Enable/disable buttons based on project state
-    // TODO should this be done in the trackerbody class? MainWindow is what knows about active and paused state
-    // but tracker knows about its own buttons
     trackerTab->ui.t_pause_button->setEnabled(active && !paused);
     trackerTab->ui.t_resume_button->setEnabled(paused);
     trackerTab->ui.t_stop_button->setEnabled(active || paused);
@@ -176,8 +169,6 @@ Q_OBJECT
       Ui::addSubprojectDialog addUi;
       addUi.setupUi(addDialog);
 
-      //TODO show fractions and allow to configure these for all subs on add?
-
       //Adding projects to drop-down
       for(auto & proj: details){
         QVariant data = QVariant(proj.first.to_string().c_str());
@@ -186,7 +177,6 @@ Q_OBJECT
 
       //Disable OK button and require fields set to enable it
       //Have to connect the enable function to ALL required field inputs sadly
-      // TODO - look for how to bind to _any_ input into the dialog
       addUi.buttonBox->button(QDialogButtonBox::Ok)->setDisabled(true);
       connect(addUi.NameField, &QLineEdit::textChanged, [this, &addUi](QString txt){this->enableOnRequiredFields(addUi.buttonBox->button(QDialogButtonBox::Ok), &addUi);});
       connect(addUi.ParentDropdown, &QComboBox::currentIndexChanged, [this, &addUi](int index){this->enableOnRequiredFields(addUi.buttonBox->button(QDialogButtonBox::Ok), &addUi);});
@@ -214,7 +204,6 @@ Q_OBJECT
         emit subprojectAddRequested(subprojectData{addUi.NameField->text().toStdString(), frac}, parent);
 
       }
-      // TODO - refresh and for similar functions
   }
 
   void showMergeDialogImpl(std::map<proIds::Uuid, projectDetails> details){
@@ -292,8 +281,6 @@ Q_OBJECT
       connect(mergeUi.SelectionDropdownSub, &QComboBox::currentIndexChanged, updateFTE);
       connect(mergeUi.TargetDropdownSub, &QComboBox::currentIndexChanged, updateFTE);
 
-      // TODO - disable target being the same as current in UI
-
       // Do this step last to trigger the above code on the selection set
       //Adding projects to drop-down
       for(auto & proj: details){
@@ -329,7 +316,6 @@ Q_OBJECT
 
   void showDeleteDialogImpl(projectDetails details, bool running, bool marked){
     if(running){
-      // TODO - could offer to stop it here
       showSimpleAlert("Cannot delete a running project - please stop it first", "OK");
       return;
     }
@@ -441,7 +427,6 @@ Q_OBJECT
       Ui::addOneOffDialog addUi;
       addUi.setupUi(addDialog);
       bool result = addDialog->exec();
-      //TODO -disallow blank name field!
 
       //If OK was clicked, signal to mark one-off with constructed name
       if(result){
@@ -452,7 +437,6 @@ Q_OBJECT
 
     void showTimeTravelDialog(std::string clockTime, QDateTime time){
 
-      //TODO offer a pop-up showing time-marks for a specific window
       auto ttDialog = new QDialog(this);
       Ui::timeTravelDialog ttUi;
       ttUi.setupUi(ttDialog);

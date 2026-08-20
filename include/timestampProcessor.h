@@ -38,8 +38,6 @@ class timestampProcessor{
         // If the first stamp is after _start_ then the time between _start_ and this has to be ignored
         // I.E. this expects start and end to be within the period covered by _data_
 
-        //TODO - does this work if there is a currently running project?
-
         std::map<proIds::Uuid, timecode> durations;
         if(data.size() == 0) return durations; // No stamps to process
 

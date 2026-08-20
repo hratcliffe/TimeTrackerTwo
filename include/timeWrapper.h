@@ -77,7 +77,7 @@ class timeWrapper{
       if (ss.fail()) {
         throw std::runtime_error("Failed to parse time string: " + timeStr);
       }
-      tm.tm_isdst = -1; //TODO - try and verify that this works?
+      tm.tm_isdst = -1;
       return clock::from_time_t(std::mktime(&tm));
     }
 

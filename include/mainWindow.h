@@ -430,8 +430,13 @@ Q_OBJECT
 
       //If OK was clicked, signal to mark one-off with constructed name
       if(result){
-        emit projectOneOffAdd(id, addUi.name->text().toStdString(), addUi.descr->text().toStdString()); // NOTE - this may change the bound ID of the button!
-        emit projectSelectedTrack(id, addUi.name->text().toStdString());
+        std::string name = addUi.name->text().toStdString();
+        if(isValidNameString(name)){
+          emit projectOneOffAdd(id, name, addUi.descr->text().toStdString()); // NOTE - this may change the bound ID of the button!
+          emit projectSelectedTrack(id, name);
+        }else{
+          showSimpleAlert("Project name cannot be blank, please try again", "Got it");
+        }
       }
     }
 

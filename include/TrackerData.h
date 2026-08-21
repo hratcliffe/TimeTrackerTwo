@@ -535,10 +535,12 @@ Q_OBJECT
       //Fetching timedata
 
       // First fetch the most recent stamps
+      timecode start = timecodeNull;
+      timecode end = timecodeNull;
       std::vector<timeStamp> timestamps = dataHandler->fetchTrackerEntries();
       if(toNow && currentProjectStatus.isUp()){
-        //Fake end stamp for the windowing
-        timestamps.push_back(timeStamp{timeWrapper::toSeconds(timeWrapper::now()), proIds::NullUid});
+        // Run the windowing up to now
+        end = timeWrapper::toSeconds(timeWrapper::now());
       }
       if(timestamps.size() == 0){
         summary.header = timeSummaryItem{"No time entries found!", timeSummaryStatus::error};
@@ -546,7 +548,7 @@ Q_OBJECT
         return;
       }
       timecode window = timeWrapper::toSeconds(timeWrapper::now()) - timestamps[0].time; 
-      std::map<proIds::Uuid, timecode> durations = timestampProcessor::stampsToDurations(timestamps);
+      std::map<proIds::Uuid, timecode> durations = timestampProcessor::stampsToDurations(timestamps, start, end);
 
       //Next add in durations from digests
       auto digests = dataHandler->fetchDigestEntriesForTime(0, timeWrapper::toSeconds(timeWrapper::now()));

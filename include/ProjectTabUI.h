@@ -46,7 +46,9 @@ public:
           projectButton * button = new projectButton();
           button->projectId = proj.uid;
           button->fullName = proj.name;
-          button->setText(QString::fromStdString(proj.name));
+          std::string displayName = proj.name.length() < 12 ? proj.name : proj.name.substr(0, 12)+" ..";
+          button->setText(QString::fromStdString(displayName));
+          button->setToolTip(QString::fromStdString(proj.name));
           button->setFixedWidth(100);
           connect(button, &projectButton::clicked, this, [this, button](){this->viewProjectClicked(button);});
           layout->addWidget(button);

@@ -36,7 +36,9 @@ public:
           projectButton * button = new projectButton();
           button->projectId = proj.uid;
           button->fullName = proj.name;
-          button->setText(QString::fromStdString(proj.name));
+          std::string displayName = proj.name.length() < 20 ? proj.name : proj.name.substr(0, 20)+" ..";
+          button->setText(QString::fromStdString(displayName));
+          button->setToolTip(QString::fromStdString(proj.name));
           if(proj.level == 0){
             button->setStyleSheet("background-color: lightblue;"); // Top level projects 
           }else if(proj.level == 1){

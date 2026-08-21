@@ -180,16 +180,12 @@ class projectManager{
     bool isActiveProject(proIds::Uuid id, timecode now=timecodeNull){
       if(isProject(id)){
         auto & proj = projects[id];
-        if(!proj.active){
-          //Forced in-active for some reason
-          return false;
+        auto dates = proj.getDateRange();
+        //If 'now' is unspecified, or within date range, including open ranges, check active flag
+        if(now == timecodeNull || (now != timecodeNull && (dates.first == timecodeNull || dates.first <= now) && (dates.second == timecodeNull || dates.second >= now))){
+          return proj.active;
         }else{
-          //Checking dates:
-          if(now != timecodeNull){
-            return proj.getFTEAt(now) != eb_float{0.0};
-          }else{
-            return true;
-          }
+          return false;
         }
       }else{
         //Not even a project...

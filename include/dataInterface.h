@@ -254,7 +254,7 @@ class databaseIO : public dataIO{
 
 
     // Editing and manipulation
-    void rewriteTrackerProjectId(proIds::Uuid current, proIds::Uuid target, bool noDigest) override{
+    void rewriteTrackerProjectId(proIds::Uuid current, proIds::Uuid target, bool noDigest=false) override{
       // Rewrite the Uid for timestamp and digest entries from current to target
       dbStore.updateTimestampEntriesId(current, target);
       if(!noDigest){

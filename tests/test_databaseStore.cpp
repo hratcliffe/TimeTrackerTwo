@@ -256,7 +256,27 @@ TEST_CASE("List fetch - project active", "[Database]"){
   REQUIRE(pd.uid == id2);
   }
 }
+TEST_CASE("List fetch - projects w zero FTE", "[Database]"){
+  databaseStore theDB{"./InputData/KnownDatabaseZero.db", true};
+  auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+  auto id2 = proIds::Uuid("{8af5d44a-2921-4666-b33b-053459e2ced6}");
 
+  auto projList = theDB.fetchProjectListActiveAt(150, timecodeNull);
+
+  REQUIRE(projList.size() == 2);
+  {
+  auto pd = projList[0];
+  REQUIRE(pd.name == "Project Alpha");
+  REQUIRE(pd.FTE == 0.5);
+  REQUIRE(pd.uid == id);
+  }
+  {
+  auto pd = projList[1];
+  REQUIRE(pd.name == "Project Beta");
+  REQUIRE(pd.FTE == 0.0);
+  REQUIRE(pd.uid == id2);
+  }
+}
 TEST_CASE("List fetch - subprojects", "[Database]"){
   databaseStore theDB{"./InputData/KnownDatabase.db", true};
   auto pid  = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");

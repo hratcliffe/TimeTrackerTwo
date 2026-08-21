@@ -125,7 +125,6 @@ public:
       updateSquashButtons();
     }
 
-    //TODO - use selected list for this fn, or not?
     void prepareListForDelete(){
       std::vector<timeStamp> lst;
       int latestValid = 0;
@@ -150,7 +149,6 @@ public:
         }else{
           latestValid = i;
         }
-        //TODO - use a QVariant or such instead of assuming the data list is intact
       }
       emit(listDeletionRequested(lst));
     }
@@ -188,7 +186,10 @@ public:
               parent = data[i];
               gotParent = true;
             }else{
-              lst.push_back(data[i].projectUid);
+              if(data[i].projectUid != parent.projectUid){
+                // We could have merged before, OR, the 'stop' mark could be actually a pause
+                lst.push_back(data[i].projectUid);
+              }
               if(i == selected.size()-1) mergingActive = true;
             }
           }

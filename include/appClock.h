@@ -34,7 +34,8 @@ class appClock{
         return (travelling() ? "App: " : "") + shortTimeString();
     }
 
-    bool travelling(){return travelTimeTarget != travelTimeZero;}
+    //Allow 1 second slip
+    bool travelling(){return std::abs(timeWrapper::toSeconds(travelTimeTarget) - timeWrapper::toSeconds(travelTimeZero)) > 1;}
     void travelTo(TW_timePoint time){
         auto now = timeWrapper::now();
         if(time == now){

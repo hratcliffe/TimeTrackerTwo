@@ -93,7 +93,6 @@ Q_OBJECT
         FTEbox->setMaximum(conf.max_per.asPercent());
         FTEbox->setSingleStep(conf.min_inc.asPercent());
         addUi.FTETarget->addWidget(FTEbox);
-        //TODO - set maximum using passed available info
 
         //Label Target
         auto label = new QLabel();
@@ -190,8 +189,6 @@ Q_OBJECT
     void fetchInfo(){
         //Populate result with each row of start, end, fte
 
-        //TODO - this should either sort inputs, or demand ordered inputs
-        //TODO - should this de-duplicate consecutive slices at same FTE?
        //Fetch all the rows start, end and FTE into slices
         result.slices.clear(); // Should not happen...
         //First, the base row

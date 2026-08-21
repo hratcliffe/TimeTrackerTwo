@@ -1158,6 +1158,27 @@ TEST_CASE("Known Data - Load projects with start and end dates", "[QTAware]"){
   }
 }
 
+TEST_CASE("Known Data - Load projects with Zero FTE", "[QTAware]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./InputData/KnownDatabaseZero.db")};
+
+  SignalCatcher sig;
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListNeedsUpdateEvent, [&td](){td.projectListUpdate(1);});
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectListIsUpdatedEvent, &sig, &SignalCatcher::emitOrderedProjectList);
+  QAbstractEventDispatcher::connect(&td, &TrackerData::projectTotalUpdateEvent, &sig, &SignalCatcher::emitEBFloatX2);
+
+  td.loadProjects(0);
+
+  std::vector<selectableEntity> list;
+  list = sig.what(list);
+  REQUIRE(list.size() == 5);
+  // Check for the items
+  {auto check = [](selectableEntity & se){return se.name == "Project Alpha" && se.uid.to_string() == "{cc467402-acd5-494f-9c58-466f3aa6f117}" && se.level == 0;};
+  REQUIRE(std::find_if(list.begin(), list.end(), check) != list.end());}
+  {auto check = [](selectableEntity & se){return se.name == "Project Beta" && se.uid.to_string() == "{8af5d44a-2921-4666-b33b-053459e2ced6}" && se.level == 0;};
+  REQUIRE(std::find_if(list.begin(), list.end(), check) != list.end());}
+
+}
 // ---------- Merging and deleting Projects ---------------------------------------------------------------------
 TEST_CASE("Merging project data - basic checks", "[QTAware]"){
   auto app = dummyApp();

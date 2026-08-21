@@ -14,16 +14,16 @@
 class timestampProcessor{
     public:
 
-    static timecode stampsToWindow(const std::vector<timeStamp> & data, timecode start_in=-1, timecode end_in=-1){
+    static timecode stampsToWindow(const std::vector<timeStamp> & data, timecode start_in=timecodeNull, timecode end_in=timecodeNull){
 
         if(data.size() == 0) return 0;
         timecode start, end;
-        if(start_in != -1){
+        if(start_in != timecodeNull){
             start = start_in;
         }else{
             start = data[0].time;
         }
-        if(end_in != -1){
+        if(end_in != timecodeNull){
             end = end_in;
         }else{
             end = data[data.size()-1].time;
@@ -31,14 +31,12 @@ class timestampProcessor{
         return end - start;
     }
 
-    static std::map<proIds::Uuid, timecode> stampsToDurations(const std::vector<timeStamp> & data, timecode start_in=-1, timecode end_in=-1){
+    static std::map<proIds::Uuid, timecode> stampsToDurations(const std::vector<timeStamp> & data, timecode start_in=timecodeNull, timecode end_in=timecodeNull){
         //Take a list of timestamps (ordered by time) and convert to durations per Uuid
         //IMPORTANT: if the last stamp is earlier than _end_, this will assume that the last marked project
         // continues until the given end time
         // If the first stamp is after _start_ then the time between _start_ and this has to be ignored
         // I.E. this expects start and end to be within the period covered by _data_
-
-        //TODO - does this work if there is a currently running project?
 
         std::map<proIds::Uuid, timecode> durations;
         if(data.size() == 0) return durations; // No stamps to process
@@ -46,10 +44,10 @@ class timestampProcessor{
         //Only one entry, have to be a bit careful - per the contract, we give this whatever time there is between max(start, stampTime) and end
         // IF END IS NOT GIVEN all we can do is return 0
         if(data.size() == 1){
-          if(end_in == -1){
+          if(end_in == timecodeNull){
             durations[data[0].projectUid] = 0;
           }else{
-            if(start_in == -1 || data[0].time > start_in){
+            if(start_in == timecodeNull || data[0].time > start_in){
               durations[data[0].projectUid] = end_in -data[0].time;
             }else{
               durations[data[0].projectUid] = end_in - start_in;
@@ -62,7 +60,7 @@ class timestampProcessor{
 
         auto current = data.begin();
         //Setup last value for previous entry
-        if(start_in != -1 && start_in > data[0].time ){
+        if(start_in != timecodeNull && start_in > data[0].time ){
             last = start_in;
             // Spin through the list until we exceed the start time, then process the part between start and this
             while((current++)->time < start_in && current !=data.end()) ;
@@ -76,7 +74,7 @@ class timestampProcessor{
         durations[current->projectUid] = (current+1)->time - last;
         current++;
         last = current->time;
-        if(end_in != -1){
+        if(end_in != timecodeNull){
             end = end_in;
         }else{
             end = data[data.size()-1].time;

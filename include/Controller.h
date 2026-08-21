@@ -31,7 +31,21 @@ Q_OBJECT
 
     currentData = new TrackerData(config);
     currentData->writeState("Opened", clock->now());
-    //TODO write ref time IFF file is new
+    auto aref = timeWrapper::toSeconds(timeWrapper::referenceTime());
+    try{
+      auto ref = currentData->readState("ReferenceTime");
+      if(ref != aref){
+        std::stringstream ss;
+        ss<<"Reference time in file "<<ref<<" does not match app "<< aref;
+        throw std::runtime_error(ss.str());
+      }
+    }catch(badLookup & e){
+      //Reference time not present, so write it now
+      currentData->writeState("ReferenceTime", aref);
+    }catch(std::runtime_error & e){
+      //Some other error - perhaps the ref time does not match?
+      std::cerr<<e.what()<<std::endl;
+    }
 
     connectSignals();
     [[maybe_unused]] timecode lastClose=0;
@@ -96,15 +110,6 @@ Q_OBJECT
       // After forming the digest, delete the timestamps (NOTE - keep the last one IF it is an active project as this is then running into the NEXT DAY)
 
       //Reports will then use the digests plus the timestamps
-
-      // TODO What about traveling to another time Zone? 
-
-      //TODO allow editing of projects
-      //TODO - allow editing of inactive projects? For those that will start in the future? "Upcoming"
-      //TODO ditto subprojects
-
-      //TODO allow review of stamps
-      //TODO allow adding time travel on previous days and get this RIGHT
   }
 
   void writeState(){
@@ -218,6 +223,7 @@ Q_OBJECT
     //Time traveling:
     //To show a dialog, view needs to know the time now:
     connect(themainWindow, &mainWindow::fetchTimeTravelInfo, [this](){themainWindow->showTimeTravelDialog(this->clock->shortTimeString(), QDateTime::currentDateTime());});
+    connect(themainWindow, &mainWindow::timeTravelNowRequested, [this](){this->clock->restoreToNow();});
     connect(themainWindow, &mainWindow::timeTravelRequested, [this](QDateTime time){this->clock->travelTo(fromQDateTime(time));});
 
     //Offer time-travel as an option
@@ -270,7 +276,6 @@ Q_OBJECT
   }
 
   TW_timePoint fromQDateTime(QDateTime time){
-    //TODO move this to support code - has more than one instance - BUT has to be at level where QT is known...
     //Convert from QT time to app time, going via a string
     // Format  "%Y-%m-%d %H:%M:%S"
     std::string time_str;

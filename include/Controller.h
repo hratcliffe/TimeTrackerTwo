@@ -223,6 +223,7 @@ Q_OBJECT
     //Time traveling:
     //To show a dialog, view needs to know the time now:
     connect(themainWindow, &mainWindow::fetchTimeTravelInfo, [this](){themainWindow->showTimeTravelDialog(this->clock->shortTimeString(), QDateTime::currentDateTime());});
+    connect(themainWindow, &mainWindow::timeTravelNowRequested, [this](){this->clock->restoreToNow();});
     connect(themainWindow, &mainWindow::timeTravelRequested, [this](QDateTime time){this->clock->travelTo(fromQDateTime(time));});
 
     //Offer time-travel as an option

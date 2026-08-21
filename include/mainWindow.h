@@ -447,9 +447,8 @@ Q_OBJECT
       ttUi.setupUi(ttDialog);
       ttUi.realtimeLabel->setText(clockTime.c_str());
       ttUi.dateTimeEdit->setDateTime(time);
-      //The now button in Dialog resets the edit to this - NOTE this time does not track, it is the time when
-      // dialog starts...
-      connect(ttUi.nowButton, &QPushButton::clicked, [time, ttUi](){ttUi.dateTimeEdit->setDateTime(time);});
+      // Connect Now button to emit request to travel to 'now' and close dialog
+      connect(ttUi.nowButton, &QPushButton::clicked, [this, ttDialog](){emit timeTravelNowRequested(); ttDialog->close();});
       bool result = ttDialog->exec();
       if(result){
         emit timeTravelRequested(ttUi.dateTimeEdit->dateTime());
@@ -505,6 +504,7 @@ Q_OBJECT
     void projectDetailsRequired(const proIds::Uuid & proj);
 
     void fetchTimeTravelInfo();
+    void timeTravelNowRequested();
     void timeTravelRequested(QDateTime time);
 
     void reviewRequested();

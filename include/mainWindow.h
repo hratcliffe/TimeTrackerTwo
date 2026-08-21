@@ -174,6 +174,10 @@ Q_OBJECT
         QVariant data = QVariant(proj.first.to_string().c_str());
         addUi.ParentDropdown->addItem(proj.second.name.c_str(), data);
       }
+      if(projectTab->selected != proIds::NullUid){
+        auto index = addUi.ParentDropdown->findData(projectTab->selected.to_string().c_str());
+        if(index != -1) addUi.ParentDropdown->setCurrentIndex(index);
+      }
 
       //Disable OK button and require fields set to enable it
       //Have to connect the enable function to ALL required field inputs sadly

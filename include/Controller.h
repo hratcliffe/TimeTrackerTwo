@@ -197,7 +197,7 @@ Q_OBJECT
     connect(currentData, &TrackerData::timeSummaryReady, themainWindow->summaryTab, &SummaryTabUI::timeSummaryUpdated);
 
     //Review view
-    connect(themainWindow, &mainWindow::reviewRequested, [this](){currentData->generateReviewData(this->clock->now());});
+    connect(themainWindow, &mainWindow::reviewRequested, [this](){currentData->generateReviewData(this->clock->realTime());});
     connect(currentData, &TrackerData::timeStampListReady, themainWindow->reviewTab, &ReviewTabUI::reviewDisplayUpdated);
     // Review deletion
     connect(themainWindow->reviewTab, &ReviewTabUI::listDeletionRequested, currentData, &TrackerData::deleteTimeStampList);

@@ -24,6 +24,9 @@ class appClock{
     timecode now(){
         return timeWrapper::toSeconds(appTime);
     }
+    timecode realTime(){
+        return timeWrapper::toSeconds(timeWrapper::now());
+    }
     std::string fullTimeString(){
         return timeWrapper::formatTime(appTime);
     }

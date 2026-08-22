@@ -37,6 +37,7 @@ public:
       ui.v_delete_button->setEnabled(true);
       connect(ui.v_delete_button, &QPushButton::clicked, [this](){this->prepareListForDelete();});
       connect(ui.v_combine_button, &QPushButton::clicked, [this](){this->prepareConsolidationRequest();});
+      connect(ui.v_filter_button, &QPushButton::clicked, [this](){emit reviewUpdateNeeded(fromQDateTime(ui.v_dateTimeStart->dateTime()), fromQDateTime(ui.v_dateTimeEnd->dateTime()));});
     }
 
     std::vector<bool> prepareRestoreSelections(std::vector<timeStampForDisplay> const & data_old, std::vector<timeStampForDisplay> const & data_new, std::vector<bool> const & selections)const{
@@ -63,6 +64,15 @@ public:
     }
 
     void reviewDisplayUpdated(std::vector<timeStampForDisplay> data_in, timecode now = timecodeNull){
+
+      //Setting the filter inputs
+      if(now != timecodeNull){
+        auto date = toQDateTime(timeWrapper::midnightBefore(timeWrapper::fromSeconds(now)));
+        ui.v_dateTimeStart->setDateTime(date.addMonths(-1));
+        ui.v_dateTimeEnd->setDateTime(date.addDays(1));
+      }
+
+      // ----- Adding the review marks
 
       //This prepares a new selected list by comparing old and new
       selected = prepareRestoreSelections(data, data_in, selected);
@@ -232,6 +242,7 @@ public:
       void consolidationRequested(proIds::Uuid&, std::vector<proIds::Uuid>&);
       void currentStatusUpdatedP(std::string);
       void currentStatusUpdatedS();
+      void reviewUpdateNeeded(TW_timePoint, TW_timePoint);
 
 };
 #endif

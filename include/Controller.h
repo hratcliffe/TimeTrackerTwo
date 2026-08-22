@@ -199,6 +199,9 @@ Q_OBJECT
     //Review view
     connect(themainWindow, &mainWindow::reviewRequested, [this](){currentData->generateReviewData(this->clock->realTime());});
     connect(currentData, &TrackerData::timeStampListReady, [this](auto lst){themainWindow->reviewTab->reviewDisplayUpdated(lst, this->clock->now());});
+    //Circular connection back when filter button used
+    connect(themainWindow->reviewTab, &ReviewTabUI::reviewUpdateNeeded, [this](TW_timePoint start, TW_timePoint end){currentData->generateReviewData(start, end);});
+
 // Review deletion
     connect(themainWindow->reviewTab, &ReviewTabUI::listDeletionRequested, currentData, &TrackerData::deleteTimeStampList);
     connect(currentData, &TrackerData::timeStampListUpdateEvent, themainWindow, &mainWindow::reviewRequested);

@@ -534,7 +534,10 @@ Q_OBJECT
       auto start = timeWrapper::toSeconds(start_cand) > 0 ? start_cand : timeWrapper::fromSeconds(1);
       fetchTimestamps(start, end);
     }
- 
+    void generateReviewData(TW_timePoint start, TW_timePoint end){
+      fetchTimestamps(start, end);
+    }
+
     void generateTimeSummary(bool toNow = true){
       timeSummarySet summary;
       // Items to be displayed - expect display to add newlines between items, format etc

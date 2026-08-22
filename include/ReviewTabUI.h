@@ -62,7 +62,7 @@ public:
       return new_selections;
     }
 
-    void reviewDisplayUpdated(std::vector<timeStampForDisplay> data_in){
+    void reviewDisplayUpdated(std::vector<timeStampForDisplay> data_in, timecode now = timecodeNull){
 
       //This prepares a new selected list by comparing old and new
       selected = prepareRestoreSelections(data, data_in, selected);
@@ -91,6 +91,16 @@ public:
         ui.v_delete_button->setEnabled(false);
       }
 
+      QHBoxLayout * now_marker=nullptr;
+      bool marker_needed = (now != timecodeNull);
+      if(marker_needed){
+        now_marker = new QHBoxLayout();
+        auto label = new QLabel(this);
+        std::string txt = timeWrapper::formatTime(timeWrapper::fromSeconds(now)) + " <----- Now";
+        label->setText(txt.c_str());
+        now_marker->addWidget(label, 1);
+      }
+      size_t i2 = 0;
       for(size_t i = 0; i < data.size(); i++){
         auto item = data[i];
         auto row = new QHBoxLayout();
@@ -114,7 +124,16 @@ public:
         label->setText(disp.c_str());
         row->addWidget(chk, 0);
         row->addWidget(label, 1);
-        ui.v_items->addLayout(row, i);
+        if(marker_needed && item.time > now){
+          ui.v_items->addLayout(now_marker, i2);
+          i2++;
+          marker_needed = false;
+        }
+        ui.v_items->addLayout(row, i2);
+        i2++;
+      }
+      if(marker_needed){
+        ui.v_items->addLayout(now_marker, i2);
       }
     }
 
@@ -131,7 +150,7 @@ public:
       for(size_t i = 0; i< ui.v_items->count(); i++){
         // First item is checkbox, second string
         QCheckBox * box = static_cast<QCheckBox *>(ui.v_items->itemAt(i)->layout()->itemAt(0)->widget());
-        if(box->isChecked()){
+        if(box && box->isChecked()){
           lst.push_back({data[i].time, data[i].projectUid});
           if(i > 1 && i == data.size()-1){
             //Have to update the state in the view, according to whether the remaining current state is a stop or a project

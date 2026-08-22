@@ -198,8 +198,8 @@ Q_OBJECT
 
     //Review view
     connect(themainWindow, &mainWindow::reviewRequested, [this](){currentData->generateReviewData(this->clock->realTime());});
-    connect(currentData, &TrackerData::timeStampListReady, themainWindow->reviewTab, &ReviewTabUI::reviewDisplayUpdated);
-    // Review deletion
+    connect(currentData, &TrackerData::timeStampListReady, [this](auto lst){themainWindow->reviewTab->reviewDisplayUpdated(lst, this->clock->now());});
+// Review deletion
     connect(themainWindow->reviewTab, &ReviewTabUI::listDeletionRequested, currentData, &TrackerData::deleteTimeStampList);
     connect(currentData, &TrackerData::timeStampListUpdateEvent, themainWindow, &mainWindow::reviewRequested);
     //Review merging

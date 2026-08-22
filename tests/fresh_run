@@ -6,6 +6,7 @@ cp ./InputData/KnownDatabaseActiveO.db ./Scratch
 cp ./InputData/KnownDatabaseO.db ./Scratch/KnownDatabaseO2.db
 cp ./InputData/KnownDatabaseO.db ./Scratch/KnownDatabaseO3.db
 cp ./InputData/KnownDatabaseO.db ./Scratch
+cp ./InputData/KnownDatabaseMarks.db ./Scratch
 cp ./InputData/KnownDatabaseForDelete.db ./Scratch
 cp ./InputData/KnownDatabaseForDelete.db ./Scratch/KnownDatabaseForDelete2.db
 cp ./InputData/KnownDatabaseForDelete.db ./Scratch/KnownDatabaseForDelete3.db

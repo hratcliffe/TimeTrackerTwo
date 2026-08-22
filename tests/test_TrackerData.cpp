@@ -292,6 +292,18 @@ TEST_CASE("Creating OneOff", "[QTAware, Slots]"){
   REQUIRE(descr.find("One Off Wobbly") != std::string::npos);
 }
 
+TEST_CASE("Reading Name", "[QTAware]"){
+  auto app = dummyApp();
+  TrackerData td{basicConfig("./Scratch/KnownDatabaseMarks.db")};
+  //Known data with marks on project, sub and oneoff
+
+  REQUIRE(td.getProjectAt(80) == "Project Alpha");
+  REQUIRE(td.getProjectAt(700) == "Documentation");
+  REQUIRE(td.getProjectAt(8003) == "Not Tracking");
+  REQUIRE(td.getProjectAt(8105) == "Urgent Bugs");
+
+}
+
 // --- Checking and verifying
 TEST_CASE("Verifying data consistency", "[QTAware]"){
   auto app = dummyApp();

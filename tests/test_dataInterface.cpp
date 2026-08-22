@@ -185,6 +185,17 @@ TEST_CASE("Int- Reading Known Data - All Project Dates", "[Database]"){
     REQUIRE(entries[id].slices[0] == slice1); }
   }
 }
+
+TEST_CASE("Int- Reading Known Data - Name from any", "[Database]"){
+  databaseIO theDB{"./InputData/KnownDatabaseO.db", true};
+  auto id = proIds::Uuid("{cc467402-acd5-494f-9c58-466f3aa6f117}");
+  REQUIRE(theDB.fetchNameFromAnyProjectType(id) == "Project Alpha");
+  id = proIds::Uuid("{6364fcb1-6a15-4b69-8412-7ef0eee6c94f}");
+  REQUIRE(theDB.fetchNameFromAnyProjectType(id) == "Documentation"); 
+  id = proIds::Uuid("{d74a08d4-35b4-4b7a-b525-b5da00af6269}");
+  REQUIRE(theDB.fetchNameFromAnyProjectType(id) == "Urgent Bugs");
+
+}
 // Fetch lists
 //NOTE: projects list order is NOT guaranteed per contract
 

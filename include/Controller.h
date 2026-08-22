@@ -223,8 +223,8 @@ Q_OBJECT
     //Time traveling:
     //To show a dialog, view needs to know the time now:
     connect(themainWindow, &mainWindow::fetchTimeTravelInfo, [this](){themainWindow->showTimeTravelDialog(this->clock->shortTimeString(), QDateTime::currentDateTime());});
-    connect(themainWindow, &mainWindow::timeTravelNowRequested, [this](){this->clock->restoreToNow();});
-    connect(themainWindow, &mainWindow::timeTravelRequested, [this](QDateTime time){this->clock->travelTo(fromQDateTime(time));});
+    connect(themainWindow, &mainWindow::timeTravelNowRequested, [this](){this->clock->restoreToNow(); themainWindow->updateRunningProjectDisplay(currentData->getProjectAt(this->clock->now()));});
+    connect(themainWindow, &mainWindow::timeTravelRequested, [this](QDateTime time){this->clock->travelTo(fromQDateTime(time));themainWindow->updateRunningProjectDisplay(currentData->getProjectAt(timeWrapper::toSeconds(fromQDateTime(time))));});
 
     //Offer time-travel as an option
     connect(currentData, &TrackerData::popTT, themainWindow, &mainWindow::showTTOption);

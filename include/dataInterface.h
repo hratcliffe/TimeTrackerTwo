@@ -48,6 +48,8 @@ class dataIO{
     virtual std::vector<fullOneOffProjectData> fetchOneOffProjectList() = 0;
     virtual std::vector<fullOneOffProjectData> fetchOneOffProjectsInTimeRange(timecode start, timecode end) = 0;
 
+    virtual std::string fetchNameFromAnyProjectType(proIds::Uuid const & id) = 0;
+ 
     virtual timeStamp fetchTrackerAt(timecode time) = 0; /**< \brief Fetch the stamp 'active at' given time */
     virtual bool checkTrackerTimeMarked(timecode time, timecode interval=0) = 0; /**< Check whether given time is already marked */
     virtual timecode getFirstAvailableAfter(timecode time) = 0;
@@ -199,6 +201,9 @@ class databaseIO : public dataIO{
       return dbStore.fetchOneOffsInRange(start, end);
     }
 
+    std::string fetchNameFromAnyProjectType(proIds::Uuid const & id) override{
+      return dbStore.fetchNameFromAny(id);
+    }
     timeStamp fetchTrackerAt(timecode time) override{
       return dbStore.fetchTrackerAt(time);
     }

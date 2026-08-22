@@ -257,6 +257,16 @@ Q_OBJECT
 
     }
 
+    auto getProjectAt(timecode now){
+      if(!dataHandler) throw std::runtime_error("No data source");
+      auto stamp = dataHandler->fetchTrackerAt(now);
+      if(stamp.projectUid != proIds::NullUid){
+        return dataHandler->fetchNameFromAnyProjectType(stamp.projectUid);
+      }else{
+        return std::string{"Not Tracking"};
+      }
+    }
+
     /**
      * @brief Check project manager against backend
      * 

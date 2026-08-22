@@ -821,6 +821,28 @@ class databaseStore{
 
     }
 
+    /**
+     * @brief Fetch name from id for any type
+     * 
+     * Looks up id in projects, subprojects and one-offs and returns name
+     * @param id  The id
+     * @return std::string The name 
+     */
+    std::string fetchNameFromAny(proIds::Uuid const & id){
+      const std::string id_str = id.to_string();
+      std::string cmd = "select name from projects where id=? union select name from subprojects where id=? union select name from oneoffs where id=?;";
+      sqlite3_stmt * prep_cmd;
+      int err = sqlite3_prepare_v2(DB, cmd.c_str(), cmd.length(), &prep_cmd, nullptr);
+      sqlite3_bind_text(prep_cmd, 1, id_str.c_str(), id_str.length(), SQLITE_STATIC);
+      sqlite3_bind_text(prep_cmd, 2, id_str.c_str(), id_str.length(), SQLITE_STATIC);
+      sqlite3_bind_text(prep_cmd, 3, id_str.c_str(), id_str.length(), SQLITE_STATIC);
+      if((err = sqlite3_step(prep_cmd)) == SQLITE_ROW){
+        return reinterpret_cast<const char *>(sqlite3_column_text(prep_cmd, 0));
+      }else{
+        return "";
+      }
+    }
+
     timeStamp fetchTrackerAt(timecode time){
 
       //Fetch the last timestamp before the given time - i.e the one active at time

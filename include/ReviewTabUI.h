@@ -38,6 +38,7 @@ public:
       connect(ui.v_delete_button, &QPushButton::clicked, [this](){this->prepareListForDelete();});
       connect(ui.v_combine_button, &QPushButton::clicked, [this](){this->prepareConsolidationRequest();});
       connect(ui.v_filter_button, &QPushButton::clicked, [this](){emit reviewUpdateNeeded(fromQDateTime(ui.v_dateTimeStart->dateTime()), fromQDateTime(ui.v_dateTimeEnd->dateTime()));});
+      connect(ui.v_reset_button, &QPushButton::clicked, [this](){emit reviewUpdateNeededAll();});
     }
 
     std::vector<bool> prepareRestoreSelections(std::vector<timeStampForDisplay> const & data_old, std::vector<timeStampForDisplay> const & data_new, std::vector<bool> const & selections)const{
@@ -242,6 +243,7 @@ public:
       void consolidationRequested(proIds::Uuid&, std::vector<proIds::Uuid>&);
       void currentStatusUpdatedP(std::string);
       void currentStatusUpdatedS();
+      void reviewUpdateNeededAll();
       void reviewUpdateNeeded(TW_timePoint, TW_timePoint);
 
 };

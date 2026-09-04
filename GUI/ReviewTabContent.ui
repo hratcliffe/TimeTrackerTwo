@@ -15,7 +15,7 @@
     <rect>
      <x>9</x>
      <y>9</y>
-     <width>477</width>
+     <width>514</width>
      <height>529</height>
     </rect>
    </property>
@@ -93,7 +93,7 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>473</width>
+         <width>510</width>
          <height>398</height>
         </rect>
        </property>
@@ -173,6 +173,13 @@
          </property>
          <property name="text">
           <string>Go</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="v_reset_button">
+         <property name="text">
+          <string>All</string>
          </property>
         </widget>
        </item>

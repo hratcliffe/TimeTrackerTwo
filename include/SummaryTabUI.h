@@ -59,14 +59,15 @@ public:
 
     }
     void updateProperties(viewProperties prop_in){prop=prop_in;}
-    void timeSummaryUpdated(timeSummarySet summary_in, timecode now=timecodeNull){
-
-      //Setting the filter inputs
-      if(now != timecodeNull){
-        auto date = toQDateTime(timeWrapper::midnightBefore(timeWrapper::fromSeconds(now)));
+    void setFilter(timecode end){
+      //Setting the filter end input
+      if(end != timecodeNull){
+        auto date = toQDateTime(timeWrapper::midnightBefore(timeWrapper::fromSeconds(end)));
         ui.s_dateTimeStart->setDateTime(date.addMonths(-1));
         ui.s_dateTimeEnd->setDateTime(date.addDays(1));
       }
+    }
+    void timeSummaryUpdated(timeSummarySet summary_in){
 
       summary = summary_in;
       showTimeSummary();
@@ -82,24 +83,28 @@ public:
       timecode unit_factor = unitToDivisor(units);
 
       //Header
-      auto label = new QLabel(this);
-      std::string txt = summary.header.text;
-      label->setText(txt.c_str());
-      applyStatus(label, summary.header.stat);
-      layout->addWidget(label);
- 
-      //Duration
-      auto & item = summary.duration;
-      if(item.format){
-        std::string ins = displayFloatQuarters((double)item.time/timeFactors::day);
-        txt = item.text.getWithInsert(ins);
-      }else{
-        txt = item.text.getRawText();
+      {
+        auto label = new QLabel(this);
+        std::string txt = summary.header.text;
+        label->setText(txt.c_str());
+        applyStatus(label, summary.header.stat);
+        layout->addWidget(label);
       }
-      label->setText(txt.c_str());
-      applyStatus(label, item.stat);
-      layout->addWidget(label);
- 
+      //Duration
+      {
+        auto & item = summary.duration;
+        auto label = new QLabel(this);
+        std::string txt;
+        if(item.format){
+          std::string ins = displayFloatQuarters((double)item.time/timeFactors::day);
+          txt = item.text.getWithInsert(ins);
+        }else{
+          txt = item.text.getRawText();
+        }
+        label->setText(txt.c_str());
+        applyStatus(label, item.stat);
+        layout->addWidget(label);
+      }
       //Header
       for(auto & item : {summary.uptime}){
         auto label = new QLabel(this);

@@ -193,8 +193,8 @@ Q_OBJECT
     connect(themainWindow, &mainWindow::deleteConfirmed, currentData, &TrackerData::deleteProject);
 
     //Time summary view
-    connect(themainWindow, &mainWindow::timeSummaryRequested, [this](){currentData->generateTimeSummaryUpTo(this->clock->realTime());});
-    connect(currentData, &TrackerData::timeSummaryReady, [this](auto lst){themainWindow->summaryTab->timeSummaryUpdated(lst, this->clock->now());});
+    connect(themainWindow, &mainWindow::timeSummaryRequested, [this](){themainWindow->summaryTab->setFilter(this->clock->realTime()); currentData->generateTimeSummaryUpTo(this->clock->realTime());});
+    connect(currentData, &TrackerData::timeSummaryReady, [this](auto lst){themainWindow->summaryTab->timeSummaryUpdated(lst);});
 
     connect(themainWindow->summaryTab, &SummaryTabUI::summaryUpdateNeeded, [this](TW_timePoint start, TW_timePoint end){currentData->generateTimeSummaryBetween(start, end);});
     //And returning to all on reset button

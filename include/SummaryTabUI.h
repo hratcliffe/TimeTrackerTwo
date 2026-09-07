@@ -53,9 +53,21 @@ public:
     explicit SummaryTabUI(QWidget *parent = nullptr) : QWidget(parent){
       ui.setupUi(this);
       connect(ui.s_unit_button, &QPushButton::clicked, [this](){this->rotateUnits();});
+
+      connect(ui.s_filter_button, &QPushButton::clicked, [this](){emit summaryUpdateNeeded(fromQDateTime(ui.s_dateTimeStart->dateTime()), fromQDateTime(ui.s_dateTimeEnd->dateTime().addDays(1)));}); // To the end of the selected end day
+      connect(ui.s_reset_button, &QPushButton::clicked, [this](){emit summaryUpdateNeededAll();});
+
     }
     void updateProperties(viewProperties prop_in){prop=prop_in;}
-    void timeSummaryUpdated(timeSummarySet summary_in){
+    void timeSummaryUpdated(timeSummarySet summary_in, timecode now=timecodeNull){
+
+      //Setting the filter inputs
+      if(now != timecodeNull){
+        auto date = toQDateTime(timeWrapper::midnightBefore(timeWrapper::fromSeconds(now)));
+        ui.s_dateTimeStart->setDateTime(date.addMonths(-1));
+        ui.s_dateTimeEnd->setDateTime(date.addDays(1));
+      }
+
       summary = summary_in;
       showTimeSummary();
     }
@@ -118,5 +130,8 @@ public:
       }
     }
 
+  signals:
+    void summaryUpdateNeededAll();
+    void summaryUpdateNeeded(TW_timePoint, TW_timePoint);
 };
 #endif

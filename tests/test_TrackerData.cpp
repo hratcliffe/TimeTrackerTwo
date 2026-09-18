@@ -450,7 +450,7 @@ TEST_CASE("Counting use of projects -via stamps"){
   proIds::Uuid p_bugs  = proIds::Uuid("{d74a08d4-35b4-4b7a-b525-b5da00af6269}").tag(proIds::uidTag::oneoff);
   proIds::Uuid id_1s   = uniqueIdGenerator().getOnesId();
 
-  //No entries  
+  //No entries
   REQUIRE_FALSE(td.checkTimeOnProjectOrSub(p_test));
   //Not even a project
   REQUIRE_FALSE(td.checkTimeOnProjectOrSub(id_1s));
@@ -466,7 +466,7 @@ TEST_CASE("Counting use of projects -via stamps"){
   REQUIRE(td.checkTimeOnProjectOrSub(p_tues));
    //A one off - none
   REQUIRE_FALSE(td.checkTimeOnProjectOrSub(p_bugs));
- 
+
 }
 TEST_CASE("Counting use of projects -via digests"){
   auto app = dummyApp();
@@ -586,7 +586,7 @@ TEST_CASE("Stopping", "[QTAware, Slots]"){
 
   SignalCatcher sig;
   QAbstractEventDispatcher::connect(&td, &TrackerData::projectStopped, &sig, &SignalCatcher::emitStopped);
-  
+
   //Mark some dummy project
   std::string name = "Wibble 79";
   auto id = CreateProjectAndReturnId(td, name);
@@ -698,7 +698,7 @@ TEST_CASE("Marking duplicates - silent fix", "[QTAware, Slots]"){
     REQUIRE_NOTHROW(td.markProject(id, name, 399));
     REQUIRE_NOTHROW(td.markProject(id, name, 399)); // Now alerts not throws
     //REQUIRE_THROWS_AS(td.markProject(id, name, 399), stampCollision); // Too large to bump
- 
+
     std::string msg;
     msg = sig.what<std::string, SignalCatcher::alert>(msg);
     REQUIRE(msg == "Hey - are you really tracking down to the second!?!\n Wait a moment and try again!");
@@ -827,7 +827,7 @@ TEST_CASE("Known Data - Time summary", "[QTAware, Slots]"){
   QAbstractEventDispatcher::connect(&td, &TrackerData::timeSummaryReady, &sig, &SignalCatcher::emitTimeSummary);
 
   td.loadProjects(4000);
-  td.generateTimeSummary(false);
+  td.generateTimeSummaryUpTo(timecodeNull);
 
   timeSummarySet summary;
   summary = sig.what(summary);
@@ -940,7 +940,7 @@ TEST_CASE("Empty Data - Time summary", "[QTAware, Slots]"){
   QAbstractEventDispatcher::connect(&td, &TrackerData::timeSummaryReady, &sig, &SignalCatcher::emitTimeSummary);
 
   td.loadProjects(4000);
-  td.generateTimeSummary(false);
+  td.generateTimeSummaryUpTo(timecodeNull);
 
   timeSummarySet summary;
   summary = sig.what(summary);
@@ -958,7 +958,7 @@ TEST_CASE("Known Data - Time summary with downtime", "[QTAware, Slots]"){
   QAbstractEventDispatcher::connect(&td, &TrackerData::timeSummaryReady, &sig, &SignalCatcher::emitTimeSummary);
 
   td.loadProjects(17000);
-  td.generateTimeSummary(false);
+  td.generateTimeSummaryUpTo(timecodeNull);
   timeSummarySet summary;
   summary = sig.what(summary);
 
@@ -992,7 +992,7 @@ TEST_CASE("OneOff Marks - Time Summary", "[QTAware, Slots]"){
   QAbstractEventDispatcher::connect(&td, &TrackerData::timeSummaryReady, &sig, &SignalCatcher::emitTimeSummary);
 
   td.loadProjects(17000);
-  td.generateTimeSummary(false);
+  td.generateTimeSummaryUpTo(timecodeNull);
   timeSummarySet summary;
   summary = sig.what(summary);
 
@@ -1035,6 +1035,79 @@ TEST_CASE("Stamp review data", "[QTAware, Slots]"){
   REQUIRE(lst[3].projectName == "");
 
 }
+
+TEST_CASE("Summary with window", "[QTAware, Slots]"){
+  //Since all the contributing functions are (expected to be) checked, the most important thing to verify is that the window is as expected based on the input dates. Try 3 windows
+  auto app = dummyApp();
+
+  std::vector<int> ends{4000, 8001, 12000};
+  std::vector<int> uptimes{3311, 7312, 10289};
+  std::vector<int> alpha_times{3311, 7312, 7312};
+  std::vector<int> beta_times{0, 0, 2977};
+  std::vector<std::vector<std::string> > percents{{"100", "88", "12"}, {"100", "40", "60"}, {"71", "40", "60"}};
+
+  for(size_t i = 0; i < 3; i++){
+    TrackerData td{basicConfig("./InputData/KnownDatabaseWithDowntime.db")};
+
+    SignalCatcher sig;
+    QAbstractEventDispatcher::connect(&td, &TrackerData::timeSummaryReady, &sig, &SignalCatcher::emitTimeSummary);
+
+    td.loadProjects(ends[i] + 1000);
+    td.generateTimeSummaryBetween(timeWrapper::fromSeconds(680), timeWrapper::fromSeconds(ends[i]));
+
+    timeSummarySet summary;
+    summary = sig.what(summary);
+    REQUIRE(summary.projects.size() > 0);
+
+    //Uptime
+    REQUIRE(summary.uptime.time == uptimes[i]);
+    //Alpha
+    {
+    auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("Project Alpha") != std::string::npos;};
+    auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
+    fst ++;
+    REQUIRE(fst->text.getRawText().find("Time on project and subs") != std::string::npos);
+    REQUIRE(fst->time == alpha_times[i]);
+    fst++;
+    REQUIRE(fst->text.getRawText() == "Fraction of uptime "+percents[i][0]+"% (target 50%)");
+    REQUIRE(fst->stat == timeSummaryStatus::overTarget);
+    }
+    // BETA
+    {
+    auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("Project Beta") != std::string::npos;};
+    auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
+    fst++;
+    REQUIRE(fst->text.getRawText().find("Time on project and subs") != std::string::npos);
+    REQUIRE(fst->time == beta_times[i]);
+    }
+    {
+    //Alpha Subproj
+    auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("Project Alpha: Documentation") != std::string::npos;};
+    auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
+    fst ++;
+    REQUIRE(fst->text.getRawText() == "Fraction on sub "+percents[i][1]+"% (target 30%)");
+    REQUIRE(fst->stat == timeSummaryStatus::overTarget);
+    }
+    {
+    //Alpha Subproj 2
+    auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("Project Alpha: Testing") != std::string::npos;};
+    auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
+    fst ++;
+    REQUIRE(fst->text.getRawText() == "Fraction on sub "+percents[i][2]+"% (target 70%)");
+    REQUIRE(fst->stat == timeSummaryStatus::underTarget);
+    }
+
+    //Exactly what happens for beta sub breakdown is not prescribed
+
+    //And check the off-off
+    {
+    auto check = [](timeSummaryEntry & ts){return ts.text.getRawText().find("One Off Projects") != std::string::npos;};
+    auto fst = std::find_if(summary.projects.begin(), summary.projects.end(), check);
+    REQUIRE(fst->time == 0);
+    }
+  }
+}
+
 
 // -------- Digest Generation ------------------------------------------------------------------------
 TEST_CASE("Generating Digests", "[QTAware, Slots]"){
@@ -1543,7 +1616,7 @@ TEST_CASE("Deleting Stamps", "[QTAware]"){
   QAbstractEventDispatcher::connect(&td, &TrackerData::timeSummaryReady, &sig, &SignalCatcher::emitTimeSummary);
 
   td.loadProjects(16000);
-  td.generateTimeSummary(false);
+  td.generateTimeSummaryUpTo(timecodeNull);
   timeSummarySet summary;
   summary = sig.what(summary);
 
@@ -1574,7 +1647,7 @@ TEST_CASE("Deleting Stamps", "[QTAware]"){
     //Deletes 9023 change to Important Title, instead stay stopped
     // Uptime -> 13787, Beta -> 4889
     // Check final state
-    td.generateTimeSummary(false);
+    td.generateTimeSummaryUpTo(timecodeNull);
     timeSummarySet summary;
     summary = sig.what(summary);
 
@@ -1609,7 +1682,7 @@ TEST_CASE("Deleting Stamps - no-op cases", "[QTAware]"){
   QAbstractEventDispatcher::connect(&td, &TrackerData::timeSummaryReady, &sig, &SignalCatcher::emitTimeSummary);
 
   td.loadProjects(16000);
-  td.generateTimeSummary(false);
+  td.generateTimeSummaryUpTo(timecodeNull);
   timeSummarySet summary;
   summary = sig.what(summary);
 
@@ -1637,7 +1710,7 @@ TEST_CASE("Deleting Stamps - no-op cases", "[QTAware]"){
     REQUIRE_NOTHROW(td.deleteIndividualStamps(timeWrapper::fromSeconds(17000), timeWrapper::fromSeconds(18000)));
     // Should change nothing
     // Check final state
-    td.generateTimeSummary(false);
+    td.generateTimeSummaryUpTo(timecodeNull);
     timeSummarySet summary;
     summary = sig.what(summary);
     //Uptime
@@ -1664,7 +1737,7 @@ TEST_CASE("Deleting Stamps - no-op cases", "[QTAware]"){
     REQUIRE_NOTHROW(td.deleteIndividualStamps(timeWrapper::fromSeconds(1), timeWrapper::fromSeconds(2)));
     // Should change nothing
     // Check final state
-    td.generateTimeSummary(false);
+    td.generateTimeSummaryUpTo(timecodeNull);
     timeSummarySet summary;
     summary = sig.what(summary);
 

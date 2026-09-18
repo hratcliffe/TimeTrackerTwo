@@ -47,6 +47,12 @@ class timeWrapper{
       std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", std::localtime(&time)); /**< \brief Format time as a string */
       return std::string(buffer);
     }
+    static std::string formatDate(timePoint tp) {
+      std::time_t time = clock::to_time_t(tp); /**< \brief Convert time point to time_t for formatting */
+      char buffer[100];
+      std::strftime(buffer, sizeof(buffer), "%Y-%m-%d", std::localtime(&time)); /**< \brief Format time as a string */
+      return std::string(buffer);
+    }
     static std::string formatTimeAsClock(timePoint tp) {
       std::time_t time = clock::to_time_t(tp); /**< \brief Convert time point to time_t for formatting */
       char buffer[100];

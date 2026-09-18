@@ -538,29 +538,45 @@ Q_OBJECT
       fetchTimestamps(start, end);
     }
 
-    void generateTimeSummary(bool toNow = true){
+    void generateTimeSummaryToAppNow(TW_timePoint start_in){
+      //prepare time window
+      timecode start = timeWrapper::toSeconds(start_in);
+      timecode end = timecodeNull;
+      end = timeWrapper::toSeconds(timeWrapper::now());
+      generateTimeSummary(start, end, "From "+timeWrapper::formatTimeAsShortDate(start_in));
+    }
+    void generateTimeSummaryUpTo(timecode end){
+      //prepare time window
+      timecode start = timecodeNull;
+      generateTimeSummary(start, end, "All Time");
+    }
+    void generateTimeSummaryBetween(TW_timePoint start_in, TW_timePoint end_in){
+      //prepare time window
+      timecode start = timeWrapper::toSeconds(start_in);
+      timecode end = timeWrapper::toSeconds(end_in);
+      std::string date_str = timeWrapper::formatTimeAsShortDate(start_in)+" - "+timeWrapper::formatTimeAsShortDate(end_in);
+      generateTimeSummary(start, end, date_str);
+    }
+    private:
+    void generateTimeSummary(timecode start, timecode end, std::string date_str=""){
       timeSummarySet summary;
       // Items to be displayed - expect display to add newlines between items, format etc
       // There are some special items to use a headers, then an ordered list for projects
 
       const float targetThresholdFTE = 0.01;
       const float targetThresholdFractionFrac = 0.01; // Ditto for sub fracs
-      //Fetching timedata
 
       // First fetch the most recent stamps
-      timecode start = timecodeNull;
-      timecode end = timecodeNull;
-      std::vector<timeStamp> timestamps = dataHandler->fetchTrackerEntries();
-      if(toNow && currentProjectStatus.isUp()){
-        // Run the windowing up to now
-        end = timeWrapper::toSeconds(timeWrapper::now());
-      }
+      std::vector<timeStamp> timestamps = dataHandler->fetchTrackerEntries(start, end);
+
       if(timestamps.size() == 0){
-        summary.header = timeSummaryItem{"No time entries found!", timeSummaryStatus::error};
+        summary.header = timeSummaryItem{date_str+" No time entries found!", timeSummaryStatus::error};
         emit timeSummaryReady(summary);
         return;
+      }else{
+        summary.header = timeSummaryItem{date_str, timeSummaryStatus::none};
       }
-      timecode window = timeWrapper::toSeconds(timeWrapper::now()) - timestamps[0].time; 
+      timecode window = end - timestamps[0].time;
       std::map<proIds::Uuid, timecode> durations = timestampProcessor::stampsToDurations(timestamps, start, end);
 
       //Next add in durations from digests
@@ -573,7 +589,7 @@ Q_OBJECT
         }
       }
 
-      summary.duration = timeSummaryEntry{window, std::string{"Showing summary for past {} days"}, timeSummaryStatus::none, true};
+      summary.duration = timeSummaryEntry{window, std::string{"Showing summary for {} days"}, timeSummaryStatus::none, true};
 
       timecode uptime = 0, oneoffs = 0;
       for(auto & item : durations){
@@ -651,7 +667,7 @@ Q_OBJECT
       emit timeSummaryReady(summary);
 
     }
-
+    public:
     void generateDailyDigest(TW_timePoint start_tp){
       //Generate the 'per-day' version of the timestamps for the GMT day starting at start
       // ALSO adds a special entry for the TOTAL duration covered under the NULL uuid

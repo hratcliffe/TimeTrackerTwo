@@ -37,7 +37,13 @@ inline QDateTime toQDateTime(TW_timePoint time){
   time_str = timeWrapper::formatTime(time);
   return QDateTime::fromString(QString::fromStdString(time_str),"yyyy-MM-dd hh:mm:ss");
 }
-
+inline QDate toQDate(TW_timePoint time){
+  //Convert to QT time from app time, going via a string
+  // Format  "%Y-%m-%d 00:00:00"
+  std::string time_str;
+  time_str = timeWrapper::formatDate(time);
+  return QDate::fromString(QString::fromStdString(time_str),"yyyy-MM-dd");
+}
 namespace QLocalShortcuts{
   inline void deleteLayoutItems(QLayout *layout) {
     QLayoutItem *item;

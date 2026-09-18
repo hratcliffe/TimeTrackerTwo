@@ -37,6 +37,7 @@ class timestampProcessor{
         // continues until the given end time
         // If the first stamp is after _start_ then the time between _start_ and this has to be ignored
         // I.E. this expects start and end to be within the period covered by _data_
+        // IF the last stamp is a project and no end time is given, then no duration can be assigned for this slice - 0 will be added (or shown)
 
         std::map<proIds::Uuid, timecode> durations;
         if(data.size() == 0) return durations; // No stamps to process
@@ -81,6 +82,12 @@ class timestampProcessor{
         }
         //We have possibly handled several now, so check we're not at the end
         if(current == --data.end()){
+            // Including the one we're on in output
+            if(durations.count(current->projectUid) > 0){
+              durations[current->projectUid] += end - last;
+            }else{
+              durations[current->projectUid] = end - last;
+            }
             return durations;
         }
         //Current is at least ONE element in, and we stop one before the end so there is a next one to check

@@ -100,8 +100,8 @@ TEST_CASE("Start Time Within", "[Basic]"){
     auto durs = proc::stampsToDurations(data, 120);
     REQUIRE(durs[a] == 77);
     REQUIRE(durs[b] == 27);
-    REQUIRE(durs.count(c) == 0); // No end time
-    REQUIRE(durs.size() == 2);
+    REQUIRE(durs[c] == 0); // No end time so duration -> 0
+    REQUIRE(durs.size() == 3);
 }
 
 TEST_CASE("Start Time Before", "[Basic]"){
@@ -285,6 +285,23 @@ TEST_CASE("Single Entry Both Contraints", "[Edge]"){
     data.push_back(t);
     auto durs = proc::stampsToDurations(data, 980, 1001);
     REQUIRE(durs[a] == 21);
+}
+
+TEST_CASE("Both Contraints, within last", "[Edge]"){
+    uniqueIdGenerator theGen;
+    std::vector<timeStamp> data;
+    timeStamp t;
+    auto a = theGen.getNextId();
+    t.projectUid = a;
+    t.time = 689;
+    data.push_back(t);
+    auto b = theGen.getNextId();
+    t.projectUid = b;
+    t.time = 3609;
+    data.push_back(t);
+    auto durs = proc::stampsToDurations(data, 680, 4000);
+    REQUIRE(durs[a] == 3609-689);
+    REQUIRE(durs[b] == 4000-3609);
 }
 
 TEST_CASE("Window 1", "[Basic]"){
